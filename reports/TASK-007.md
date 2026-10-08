@@ -58,3 +58,15 @@ Independent dev replay в этом раунде не выполнялся; ре�
 
 ### Следующая передача GLM
 Та же ветка/worktree, только R3b focus после failed DELETE и browser regression, обновить executor report. Не переделывать service/schema/API/transactions/R1/R2. Обычные новые commits, gates TASK-007, вернуть latest full SHA/READY_FOR_REVIEW; без merge/push/amend/rebase/reset/deploy. TASK-008 не начинать.
+
+
+## Финальное review e7fded5 — 2026-10-08
+
+**APPROVED для локальной интеграции. R1/R2/R3/R3b закрыты.** Проверен `e7fded5766735a993ebf8be7c2cf0ae786379600` относительно `b28b80b5dacca602d6db0431cf1c15989f717f08`: фактически 3 файла (один component + inbox browser spec + executor report), 131 insertions/1 deletion. Service/API/schema/transactions/locking не менялись; timestamp correction прошлого раунда ранее проверена, rollback не требуется.
+
+R3b: HTTP refusal и network rejection DELETE создают новый focus target cancel; post-commit effect работает после снятия pending и фокусирует enabled безопасную Отмену. Unmount guard сохранён, cancel/Escape при pending запрещены, success→quick-add/обычная отмена→trigger/rename focus-return сохранены. Новая browser regression проверяет held500, network abort, Escape после failure и успешный retry-delete.
+
+Независимые Node24.21.0 gates: npm ci --offline; lint/typecheck без warnings; **44 unit**, **47 DB**, **101 auth**; CI=1 E2E_PORT=3273 — **83 browser**; отдельный archive snapshot проверяемого SHA без .env/DATABASE_URL/BETTER_AUTH_SECRET/BETTER_AUTH_URL, npm ci+build — все PASS/exit0. По одному auth/E2E прогону Codex, executor 2×/3× evidence отдельно заявлены. Logs без lifecycle error patterns.
+Исходный controlled production Chromium/API probe повторён независимо на собственном server **3274**/unique test DB: после held DELETE500 activeElement — **BUTTON task-delete-cancel-<id>**, control enabled; Escape/open/cancel корректны. R1: подтверждённая task есть в БД, aborted read даёт createError=false/read retry=1; retry network abort без pageerrors. R2: current toggle row rename/delete disabled, force-click не открывает confirmation. Probe exit0, server/pool/DB закрыты через completion-aware finalization.
+
+Самостоятельный dev replay в этом раунде не выполнялся; executor исходный real Next dev evidence сохранён, permanent dev suite отсутствует. Реальные устройства/production proxy/deployment не проверены, прежние deployment/limiter/audit ограничения сохраняются. Следующий шаг — local no-ff merge в чистую main, integration gates и DONE. TASK-008 не назначен; push/deploy не разрешены.
