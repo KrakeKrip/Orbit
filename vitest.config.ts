@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.{ts,tsx}"],
+    // DB suite изолирован в npm run test:db (vitest.db.config.ts).
+    exclude: ["**/node_modules/**", "**/dist/**", "tests/db/**"],
   },
 });
