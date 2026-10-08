@@ -1,17 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import TodayPage from "@/app/(workspace)/today/page";
-import InboxPage from "@/app/(workspace)/inbox/page";
 import UpcomingPage from "@/app/(workspace)/upcoming/page";
+import { TasksView } from "@/components/orbit/tasks-view";
 import { ProjectsView } from "@/components/orbit/projects-view";
+import type { TaskDTO } from "@/lib/tasks";
 import type { ProjectDTO } from "@/lib/projects";
 
-// /projects — реальный server-driven экран (actor + БД), поэтому unit-уровень
-// покрывает клиентский ProjectsView (список/empty/escaping); полный flow —
-// HTTP integration и browser E2E. Остальные экраны — placeholders.
+// /inbox и /projects — реальные server-driven экраны (actor + БД), поэтому
+// unit-уровень покрывает клиентские TasksView/ProjectsView (empty/список/
+// escaping); полный flow — HTTP integration и browser E2E. /today и
+// /upcoming — placeholders до TASK-008.
 const screens = [
   { name: "Сегодня", page: TodayPage },
-  { name: "Входящие", page: InboxPage },
   { name: "Предстоящее", page: UpcomingPage },
 ] as const;
 
@@ -28,6 +29,20 @@ describe("экраны рабочей области", () => {
   );
 });
 
+function task(id: string, title: string, completed = false): TaskDTO {
+  const timestamp = new Date("2026-01-01T00:00:00.000Z").toISOString();
+  return {
+    id,
+    title,
+    projectId: null,
+    parentId: null,
+    completedAt: completed ? timestamp : null,
+    revision: 0,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
 function project(id: string, name: string, archived = false): ProjectDTO {
   const timestamp = new Date("2026-01-01T00:00:00.000Z").toISOString();
   return {
@@ -38,6 +53,49 @@ function project(id: string, name: string, archived = false): ProjectDTO {
     updatedAt: timestamp,
   };
 }
+
+describe("TasksView (unit render)", () => {
+  it("пустой список: tabs, quick-add форма и honest empty state открытых", () => {
+    const html = renderToStaticMarkup(
+      <TasksView initialOpen={[]} initialCompleted={[]} actorId="user-1" />,
+    );
+
+    expect(html).toContain("Открытые");
+    expect(html).toContain("Завершённые");
+    expect(html).toContain("Название задачи");
+    expect(html).toContain("Добавить задачу");
+    expect(html).toContain("Задач пока нет");
+    expect(html).toContain("Добавьте первую задачу");
+  });
+
+  it("заголовки задач рендерятся текстом с экранированием markup", () => {
+    const html = renderToStaticMarkup(
+      <TasksView
+        initialOpen={[
+          task("11111111-1111-4111-8111-111111111111", "<b>Купить хлеб</b>"),
+          task(
+            "22222222-2222-4222-8222-222222222222",
+            "🦄 Очень длинное название задачи, которое занимает больше одной строки и не должно ломать вёрстку",
+          ),
+        ]}
+        initialCompleted={[
+          task("33333333-3333-4333-8333-333333333333", "Завершённая", true),
+        ]}
+        actorId="user-1"
+      />,
+    );
+
+    expect(html).toContain("&lt;b&gt;Купить хлеб&lt;/b&gt;");
+    expect(html).not.toContain("<b>Купить хлеб</b>");
+    expect(html).toContain("🦄 Очень длинное название");
+    expect(html).toContain("break-words");
+    // Действия строк доступны; завершённые не смешаны с открытыми.
+    expect(html).toContain("Завершить");
+    expect(html).toContain("Переименовать");
+    expect(html).toContain("Удалить");
+    expect(html).not.toContain(">Завершённая<");
+  });
+});
 
 describe("ProjectsView (unit render)", () => {
   it("пустой список: tabs, create form и honest empty state активных", () => {
@@ -70,12 +128,10 @@ describe("ProjectsView (unit render)", () => {
       />,
     );
 
-    // markup — экранированный текст, не HTML-тег.
     expect(html).toContain("&lt;b&gt;Учёба&lt;/b&gt;");
     expect(html).not.toContain("<b>Учёба</b>");
     expect(html).toContain("🦄🦄 Очень длинное название");
     expect(html).toContain("break-words");
-    // Действия строк доступны; архивный проект не смешан с активным списком.
     expect(html).toContain("Архивировать");
     expect(html).toContain("Переименовать");
     expect(html).not.toContain(">Архивный<");

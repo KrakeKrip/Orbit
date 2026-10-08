@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
 import { userSettings } from "@/server/db/schema";
 import {
@@ -56,15 +56,14 @@ export async function updateAccountSettings(
   actorId: string,
   patch: SettingsPatch,
 ): Promise<AccountSettings> {
-  const now = new Date();
   const rows = await getDb()
     .insert(userSettings)
     .values({
       userId: actorId,
       timezone: patch.timezone ?? DEFAULT_SETTINGS.timezone,
       theme: patch.theme ?? DEFAULT_SETTINGS.theme,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: sql`now()`,
+      updatedAt: sql`now()`,
     })
     .onConflictDoUpdate({
       target: userSettings.userId,
@@ -73,7 +72,8 @@ export async function updateAccountSettings(
           ? {}
           : { timezone: patch.timezone }),
         ...(patch.theme === undefined ? {} : { theme: patch.theme }),
-        updatedAt: now,
+        // now() из БД: server write теми же часами, что и created_at.
+        updatedAt: sql`now()`,
       },
     })
     .returning({
