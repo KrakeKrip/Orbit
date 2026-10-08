@@ -6,7 +6,7 @@ import {
   isRunnerCreatedDbName,
   resolveTestDatabaseTarget,
   type DbTarget,
-} from "./db-target";
+} from "./db-target.ts";
 
 /**
  * Подготовка изолированной test-базы (исправление R1).

@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:db": "vitest run --config vitest.db.config.ts",
+    "test:auth": "next build && vitest run --config vitest.auth.config.ts",
     "test:e2e": "next build && playwright test",
+    "auth:bootstrap": "node scripts/bootstrap-user.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/db-migrate.ts",
     "build": "next build"
@@ -29,7 +31,8 @@
     "pg": "^8.23.1",
     "radix-ui": "^1.7.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.22",

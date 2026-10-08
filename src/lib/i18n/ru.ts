@@ -57,7 +57,7 @@ export const ru = {
   },
   settings: {
     title: "Настройки",
-    description: "Аккаунт и часовой пояс будут подключены позже.",
+    description: "Часовой пояс и редактирование аккаунта будут подключены позже.",
     theme: {
       label: "Тема",
       hint: "Выбор применяется сразу и хранится только на этом устройстве. Сохранение темы в аккаунте появится позже.",
@@ -67,5 +67,23 @@ export const ru = {
         dark: "Тёмная",
       },
     },
+    account: {
+      label: "Аккаунт",
+      signedInAs: "Вы вошли как",
+      logout: "Выйти",
+      loggingOut: "Выход…",
+      logoutError: "Не удалось выйти. Попробуйте ещё раз.",
+      note: "Смена email и пароля появится позже.",
+    },
+  },
+  login: {
+    title: "Вход в Orbit",
+    description: "Персональный менеджер задач",
+    email: "Email",
+    password: "Пароль",
+    submit: "Войти",
+    submitting: "Вход…",
+    invalidCredentials: "Неверный email или пароль.",
+    unexpectedError: "Не удалось выполнить вход. Попробуйте ещё раз.",
   },
 } as const;
