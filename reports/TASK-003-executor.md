@@ -2,9 +2,36 @@
 
 ## Статус
 
-READY_FOR_REVIEW (после коррекции R1/R2 по review reports/TASK-003.md от 2026-10-08).
+READY_FOR_REVIEW (после коррекций R1/R2 и R1b по review reports/TASK-003.md от 2026-10-08).
 
-## Correction R1/R2 — безопасный DB test runner (этап NEEDS_FIXES)
+## Correction R1b — неразрушающая sentinel-фикстура в regression-тесте
+
+Старт коррекции: HEAD `fcaa4a0` (coord-коммит, R2 закрыто) поверх `d200fa6`. Изменён только `tests/db/runner.db.test.ts` + этот отчёт; runner (`db-target.ts`, `runner.ts`, `global-setup.ts`, `helpers.ts`), схема, миграции, зависимости и UI не менялись.
+
+- Убрано `DROP DATABASE IF EXISTS "orbit_test"` из sentinel-теста (тот же запрещённый паттерн внутри обычного `npm run test:db`, на который указал review).
+- Sentinel-фикстура теперь получает **уникальное** имя `orbit_test_sentinel_<rand>` и создаётся `CREATE DATABASE` **без предварительного DROP/IF NOT EXISTS**; флаг владения выставляется только после успешного CREATE.
+- Cleanup (afterAll и пути сбоев setup/assertions — включая падения между CREATE и завершением теста) удаляет только успешно созданную фикстуру; существующие базы и данные не затрагиваются. Проверка строго фиксированного `orbit_test` на текущем кластере не выполняется (по review — допустима только в отдельном изолированном кластере).
+- Проверено: `prepareTestDatabase` и teardown сохраняют заранее созданную фикстуру и её строку `keep-me` на всех этапах (до teardown, после teardown, после завершения теста).
+- Разбиение числа DB-тестов в предыдущей редакции отчёта исправлено: **47 = 28 schema + 15 guard + 4 runner** (было ошибочно указано «12 guard + 7 runner»). Исторический раздел ниже описывает состояние ДО коррекций.
+
+### Проверки после R1b (Node v24.21.0 / npm 11.19.0)
+
+| Команда | Результат |
+| --- | --- |
+| `npm run typecheck` / `npm run lint` | exit 0 / exit 0 |
+| `npm run test:db`, два последовательных запуска | оба exit 0 — **47 passed** (28 schema + 15 guard + 4 runner) |
+| Проверка кластера после прогонов | только `orbit_dev` (+ служебный postgres): ни фикстуры, ни временных баз |
+| `npm ci` | exit 0 |
+| `npm test` | exit 0 — 4 UI tests |
+| `npm run build` | exit 0 |
+| `CI=1 E2E_PORT=3175 npm run test:e2e` | exit 0 — 47 passed |
+| `git diff --check` / `git status` после коммитов | чисто |
+
+Коммиты коррекции R1b: fix-коммит + обновление отчёта (полный latest SHA — в ответе пользователю).
+
+---
+
+## Correction R1/R2 — безопасный DB test runner (первая коррекция)
 
 Старт коррекции: HEAD `736d460` (coord-коммит с review) поверх `3706dd2`. Изменены только затронутые области: `tests/db/` (новые `db-target.ts`, `runner.ts`, guard/sentinel тесты; переработаны `global-setup.ts`, `helpers.ts`), `README.md`, `.env.example` и этот отчёт. Зависимости, схема, миграции, compose и UI не менялись.
 
@@ -32,7 +59,7 @@ READY_FOR_REVIEW (после коррекции R1/R2 по review reports/TASK-0
 | `npm ci` | exit 0 |
 | `npm run lint` / `npm run typecheck` | exit 0 / exit 0 (strict) |
 | `npm test` | exit 0 — 4 UI tests, без БД |
-| `npm run test:db`, два последовательных запуска | оба exit 0 — **47 passed** (28 schema + 12 guard + 7 runner); после прогонов в кластере только `orbit_dev` и служебный `postgres` |
+| `npm run test:db`, два последовательных запуска | оба exit 0 — **47 passed** (28 schema + 15 guard + 4 runner); после прогонов в кластере только `orbit_dev` и служебный `postgres` |
 | `npm run build` | exit 0 |
 | `CI=1 E2E_PORT=3161 npm run test:e2e` | exit 0 — 47 passed |
 | `git diff --check` / `git status` после коммитов | чисто |

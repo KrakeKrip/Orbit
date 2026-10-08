@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { afterAll, describe, expect, test } from "vitest";
 import { Client } from "pg";
 import { loadDotEnv, resolveTestDatabaseTarget } from "./db-target";
@@ -5,20 +6,26 @@ import { prepareTestDatabase } from "./runner";
 
 /**
  * R1 acceptance: раннер не трогает ранее существовавшие базы.
- * Sentinel-база создаётся этим тестом и удаляется только этим тестом;
- * на пользовательских данных проверка не выполняется.
+ * Sentinel-фикстура получает уникальное имя и создаётся этим тестом через
+ * CREATE БЕЗ предварительного DROP; cleanup выполняется только для
+ * успешно созданной фикстуры (владение фиксируется после CREATE и
+ * соблюдается во всех путях, включая сбои setup/assertions). На
+ * пользовательских данных проверка не выполняется.
  */
 
 loadDotEnv();
 const base = resolveTestDatabaseTarget();
 
-async function withAdmin(fn: (client: Client) => Promise<void>): Promise<void> {
+async function withDatabase(
+  name: string,
+  fn: (client: Client) => Promise<void>,
+): Promise<void> {
   const client = new Client({
     host: base.host,
     port: base.port,
     user: base.user,
     password: base.password,
-    database: "postgres",
+    database: name,
   });
   await client.connect();
   try {
@@ -26,6 +33,10 @@ async function withAdmin(fn: (client: Client) => Promise<void>): Promise<void> {
   } finally {
     await client.end();
   }
+}
+
+async function withAdmin(fn: (client: Client) => Promise<void>): Promise<void> {
+  await withDatabase("postgres", fn);
 }
 
 async function databaseExists(name: string): Promise<boolean> {
@@ -40,98 +51,82 @@ async function databaseExists(name: string): Promise<boolean> {
   return exists;
 }
 
-// Sentinel-ресурсы этого тестового файла.
-const sentinelDb = "orbit_test";
-let sentinelCreated = false;
+async function createSentinelFixture(): Promise<string> {
+  const name = `orbit_test_sentinel_${randomBytes(4).toString("hex")}`;
+  await withAdmin(async (admin) => {
+    // CREATE без IF NOT EXISTS: коллизия даёт ошибку, чужие базы не удаляются.
+    await admin.query(`CREATE DATABASE "${name}"`);
+  });
+  // Владение фиксируется только после успешного CREATE.
+  await withDatabase(name, async (client) => {
+    await client.query(`CREATE TABLE "sentinel" ("value" text NOT NULL)`);
+    await client.query(`INSERT INTO "sentinel" ("value") VALUES ('keep-me')`);
+  });
+  return name;
+}
+
+async function readSentinel(name: string): Promise<string[]> {
+  const rows: string[] = [];
+  await withDatabase(name, async (client) => {
+    const result = await client.query<{ value: string }>(
+      `SELECT "value" FROM "sentinel"`,
+    );
+    rows.push(...result.rows.map((r) => r.value));
+  });
+  return rows;
+}
+
+// Ресурсы, созданные этим тестовым файлом (cleanup только своих).
+let sentinelFixture: string | null = null;
 let secondRunDb: string | null = null;
 
 afterAll(async () => {
-  if (sentinelCreated) {
+  if (sentinelFixture) {
+    const name = sentinelFixture;
+    sentinelFixture = null;
+    // WITH (FORCE) допустим: это база, успешно созданная этим файлом.
     await withAdmin(async (admin) => {
-      await admin.query(`DROP DATABASE IF EXISTS "${sentinelDb}" WITH (FORCE)`);
+      await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);
     });
   }
-  if (secondRunDb && (await databaseExists(secondRunDb))) {
-    await withAdmin(async (admin) => {
-      await admin.query(`DROP DATABASE "${secondRunDb}" WITH (FORCE)`);
-    });
+  if (secondRunDb) {
+    const name = secondRunDb;
+    secondRunDb = null;
+    // Дополнительная защита после теста «двух запусков»: база создана
+    // раннером в этом тесте; удаляем, только если teardown её не убрал.
+    if (await databaseExists(name)) {
+      await withAdmin(async (admin) => {
+        await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);
+      });
+    }
   }
 });
 
 describe("R1: раннер не уничтожает существующие базы", () => {
-  test("sentinel в заранее существующей orbit_test остаётся нетронутым", async () => {
-    // 1. Готовим «ранее существовавшую» orbit_test с sentinel.
-    await withAdmin(async (admin) => {
-      await admin.query(`DROP DATABASE IF EXISTS "${sentinelDb}" WITH (FORCE)`);
-      await admin.query(`CREATE DATABASE "${sentinelDb}"`);
-    });
-    sentinelCreated = true;
-    const sentinel = new Client({
-      host: base.host,
-      port: base.port,
-      user: base.user,
-      password: base.password,
-      database: sentinelDb,
-    });
-    await sentinel.connect();
-    try {
-      await sentinel.query(`CREATE TABLE "sentinel" ("value" text NOT NULL)`);
-      await sentinel.query(
-        `INSERT INTO "sentinel" ("value") VALUES ('keep-me')`,
-      );
-    } finally {
-      await sentinel.end();
-    }
+  test("sentinel в заранее созданной fixture-базе остаётся нетронутым после setup/teardown", async () => {
+    // 1. Фикстура: уникальное имя, CREATE без предварительного DROP.
+    const fixture = await createSentinelFixture();
+    sentinelFixture = fixture;
 
     // 2. Реальный запуск подготовки test-базы.
     const prepared = await prepareTestDatabase(process.env);
     try {
-      // 3. Создана уникальная база, а не orbit_test.
+      // 3. Создана уникальная база, а не чужая/фикстурная.
       expect(prepared.target.database).toMatch(/^orbit_test_[0-9]+_[a-z0-9]+$/);
-      expect(prepared.target.database).not.toBe(sentinelDb);
-      await expect(await databaseExists(prepared.target.database)).toBe(true);
+      expect(prepared.target.database).not.toBe(fixture);
+      expect(await databaseExists(prepared.target.database)).toBe(true);
 
-      // 4. Sentinel и таблица с данными остались нетронутыми.
-      const check = new Client({
-        host: base.host,
-        port: base.port,
-        user: base.user,
-        password: base.password,
-        database: sentinelDb,
-      });
-      await check.connect();
-      try {
-        const { rows } = await check.query<{ value: string }>(
-          `SELECT "value" FROM "sentinel"`,
-        );
-        expect(rows).toEqual([{ value: "keep-me" }]);
-      } finally {
-        await check.end();
-      }
+      // 4. Фикстура и её данные не тронуты работой раннера.
+      expect(await readSentinel(fixture)).toEqual(["keep-me"]);
     } finally {
       // 5. teardown удаляет только созданную этим запуском базу.
       await prepared.teardown();
       await expect(await databaseExists(prepared.target.database)).toBe(false);
     }
 
-    // 6. Sentinel жив и после teardown.
-    await expect(await databaseExists(sentinelDb)).toBe(true);
-    const verify = new Client({
-      host: base.host,
-      port: base.port,
-      user: base.user,
-      password: base.password,
-      database: sentinelDb,
-    });
-    await verify.connect();
-    try {
-      const { rows } = await verify.query<{ value: string }>(
-        `SELECT "value" FROM "sentinel"`,
-      );
-      expect(rows).toEqual([{ value: "keep-me" }]);
-    } finally {
-      await verify.end();
-    }
+    // 6. Фикстура и sentinel живы и после teardown.
+    expect(await databaseExists(fixture)).toBe(true);
+    expect(await readSentinel(fixture)).toEqual(["keep-me"]);
   });
 
   test("два последовательных запуска создают разные базы и обе удаляются teardown", async () => {
@@ -140,14 +135,14 @@ describe("R1: раннер не уничтожает существующие б
     secondRunDb = second.target.database;
     try {
       expect(first.target.database).not.toBe(second.target.database);
-      await expect(await databaseExists(first.target.database)).toBe(true);
-      await expect(await databaseExists(second.target.database)).toBe(true);
+      expect(await databaseExists(first.target.database)).toBe(true);
+      expect(await databaseExists(second.target.database)).toBe(true);
     } finally {
       await first.teardown();
       await second.teardown();
     }
-    await expect(await databaseExists(first.target.database)).toBe(false);
-    await expect(await databaseExists(second.target.database)).toBe(false);
+    expect(await databaseExists(first.target.database)).toBe(false);
+    expect(await databaseExists(second.target.database)).toBe(false);
   });
 });
 
