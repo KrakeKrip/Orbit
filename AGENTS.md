@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: FOUNDATIONS; TASK-001–003 приняты и локально интегрированы; TASK-004 подготовлен для GLM, статус TODO; реализация ещё не проверена. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: FOUNDATIONS; TASK-001–003 приняты и локально интегрированы; TASK-004 после независимого review NEEDS_FIXES (bootstrap/CLI/teardown); код не интегрирован. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
