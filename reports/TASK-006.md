@@ -29,3 +29,16 @@ Executor dev StrictMode evidence прочитан; самостоятельны�
 
 ## Передача GLM
 Та же ветка/worktree. Исправить только R1/R2/R3 и связанные regressions, обновить reports/TASK-006-executor.md. Обычные новые commits; не менять main/старые worktree/coord docs/защитные настройки; без merge/push/amend/rebase/reset/deploy. Выполнить gates TASK-006, вернуть full latest SHA и READY_FOR_REVIEW либо точную BLOCKED диагностику. TASK-007 не начинать.
+
+
+## Повторное review fcd5d87 — 2026-10-08
+
+**APPROVED для локальной интеграции. R1/R2/R3 закрыты.** Проверен `fcd5d87744a45e7e2edacad3edc6dfe674b35237` относительно review `d22a65ec7d3b19f2702c9164b64b3888a49543b1`: 6 файлов, 170 insertions/7 deletions, только 2 src + 3 test + executor report. Service/schema/ownership/dependencies не менялись.
+
+R1: native UTF-16 maxLength убран; pure validation по 120 code points сохранена. Browser regression проверяет keyboard.insertText(120 emoji), создание/reload полного имени, 121 — validation с сохранённым draft. R2: другой rename trigger disabled при pending и openRename имеет in-flight guard; held PATCH regression с двумя проектами проходит. R3: media type определяется до ';', trim/lowercase и точное равенство application/json; JSONP отвергается. Реальные POST/PATCH/settings HTTP regressions сохраняют отсутствие mutation при отказе.
+
+Независимые gates Node 24.21.0: npm ci --offline; lint/typecheck без warnings; 29 unit, 47 DB, 72 auth, CI=1 E2E_PORT=3253 — 71 browser; isolated git archive snapshot без env, npm ci + build — все exit 0/PASS. По одному auth/E2E прогону Codex; executor 2× отдельно заявлены. Logs без lifecycle error patterns.
+Повторён исходный независимый Chromium/API probe на собственном production server 3254/unique test DB: application/jsonp →415; API 120 emoji →201; реальная вставка в input →120 code points/240 units; trigger Q при held PATCH P недоступен и его editor не открывается до/после ответа P. Probe exit 0, server/pool/DB закрыты через completion-aware finalization.
+
+Нормальные rename/error/retry/focus/unmount/browser regressions сохранены. Mounted lifecycle guard симметричен по коду и не менялся коррекцией; executor real Next dev evidence прочитан, независимый dev replay в этом раунде не выполнялся. Реальные устройства/production proxy/deployment не проверены; прежние ограничения остаются.
+Следующий шаг: local no-ff merge в чистую main, integration gates и DONE. TASK-007 этим review не назначен; push/deploy не разрешены.
