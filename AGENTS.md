@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: INITIAL SETUP. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: FOUNDATIONS; TASK-001 принят, следующий TASK ещё не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
@@ -33,5 +33,5 @@ TODO означает в том числе подготовленную, но е
 - Не считать сборку доказательством GUI, авторизации или работы на реальном устройстве. Явно отделять проверенное от непроверенного.
 
 ## Проверки
-Пока нет package.json, команды приложения недоступны. TASK-001 должен добавить npm scripts dev/start/lint/typecheck/test/build и README.
+TASK-001 добавил package.json, npm scripts dev/start/lint/typecheck/test/build и README. Целевой runtime Node 24 LTS. Review — reports/TASK-001.md; тесты foundation не подтверждают будущие DB/auth/task flows.
 Дальнейшие проверки соразмерны изменениям: правила дат — unit, безопасность — integration с двумя пользователями, интерфейс — browser/E2E и мобильные размеры.

@@ -63,7 +63,7 @@ User-authorized ChatGPT integration must call existing task services using a sco
 - https://better-auth.com/docs/reference/options
 
 ## INITIAL SETUP: уточнения и границы
-Это целевая архитектура; приложение, пакеты и БД пока отсутствуют. Используется именно shadcn/ui на Tailwind, не произвольная замена.
+Архитектура преимущественно целевая. TASK-001 реализовал только Next.js foundation, зависимости и команды проверок; БД, auth и task services пока отсутствуют. Используется именно shadcn/ui на Tailwind, не произвольная замена.
 
 ### Структура кода после соответствующих TASK
 - src/app: App Router, layouts, route handlers, Server Actions; минимальная HTTP-обвязка.
@@ -91,3 +91,10 @@ npm и единственный package-lock.json; Node.js 24 LTS как цел�
 - https://nextjs.org/docs/app/getting-started/installation
 - https://better-auth.com/docs/authentication/email-password (server disableSignUp)
 - https://nextjs.org/docs/app/guides/progressive-web-apps
+
+## Проверенное состояние после TASK-001 (2026-10-08)
+Next 16.4.0 / React 19.3.0 / Tailwind 4.3.3 через @tailwindcss/turbopack; TypeScript 5.9.3 strict, ESLint 9.39.5, Vitest 5.0.3. Node 24.21.0 / npm 11.19.0 использованы для независимого review. Статическая русская стартовая страница и SVG favicon; команды и локальный запуск в README. cacheComponents/partialPrefetching включены, фактических персональных данных/cache нет. Перед auth интеграцией проверить session/logout/cache границы. Известные tooling ограничения — reports/TASK-001.md.
+
+## Клиенты и общий сервер (уточнение пользователя)
+Первый релиз — веб/PWA онлайн. Далее планируются приложения iOS и macOS; Telegram возможен, формат (бот/Mini App) пока не выбран. Native UI frameworks пока не утверждены. Офлайн и синхронизация локальных изменений — отдельный будущий этап.
+Общий сервер — один источник данных и бизнес-правил. Next.js Server Actions служат веб-клиенту, а HTTP API должен предоставлять операции будущим клиентам без привязки к внутреннему формату Server Actions. До первого CRUD TASK зафиксировать versioned API contracts, validation/errors и разделение transport/services. Auth для native, Telegram linking и MCP credentials проектируются в соответствующих отдельных TASK; не использовать общий admin token. Реализации API и native приложений сейчас нет.

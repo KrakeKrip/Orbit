@@ -11,3 +11,6 @@
 - ADR-007 — Public signup выключен server-side; первый аккаунт через локальную одноразовую процедуру. Обязательные ownership integration tests с двумя пользователями; MCP/OAuth, приглашения и регистрация вне MVP.
 - ADR-008 — PWA online-only, без offline data cache. Проверка manifest не равна проверке установки на iPhone. Deployment и VPS/VPN работы только по отдельному поручению.
 - ADR-009 — Старый CODEX_PROMPT.md сохранён, но больше не действующий TASK. Codex координирует/reviews; GLM получает только TASK-001, дальнейшие TASK ещё не выданы.
+
+- ADR-010 — Уточнение пользователя: web first, затем iOS/macOS, возможно Telegram; офлайн позднее. Сохраняем стек и общий service layer; до CRUD уточняем versioned HTTP API для внешних клиентов, Server Actions не единственный transport. Технологии native UI/Telegram format/auth пока не утверждены.
+- ADR-011 — TASK-001 независимо проверен и интегрирован локальным merge 25a0a9ca47e337a02dd4d4ffe14001f90744b8fc. Foundation tests/build/HTTP/browser проходят на Node 24.21.0. Принят неблокирующий dev-tooling риск: braces advisory без патча и unsupported ESLint 9; production audit 0, повторить проверку обновлений до deployment. Подробности — reports/TASK-001.md. Remote/push/deploy отсутствуют.
