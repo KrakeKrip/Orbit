@@ -2,7 +2,34 @@
 
 ## Статус
 
-READY_FOR_REVIEW
+READY_FOR_REVIEW (после коррекции R1 по review reports/TASK-002.md от 2026-10-08).
+
+## Correction R1 — мобильные touch targets >= 44×44 (этап NEEDS_FIXES)
+
+Старт коррекции: HEAD `c4aae5f` (coord-коммит с review) поверх `b9971e6`. Исправлены только затронутые R1 файлы: `src/components/orbit/theme-select.tsx`, `src/components/orbit/mobile-header.tsx`, `tests/e2e/navigation.spec.ts` + этот отчёт; зависимости/документы/прочий код не менялись.
+
+Причины дефекта и исправление (consumer-классы, без правки библиотеки):
+- SelectTrigger имел generated `data-[size=default]:h-8` → добавлен `min-h-11`: в CSS `min-height` перекрывает `height` независимо от специфичности data-size вариантов (проверена фактическая геометрия, не только классы в source).
+- SelectItem имел компактный `py-1` (~28 px) → добавлен `min-h-11`.
+- Ссылка Orbit в mobile header имела `min-h-11` без минимума ширины → добавлены `min-w-11 justify-center` (текст центрируется, область 44×44).
+
+Фактическая геометрия после фикса (production build, viewport 360×740, getBoundingClientRect, замер отдельным Playwright-скриптом):
+- header link Orbit: **44×44** (было 36.56×44);
+- `#theme-select` (trigger): **224×44** (было 224×32);
+- раскрытые options «Системная/Светлая/Тёмная»: **219×44** каждая (было 219×28).
+
+Расширенное regression-покрытие (tests/e2e/navigation.spec.ts, ширины 360 и 390):
+- реальные boundingBox триггера, всех трёх раскрытых options (≥44×44, правый/нижний край в пределах viewport — без clip/overflow) и ссылки Orbit;
+- закрытие Escape с возвратом фокуса на триггер, scrollWidth ≤ ширины viewport;
+- выбор темы клавиатурой (Enter/ArrowDown/Enter → класс light, фокус на триггере) при мобильной ширине.
+
+Признание: исходные 43 e2e-теста не покрывали theme trigger/options и ссылку Orbit, поэтому критерий «все touch targets ≥44×44» ранее не был полностью подтверждён — замечание review справедливо.
+
+Повторные проверки после фикса (Node v24.21.0 / npm 11.19.0): `npm run lint` 0; `npm run typecheck` 0; `npm test` 0 (4 tests); `npm run test:e2e` 0 — **47 passed / 0 failed** (43 прежних + 4 новых); `next build` в составе e2e — 0; `git diff --check` чисто. Коммиты коррекции: fix + обновление отчёта (SHA — в ответе пользователю и в Git-логе; в файл отчёта собственный SHA не вписывается).
+
+---
+
+## Исходная реализация (до коррекции, сохранено без изменений)
 
 ## TASK
 
