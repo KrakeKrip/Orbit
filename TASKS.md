@@ -1,12 +1,12 @@
 # Orbit — очередь MVP
 
-Этап INITIAL SETUP, 2026-10-08. Код отсутствует. Только TASK-001 подготовлен к передаче; исполнитель ещё не запущен.
+Этап INITIAL SETUP, 2026-10-08. Код отсутствует. TASK-001 реализован GLM и проходит независимое review Codex; следующий TASK ещё не выдан.
 Статусы: TODO → IN_PROGRESS → REVIEW → DONE; NEEDS_FIXES / BLOCKED при необходимости.
 Каждый следующий TASK зависит от успешной интеграции предыдущего. Строка очереди не разрешает начать реализацию.
 
 | TASK | Статус | Результат и граница приёмки |
 | --- | --- | --- |
-| TASK-001 | TODO | Next.js/TS/Tailwind foundation, npm scripts, Vitest smoke, локальный README; без app shell, auth и DB |
+| TASK-001 | REVIEW | Next.js/TS/Tailwind foundation, npm scripts, Vitest smoke, локальный README; без app shell, auth и DB |
 | TASK-002 | TODO | shadcn/ui, дизайн-токены, light/dark, desktop sidebar и mobile bottom navigation с пустыми экранами; 360/390/768/1280 px и keyboard smoke |
 | TASK-003 | TODO | Локальный PostgreSQL Compose, Drizzle, schema/migrations с owner/FK/check constraints и completion revision; apply на пустую dev DB, без auth flows |
 | TASK-004 | TODO | Better Auth sessions, server signup OFF, локальный bootstrap пользователя, protected server boundary; тесты анонимного доступа и запрета signup |
