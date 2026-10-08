@@ -2,7 +2,43 @@
 
 ## Статус
 
-READY_FOR_REVIEW.
+READY_FOR_REVIEW (после коррекции R1/R2/R3 по review reports/TASK-007.md; старт коррекции `fe95c5be5d799317ade3722398efcf03d8501ec8`).
+
+## Correction R1/R2/R3 (этап NEEDS_FIXES)
+
+Изменены только: `src/components/orbit/tasks-view.tsx`, `tests/e2e/inbox.spec.ts` (+3 регрессии, 79 → 82). Service/schema/API/transactions/completion/locking и timestamp corrections (now() из БД) не переделывались — замечания раунда подтверждены как UI-only.
+
+### R1 — read failure не переклассифицируется в failed mutation
+`refreshLists` получил catch: network/JSON rejection чтения → контролируемый outcome (`setListError(true)` при живом actor) и `return false`, без throw. Все mutation-обработчики (create/rename/toggle/delete) после успешного ответа вызывают `await refreshLists()` — сбой последующего чтения теперь показывает **read error с кнопкой «Повторить» (только GET)** и не попадает в catch обработчика, поэтому подтверждённая mutation больше не помечается failed; draft create уже очищен к этому моменту. Retry (кнопка «Повторить») выполняет только `refreshLists()` — два GET, без повторного POST/PATCH/DELETE. Правда failed mutation (отказ самого запроса) сохраняет прежний draft/error/retry. Actor/lifecycle guards сохранены.
+
+### R2 — конфликтующие действия строки заблокированы при pending
+Прежний `rowBusy` исключал текущую toggle-строку. Теперь `busy` (rename/toggle/delete pending) блокирует **все** action-кнопки **всех** строк: у строки с held complete её «Переименовать»/«Удалить»/повторный toggle disabled (pending-лейбл на toggle). Handler- guards продублированы: `handleToggle/handleDelete/handleRenameSubmit/openRename/openDeleteConfirm` отказывают при любом чужом in-flight. Повторный toggle и force/programmatic клики не открывают editor/confirmation и не отправляют вторую mutation. После response/ошибки guards снимаются (pending-лейблы/кнопки возвращаются). Rename P→Q regression (TASK-006/R2) сохранена.
+
+### R3 — delete confirmation: focus/Escape/cancel
+Confirmation inline сохранён. При открытии фокус — **безопасная «Отмена»** (`task-delete-cancel-<id>` через `deleteFocus` state+effect, объект с nonce перезапускает эффект; сам эффект только фокусирует DOM — StrictMode-идемпотентно, без setState). Escape до DELETE (onKeyDown контейнера, игнорируется при pending) отменяет и возвращает фокус на `task-delete-trigger-<id>`; явная «Отмена» — то же; мутирующего запроса нет. После успешного удаления фокус — quick-add input (`task-title-input`, логичный следующий control); при failure фокус не теряется, error виден. Pending policy: Escape/Отмена при deletePending игнорируются/заблокированы.
+
+### Browser regressions (inbox.spec, +3)
+1. **R1**: реальный POST проходит на сервер (route.fallback), GET lists aborted → read error «Не удалось обновить список задач.» + «Повторить», без «Не удалось добавить задачу», draft пуст; retry → ровно одна строка, `postCount === 1`, `pageErrors` пуст (нет unhandled Failed to fetch).
+2. **R2**: held PATCH complete → rename/delete/toggle строки disabled asserted; force-click не открывает editor/confirmation; PATCH count остаётся 1; релиз 500 → alert, кнопки снова enabled, retry-завершение работает.
+3. **R3**: keyboard open → activeElement = `task-delete-cancel-<id>`; Escape → confirmation закрыт, activeElement = `task-delete-trigger-<id>`, DELETE count 0; явная Отмена → то же; keyboard confirm (Shift+Tab+Enter) → ровно один DELETE, activeElement = `task-title-input`.
+
+## Проверки после коррекции (Node v24.21.0 / npm 11.19.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| `npm run lint` / `npm run typecheck` | exit 0 / exit 0, без warnings |
+| `npm test` | exit 0 — 44 passed |
+| `npm run test:db` | exit 0 — 47 passed |
+| `npm run test:auth` №1 / №2 (последовательно) | exit 0 — **101/101** оба; 0 lifecycle-паттернов |
+| `CI=1 E2E_PORT=3266` / `3267` (последовательно) | exit 0 — **82/82** оба (79 + 3 новых регрессии); 0 lifecycle-паттернов |
+| `npm run build` без `.env` | exit 0 |
+| Leftovers | orbit_test\*-баз: 0; `git diff --check` чист; изменения — 1 компонент + 1 spec |
+
+Ограничения — без изменений к исходному раунду (реальные устройства/production proxy не проверялись; даты/notes/priority/project assignment/subtasks/recurrence вне scope; clock skew устранён server-side `now()`; limiter single-process).
+
+---
+
+# Предыдущий раунд (исходная реализация)
 
 ## Исходное состояние (проверено до изменений)
 

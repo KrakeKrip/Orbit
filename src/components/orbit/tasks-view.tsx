@@ -78,6 +78,15 @@ export function TasksView({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // R3 фокус confirmation: при открытии — безопасная «Отмена»; при
+  // отмене/Escape — trigger строки; после успешного удаления — quick-add.
+  // Новый объект на каждый переход перезапускает эффект; сам эффект только
+  // фокусирует DOM-узел (StrictMode-идемпотентно, без setState).
+  const [deleteFocus, setDeleteFocus] = useState<{
+    target: "cancel" | "trigger" | "create";
+    id: string;
+    nonce: number;
+  } | null>(null);
 
   const mountedRef = useRef(true);
   const actorRef = useRef(actorId);
@@ -102,6 +111,20 @@ export function TasksView({
     }
     document.getElementById(`task-rename-trigger-${renameFocusTarget.id}`)?.focus();
   }, [renameFocusTarget]);
+  useEffect(() => {
+    if (deleteFocus === null) {
+      return;
+    }
+    if (deleteFocus.target === "create") {
+      document.getElementById("task-title-input")?.focus();
+      return;
+    }
+    const elementId =
+      deleteFocus.target === "cancel"
+        ? `task-delete-cancel-${deleteFocus.id}`
+        : `task-delete-trigger-${deleteFocus.id}`;
+    document.getElementById(elementId)?.focus();
+  }, [deleteFocus]);
 
   async function refreshLists(): Promise<boolean> {
     const requestedActorId = actorRef.current;
@@ -115,12 +138,21 @@ export function TasksView({
         return false;
       }
       if (open === null || completed === null) {
+        // Read failure: подтверждённые mutation не переклассифицируются —
+        // показывается read error с retry (retry выполняет только GET).
         setListError(true);
         return false;
       }
       setLists({ open, completed });
       setListError(false);
       return true;
+    } catch {
+      // Network/JSON rejection чтения — контролируемый outcome, не
+      // unhandled rejection и не отказ уже успешной mutation.
+      if (mountedRef.current && actorRef.current === requestedActorId) {
+        setListError(true);
+      }
+      return false;
     } finally {
       if (mountedRef.current && actorRef.current === requestedActorId) {
         setListPending(false);
@@ -170,9 +202,15 @@ export function TasksView({
   }
 
   function openRename(project: TaskDTO): void {
-    if (renamePending || renameInFlight.current) {
-      // Пока rename save не завершился, другой editor не открывается:
-      // поздний ответ прежнего запроса не должен закрыть новую форму.
+    // Пока не завершился любой другой mutation, новый editor не
+    // открывается: поздний ответ прежнего запроса не должен закрыть/поменять
+    // новую форму (TASK-006/R2 и R2 этого раунда).
+    if (
+      renamePending ||
+      renameInFlight.current ||
+      toggleInFlight.current ||
+      deleteInFlight.current
+    ) {
       return;
     }
     setDeleteConfirmId(null);
@@ -192,7 +230,12 @@ export function TasksView({
   }
 
   async function handleRenameSubmit(): Promise<void> {
-    if (renameInFlight.current || renameId === null) {
+    if (
+      renameInFlight.current ||
+      toggleInFlight.current ||
+      deleteInFlight.current ||
+      renameId === null
+    ) {
       return;
     }
     const parsed = parseTaskTitle(renameDraft);
@@ -217,6 +260,8 @@ export function TasksView({
       }
       if (response.ok) {
         closeRename(renameTargetId);
+        // Сбой чтения после успешного rename — read error/retry, не отказ
+        // rename (обновлённое имя уже подтверждено сервером).
         await refreshLists();
         return;
       }
@@ -234,7 +279,13 @@ export function TasksView({
   }
 
   async function handleToggle(task: TaskDTO): Promise<void> {
-    if (toggleInFlight.current) {
+    // R2: повторный toggle и конфликтующие действия других строк/редактора
+    // не запускаются, пока completion/reopen в полёте.
+    if (
+      toggleInFlight.current ||
+      renameInFlight.current ||
+      deleteInFlight.current
+    ) {
       return;
     }
     setToggleError(null);
@@ -275,16 +326,47 @@ export function TasksView({
   }
 
   function openDeleteConfirm(task: TaskDTO): void {
-    if (deleteInFlight.current) {
+    // R2: destructive confirmation не открывается во время любого другого
+    // pending; R3: фокус уходит в confirmation (безопасная «Отмена»).
+    if (
+      deleteInFlight.current ||
+      renameInFlight.current ||
+      toggleInFlight.current ||
+      renamePending
+    ) {
       return;
     }
     setRenameId(null);
     setDeleteConfirmId(task.id);
     setDeleteError(null);
+    focusNonceRef.current += 1;
+    setDeleteFocus({
+      target: "cancel",
+      id: task.id,
+      nonce: focusNonceRef.current,
+    });
+  }
+
+  function cancelDelete(taskId: string): void {
+    // Pending policy: отмена во время удаления не нарушает state handling.
+    if (deletePendingId === taskId) {
+      return;
+    }
+    setDeleteConfirmId(null);
+    focusNonceRef.current += 1;
+    setDeleteFocus({
+      target: "trigger",
+      id: taskId,
+      nonce: focusNonceRef.current,
+    });
   }
 
   async function handleDelete(task: TaskDTO): Promise<void> {
-    if (deleteInFlight.current) {
+    if (
+      deleteInFlight.current ||
+      renameInFlight.current ||
+      toggleInFlight.current
+    ) {
       return;
     }
     setDeleteError(null);
@@ -300,6 +382,15 @@ export function TasksView({
       if (response.ok) {
         setDeleteConfirmId(null);
         await refreshLists();
+        // Логичный следующий control после успешного удаления — quick-add.
+        if (mountedRef.current) {
+          focusNonceRef.current += 1;
+          setDeleteFocus({
+            target: "create",
+            id: task.id,
+            nonce: focusNonceRef.current,
+          });
+        }
         return;
       }
       setDeleteError(ru.tasks.delete.error);
@@ -424,7 +515,6 @@ export function TasksView({
             const completed = task.completedAt !== null;
             const togglePending = togglePendingId === task.id;
             const deletePending = deletePendingId === task.id;
-            const rowBusy = busy && !togglePending && !deletePending;
             return (
               <li
                 key={task.id}
@@ -490,7 +580,18 @@ export function TasksView({
                     </p>
                   </form>
                 ) : deleteConfirmId === task.id ? (
-                  <div role="alert" aria-live="assertive">
+                  <div
+                    role="alert"
+                    aria-live="assertive"
+                    onKeyDown={(event) => {
+                      // R3: Escape до отправки DELETE отменяет подтверждение
+                      // и возвращает фокус к trigger строки.
+                      if (event.key === "Escape" && !deletePending) {
+                        event.preventDefault();
+                        cancelDelete(task.id);
+                      }
+                    }}
+                  >
                     <p className="text-sm font-medium leading-6">
                       {ru.tasks.delete.confirmTitle}
                     </p>
@@ -512,8 +613,9 @@ export function TasksView({
                       <Button
                         type="button"
                         variant="outline"
+                        id={`task-delete-cancel-${task.id}`}
                         className="min-h-11 px-4"
-                        onClick={() => setDeleteConfirmId(null)}
+                        onClick={() => cancelDelete(task.id)}
                         disabled={deletePending}
                       >
                         {ru.tasks.delete.cancel}
@@ -540,7 +642,7 @@ export function TasksView({
                         variant="outline"
                         className="min-h-11 px-4"
                         onClick={() => void handleToggle(task)}
-                        disabled={rowBusy}
+                        disabled={busy}
                       >
                         {togglePending
                           ? completed
@@ -556,16 +658,17 @@ export function TasksView({
                         id={`task-rename-trigger-${task.id}`}
                         className="min-h-11 px-4"
                         onClick={() => openRename(task)}
-                        disabled={rowBusy}
+                        disabled={busy}
                       >
                         {ru.tasks.rename.action}
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
+                        id={`task-delete-trigger-${task.id}`}
                         className="min-h-11 px-4"
                         onClick={() => openDeleteConfirm(task)}
-                        disabled={rowBusy}
+                        disabled={busy}
                       >
                         {ru.tasks.delete.action}
                       </Button>

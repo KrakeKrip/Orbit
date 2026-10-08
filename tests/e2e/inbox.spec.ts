@@ -154,6 +154,176 @@ test.describe("входящие: quick-add/rename/complete (desktop 1280)", () =
     expect(invalid).toBe(501);
   });
 
+  test("R1: подтверждённый create + сбой чтения → read error/retry без повторного POST", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => {
+      pageErrors.push(String(error));
+    });
+    let postCount = 0;
+    let getAborted = false;
+    await page.route("**/api/v1/tasks*", async (route) => {
+      if (route.request().method() === "POST") {
+        // POST проходит на реальный сервер: create подтверждён и записан в БД.
+        postCount += 1;
+        await route.fallback();
+        return;
+      }
+      getAborted = true;
+      await route.abort();
+    });
+
+    await page.goto("/inbox");
+    const input = page.getByLabel("Название задачи");
+    await input.fill("R1 задача");
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    // POST подтверждён (201): ложный failed create недопустим — показывается
+    // read error с retry (только GET), draft очищен.
+    await expect(
+      page.getByText("Не удалось обновить список задач."),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Повторить" })).toBeVisible();
+    await expect(input).toHaveValue("");
+    await expect(page.getByText("Не удалось добавить задачу")).toHaveCount(0);
+
+    // Retry выполняет только чтение; восстановление GET показывает задачу
+    // ровно один раз, без повторного POST; unhandled rejections отсутствуют.
+    await page.unroute("**/api/v1/tasks*");
+    await page.getByRole("button", { name: "Повторить" }).click();
+    await expect(
+      page.locator("li[data-task-id]", { hasText: "R1 задача" }),
+    ).toBeVisible();
+    expect(
+      await page.locator("li[data-task-id]", { hasText: "R1 задача" }).count(),
+    ).toBe(1);
+    expect(postCount).toBe(1);
+    expect(getAborted).toBe(true);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("R2: при pending complete строки её rename/delete/toggle недоступны, вторая mutation не отправляется", async ({
+    page,
+  }) => {
+    const name = `R2 ${run}`;
+    let patchCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/tasks/**", async (route) => {
+      if (route.request().method() === "PATCH") {
+        patchCount += 1;
+        await gate;
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: '{"error":{"code":"INTERNAL"}}',
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(name);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const row = page.locator("li[data-task-id]", { hasText: name });
+    await expect(row).toBeVisible();
+
+    await row.getByRole("button", { name: "Завершить" }).click();
+    // Пока completion в полёте: конфликтующие действия строки недоступны.
+    await expect(row.getByRole("button", { name: "Переименовать" })).toBeDisabled();
+    await expect(row.getByRole("button", { name: "Удалить" })).toBeDisabled();
+    // Pending-лейбл кнопки toggle — «Завершение…».
+    await expect(
+      row.getByRole("button", { name: /Завершить|Завершение/ }),
+    ).toBeDisabled();
+
+    // Force/programmatic попытки не открывают editor/confirmation и не шлют
+    // вторую mutation.
+    await row
+      .getByRole("button", { name: "Переименовать" })
+      .click({ force: true })
+      .catch(() => undefined);
+    await expect(row.getByRole("textbox")).toHaveCount(0);
+    await row
+      .getByRole("button", { name: "Удалить" })
+      .click({ force: true })
+      .catch(() => undefined);
+    await expect(page.getByText("Удалить задачу?")).toHaveCount(0);
+    await row
+      .getByRole("button", { name: /Завершить|Завершение/ })
+      .click({ force: true })
+      .catch(() => undefined);
+    expect(patchCount).toBe(1);
+
+    // После отказа guards сняты: кнопки доступны, задача осталась открытой.
+    release();
+    await expect(row.getByRole("alert")).toBeVisible();
+    await expect(row.getByRole("button", { name: "Переименовать" })).toBeEnabled();
+    await expect(row.getByRole("button", { name: "Удалить" })).toBeEnabled();
+    await expect(row.getByRole("button", { name: "Завершить" })).toBeEnabled();
+    await page.unroute("**/api/v1/tasks/**");
+    await row.getByRole("button", { name: "Завершить" }).click();
+    await expect(page.locator("li[data-task-id]", { hasText: name })).toHaveCount(0);
+  });
+
+  test("R3: delete confirmation — keyboard focus/Escape/cancel/confirm", async ({
+    page,
+  }) => {
+    let deleteCount = 0;
+    await page.route("**/api/v1/tasks/**", async (route) => {
+      if (route.request().method() === "DELETE") {
+        deleteCount += 1;
+      }
+      await route.fallback();
+    });
+    const name = `R3 ${run}`;
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(name);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const row = page.locator("li[data-task-id]", { hasText: name });
+    await expect(row).toBeVisible();
+    const taskId = await row.getAttribute("data-task-id");
+    expect(taskId).not.toBeNull();
+
+    // Keyboard open: фокус внутри confirmation — безопасная «Отмена».
+    await row.getByRole("button", { name: "Удалить" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Удалить задачу?")).toBeVisible();
+    let activeId = await page.evaluate(() => document.activeElement?.id ?? "");
+    expect(activeId).toBe(`task-delete-cancel-${taskId}`);
+
+    // Escape до DELETE: отмена + фокус на trigger, мутирующего запроса нет.
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("Удалить задачу?")).toHaveCount(0);
+    activeId = await page.evaluate(() => document.activeElement?.id ?? "");
+    expect(activeId).toBe(`task-delete-trigger-${taskId}`);
+    expect(deleteCount).toBe(0);
+
+    // Явная Отмена: фокус на trigger, без DELETE.
+    await row.getByRole("button", { name: "Удалить" }).click();
+    await expect(page.getByText("Удалить задачу?")).toBeVisible();
+    await page.getByRole("button", { name: "Отмена", exact: true }).click();
+    activeId = await page.evaluate(() => document.activeElement?.id ?? "");
+    expect(activeId).toBe(`task-delete-trigger-${taskId}`);
+    expect(deleteCount).toBe(0);
+
+    // Keyboard confirm: ровно один DELETE; после удаления фокус на quick-add.
+    await row.getByRole("button", { name: "Удалить" }).click();
+    await expect(page.getByText("Удалить задачу?")).toBeVisible();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Enter");
+    await expect(
+      page.locator("li[data-task-id]", { hasText: name }),
+    ).toHaveCount(0);
+    expect(deleteCount).toBe(1);
+    activeId = await page.evaluate(() => document.activeElement?.id ?? "");
+    expect(activeId).toBe("task-title-input");
+    await page.unroute("**/api/v1/tasks/**");
+  });
+
   test("delayed complete + навигация: stale ответ не меняет UI", async ({
     page,
   }) => {
@@ -268,9 +438,13 @@ test.describe("входящие на мобильной ширине (360)", () 
     await expect(row).toBeVisible();
 
     await row.getByRole("button", { name: "Завершить" }).click();
-    await expect(page.locator("li[data-task-id]", { hasText: `Мобильная ${run}` })).toHaveCount(0);
+    await expect(
+      page.locator("li[data-task-id]", { hasText: `Мобильная ${run}` }),
+    ).toHaveCount(0);
     await page.getByRole("button", { name: "Завершённые", exact: true }).click();
-    await expect(page.locator("li[data-task-id]", { hasText: `Мобильная ${run}` })).toBeVisible();
+    await expect(
+      page.locator("li[data-task-id]", { hasText: `Мобильная ${run}` }),
+    ).toBeVisible();
 
     const scrollWidth = await page.evaluate(
       () => document.documentElement.scrollWidth,
