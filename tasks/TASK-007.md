@@ -1,7 +1,7 @@
 # TASK-007 — Inbox и базовые one-off задачи
 
 ## Статус / база / окружение
-TODO — assignment для GLM, реализация не началась. База review: `3b716dc0bfd06fbf5a508a83382abc1fda77d852` (принятый TASK-006).
+NEEDS_FIXES — независимое review `22ba2d312c1683b1d9f54365c249a795b557fb09` выявило R1/R2/R3 [P2] в Inbox UI: read/network failure, pending actions, keyboard/focus подтверждения удаления. Отчёт reports/TASK-007.md, review commit `fe95c5be5d799317ade3722398efcf03d8501ec8` в task/TASK-007. Исправления в той же ветке/worktree; main не интегрирована, TASK-008 не выдан. Ниже исходный assignment. База review: `3b716dc0bfd06fbf5a508a83382abc1fda77d852` (принятый TASK-006).
 Ветка `task/TASK-007`; worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-007`. Starting SHA assignment взять через git rev-parse HEAD и записать в executor report: assignment над review-базой не является реализацией GLM.
 Прочитать AGENTS.md, PRODUCT.md, ARCHITECTURE.md, DESIGN.md, DECISIONS.md, этот TASK и финальные reports/TASK-004.md, TASK-005.md, TASK-006.md. Проверить pwd/git toplevel/branch/status; при чужих изменениях остановить затронутую работу.
 Приняты auth/settings/Projects; /inbox — placeholder. Main regression: 29 unit, 47 DB, 72 auth, 71 browser, no-env build. Runtime Node 24; Orbit Postgres loopback55432, не CRM/5433. Только собственные unique test DB по validated TEST_DATABASE_URL. Test lifecycle completion/clean shutdown/forced-failure semantics TASK-004 сохранить. Новых schema/migrations не требуется.

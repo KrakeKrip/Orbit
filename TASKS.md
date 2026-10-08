@@ -1,6 +1,6 @@
 # Orbit — очередь MVP
 
-Этап EVERYDAY CORE, 2026-10-08. TASK-001–006 приняты и локально интегрированы после независимого review. Работают foundation, shell/themes, PostgreSQL, Better Auth, account settings и Projects list/create/rename/archive/restore. TASK-006 DONE, review — reports/TASK-006.md. Task CRUD и реальные задачи в интерфейсе ещё отсутствуют; TASK-007 подготовлен для GLM: tasks/TASK-007.md, отдельная ветка/worktree, TODO до исполнения.
+Этап EVERYDAY CORE, 2026-10-08. TASK-001–006 приняты и локально интегрированы после независимого review. Работают foundation, shell/themes, PostgreSQL, Better Auth, account settings и Projects list/create/rename/archive/restore. TASK-006 DONE, review — reports/TASK-006.md. Task CRUD и реальные задачи в интерфейсе ещё отсутствуют; TASK-007 NEEDS_FIXES после review 22ba2d3: три UI замечания R1/R2/R3, report/review fe95c5b в task/TASK-007. Исправления в той же ветке/worktree; TASK-008 не выдан.
 Статусы: TODO → IN_PROGRESS → REVIEW → DONE; NEEDS_FIXES / BLOCKED при необходимости.
 Каждый следующий TASK зависит от успешной интеграции предыдущего. Строка очереди не разрешает начать реализацию.
 
@@ -12,7 +12,7 @@
 | TASK-004 | DONE | Better Auth login/logout sessions, server signup OFF, локальный bootstrap пользователя, protected server boundary; тесты анонимного доступа и запрета signup |
 | TASK-005 | DONE | Настройки timezone/theme, проверка сохранения и существующего sign-out, сохранение после refresh; IANA validation и owner isolation |
 | TASK-006 | DONE | Projects create/rename/archive/unarchive, server ownership, исключение архивных данных; tests с двумя пользователями |
-| TASK-007 | TODO (выдан) | Task CRUD, quick-add/Inbox, one-off complete/reopen/soft delete, стабильный порядок; refresh persistence и IDOR tests |
+| TASK-007 | NEEDS_FIXES | Task CRUD, quick-add/Inbox, one-off complete/reopen/soft delete, стабильный порядок; refresh persistence и IDOR tests |
 | TASK-008 | TODO | Today/Upcoming, user-local даты, независимые deadline warnings без дублей; timezone boundary tests |
 | TASK-009 | TODO | Project tasks, parent/subtask один уровень, atomic move/delete, priority/notes, полноценный task details sheet |
 | TASK-010 | TODO | Owner-scoped search по title/notes, loading/error/empty states, shortcuts Q / Esc, rollback ошибок сохранения |
