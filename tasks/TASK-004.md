@@ -1,7 +1,7 @@
 # TASK-004 — Better Auth, вход и защищённые серверные границы
 
 ## Статус / цель
-NEEDS_FIXES — независимое review 2026-10-08: R1/R2/R3 в reports/TASK-004.md task ветки; приёмки/интеграции нет. Подключить настоящий email/password вход к принятой PostgreSQL схеме, запретить публичную регистрацию на сервере, создать безопасную локальную процедуру первого аккаунта и reusable session boundary. CRUD/tasks/settings persistence не входят в задачу.
+DONE — независимое review 2026-10-08 завершено, R1/R1b/R2/R3/R3b/R3c закрыты; локальный merge 6424fd247af9f21a3e556a207412ef4ae2df7aef и интеграционные проверки PASS. Отчёт: reports/TASK-004.md. Исходная цель: Подключить настоящий email/password вход к принятой PostgreSQL схеме, запретить публичную регистрацию на сервере, создать безопасную локальную процедуру первого аккаунта и reusable session boundary. CRUD/tasks/settings persistence не входят в задачу.
 
 ## Исходное состояние
 Прочитать AGENTS.md, PRODUCT.md, ARCHITECTURE.md, DESIGN.md, DECISIONS.md, reports/TASK-003.md и этот TASK.

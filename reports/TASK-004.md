@@ -144,3 +144,12 @@ Completion result синхронно сохраняется до exit, пров�
 Неблокирующие ограничения: один app/DATABASE_URL на процесс global registry; deterministic synthetic duplicate response branch отдельно не покрыта (уникальный returned id проверяется против БД); memory limiter/trusted proxy требуют пересмотра до deployment; прежние dependency/tooling audit findings не исправлялись force-update. Local E2E markers предполагают один запуск в checkout, не параллельные suites в одной папке. Наличие runner namespace-pattern само по себе не является универсальным доказательством владения: emergency cleanup применяется только с локальным маркером данного запуска; непроверенные внешние marker files не использовать.
 
 Следующий шаг координатора: локальный merge --no-ff в чистую main, интеграционные проверки, затем DONE. TASK-005 этим review не выдан; push/deploy не разрешены.
+
+
+## Локальная интеграция — DONE, 2026-10-08
+
+Review commit `3e4762c169ca6e257c19bbb574f01b44fcdfe320`, принятая реализация `a0bc778283526ce02fd7d5de6cc9033f92985907`, локальный merge --no-ff **`6424fd247af9f21a3e556a207412ef4ae2df7aef`**. Main была чистой перед merge, конфликты отсутствовали, история сохранена.
+
+На интегрированной main независимо: npm ci --offline PASS; lint/typecheck PASS без warnings; UI 4/DB 47/auth 31/E2E 56 PASS, все exit 0. E2E CI=1 на отдельном порту 3217. Auth/E2E logs без lifecycle errors; свои unique test DB, пользовательскую dev БД не мигрировали и личный аккаунт не создавали. Main .env отсутствует: build без DATABASE_URL/BETTER_AUTH_SECRET/BETTER_AUTH_URL PASS, workspace/login/API Dynamic. TEST_DATABASE_URL только для изолированных suites передан из ignored локальной конфигурации без вывода секретов и без записи .env в main.
+
+TASK-004 DONE. Координационные документы актуализированы; TASK-005 не выдан. Push/deploy/изменение защитных настроек не выполнялись. Реальные iOS/macOS устройства и production остаются непроверенными; приложение пока auth foundation/UI placeholders, без task CRUD/settings persistence.
