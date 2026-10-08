@@ -69,3 +69,6 @@ TASK-001: только нейтральная стартовая страниц�
 Сдержанный indigo accent, системные шрифты, light/dark tokens; next-themes хранит light/dark/system под orbit-theme локально. Server/account persistence позднее, в TASK-005. Реально используемые shadcn Button/Select, skip link и visible focus. Полный task details/мобильные sheets после data TASK.
 
 TASK-002 принят: surface реализован как alias shadcn card; minimum touch target 44×44 проверяется для theme trigger/options, mobile Orbit/Settings и bottom nav. Реальный дизайн task rows/details появится после data TASK.
+
+## TASK-004: login/logout (задание)
+/login — самостоятельная русская email/password форма с labels/autocomplete/pending/generic error, без signup/reset/social links и без workspace nav. Theme сохранена; controls >=44 px, 360/390/1280px и keyboard. Settings получает только реальную кнопку Выйти; account preferences/timezone — TASK-005. Five workspace routes после auth guard сохраняют текущие честные data placeholders.
