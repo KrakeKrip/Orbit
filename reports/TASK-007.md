@@ -34,3 +34,27 @@ Executor real dev StrictMode evidence прочитан; самостоятель
 
 ## Передача GLM
 Та же ветка/worktree; исправить R1/R2/R3 и browser regressions, обновить reports/TASK-007-executor.md. Service/schema/ownership/completion/locking не переделывать: найденные ошибки в UI, подтверждённые server write semantics сохраняются. Обычные новые commits; main/старые worktree/coord docs/protective hooks не менять; без merge/push/amend/rebase/reset/deploy. Выполнить gates TASK-007, вернуть full latest SHA и READY_FOR_REVIEW либо точную BLOCKED диагностику. TASK-008 не начинать.
+
+
+## Повторное review 61a2add — 2026-10-08
+
+**NEEDS_FIXES: R1/R2 закрыты, R3 open/cancel/Escape/success закрыт; осталось R3b [P2] — focus после DELETE failure.** Проверен `61a2addd8b24287cde4fa9bf55a2071da2edd402` относительно `fe95c5be5d799317ade3722398efcf03d8501ec8`: фактически **3 файла**, 329 insertions/16 deletions (tasks-view + inbox browser spec + executor report). Source изменений только один component; service/API/schema/transactions/completion/locking не менялись. Дерево перед review чистое, diff --check PASS.
+
+### Закрытые замечания
+R1: refreshLists ловит network/JSON read rejection и возвращает контролируемый outcome, list error/retry показан, подтверждённая mutation больше не становится failed write. Независимый production probe: POST успешен/запись есть, aborted GET → createError=false, draft пустой, read retry=1; HTTP500 reading→retry network abort → unhandledPageErrors=[]; последующее чтение восстанавливается без нового POST.
+R2: current completion row rename/delete/toggle disabled и handler guards предотвращают вторую mutation/editor. Независимый held complete probe: renameEnabled=false, deleteEnabled=false; force-click не открывает confirmation до/после response. Сохранён held rename P→Q regression.
+R3: open фокусирует безопасную Отмену; Escape и explicit cancel возвращают focus на delete trigger. Keyboard success→quick-add regression проходит.
+
+### R3b [P2] После отказа удаления focus остаётся BODY
+`src/components/orbit/tasks-view.tsx`, handleDelete error/catch/finally (строки 396–407): при DELETE кнопки confirmation disabled, сфокусированный confirm button теряет focus. Error path показывает ошибку и включает кнопки обратно, но не задаёт deleteFocus, поэтому эффект восстановления focus не вызывается. Это оставшаяся часть первоначального R3: «при failure фокус не теряется», а не новый scope.
+
+Независимый Chromium probe на собственном production server **3269**/unique test DB: open confirmation → focus Отмена → Shift+Tab/Enter → held DELETE; подтвердить pending disabled controls; отпустить HTTP500 → alert видим, Отмена enabled, **document.activeElement={tag:BODY,id:''}**. Keyboard пользователь снова теряет своё место; Escape на BODY не всплывает к confirmation.
+Исправить только failure focus lifecycle: после HTTP refusal или network rejection и снятия pending вернуть focus в доступный безопасный control текущего живого confirmation. Не переносить focus после unmount/смены actor/неактуального request и не разрешать Escape/cancel во время DELETE pending. Сохранить success→quick-add, cancel/Escape→trigger, R1/R2 guards и read error semantics.
+Acceptance: детерминированный keyboard held DELETE→500 (и network rejection, если отдельная ветка) → task/confirmation остаются, error видима, pending снят, focus внутри confirmation на enabled control; Escape после отказа отменяет и возвращает focus к trigger; retry-delete работает. Добавить это в browser regression без weakening прежних assertions.
+
+### Независимые gates и ресурсы
+Node24.21.0: npm ci --offline; lint/typecheck без warnings; **44 unit**, **47 DB**, **101 auth**, CI=1 E2E_PORT=3268 — **82 browser**, isolated archive no-env snapshot + npm ci/build — все PASS/exit0. По одному auth/E2E прогону Codex, executor 2× отмечены отдельно. Auth/E2E logs без lifecycle error patterns. Дополнительный controlled browser/API probe 3269 завершился exit0; server/pool/test DB закрыты completion-aware finalization. Leftover orbit_test_* DB/connections: 0.
+Independent dev replay в этом раунде не выполнялся; реальные устройства/proxy/deployment не проверены. Merge/push/deploy не выполнялись; main product source/localhost3000/CRM/protective hooks не менялись. TASK-008 не назначен.
+
+### Следующая передача GLM
+Та же ветка/worktree, только R3b focus после failed DELETE и browser regression, обновить executor report. Не переделывать service/schema/API/transactions/R1/R2. Обычные новые commits, gates TASK-007, вернуть latest full SHA/READY_FOR_REVIEW; без merge/push/amend/rebase/reset/deploy. TASK-008 не начинать.
