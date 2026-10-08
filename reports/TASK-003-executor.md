@@ -2,7 +2,46 @@
 
 ## Статус
 
-READY_FOR_REVIEW
+READY_FOR_REVIEW (после коррекции R1/R2 по review reports/TASK-003.md от 2026-10-08).
+
+## Correction R1/R2 — безопасный DB test runner (этап NEEDS_FIXES)
+
+Старт коррекции: HEAD `736d460` (coord-коммит с review) поверх `3706dd2`. Изменены только затронутые области: `tests/db/` (новые `db-target.ts`, `runner.ts`, guard/sentinel тесты; переработаны `global-setup.ts`, `helpers.ts`), `README.md`, `.env.example` и этот отчёт. Зависимости, схема, миграции, compose и UI не менялись.
+
+### R1 — раннер больше не уничтожает существующие базы
+- Удалён предварительный `DROP DATABASE IF EXISTS … WITH (FORCE)`. Каждый запуск создаёт **новую уникальную** базу `orbit_test_<timestamp>_<rand>` через `CREATE DATABASE` **без IF NOT EXISTS**: коллизия/чужая база приводят к громкой ошибке, а не к удалению.
+- Teardown удаляет только базу, успешно созданную этим запуском (флаг + проверка имени по шаблону раннера; при сбое миграций база удаляется там же, где создана). Ранее существовавшие `orbit_test`, `crm_test` и любые прочие базы не затрагиваются, подключения к ним не терминируются.
+- `TEST_DATABASE_URL` теперь задаёт проверенный сервер и namespace `orbit_test`; имя в URL должно быть точно `orbit_test` (чужие namespace, включая другие `*_test`, отвергаются).
+- Проверено sentinel-тестом: тест сам создаёт «ранее существовавшую» `orbit_test` с таблицей и строкой `keep-me`, выполняет настоящий `prepareTestDatabase`, и sentinel остаётся нетронутым на всех этапах; teardown удаляет только созданную базу. Два последовательных запуска создают разные базы и убирают только свои.
+
+### R2 — guard проверяет эффективную конфигурацию подключения
+- Единая валидация в `tests/db/db-target.ts`: только протоколы `postgresql://`/`postgres://`; **query-параметры запрещены целиком** (блокирует `?host=`-перенаправление); явно обязательны host/port/user/password/database — переменные `PGHOST/PGUSER/PGPASSWORD` и системный пользователь в подключение не попадают; hostname проверяется и в raw, и в percent-декодированном виде против allowlist localhost/127.0.0.1/::1 (IPv6-скобки нормализуются).
+- Подключения (админ-создание/удаление базы, миграции, все тестовые клиенты) собираются **из проверенных частей** target; сырой URL в pg не передаётся. Админ-операции — на тот же проверенный сервер, в maintenance-базу `postgres`. Ошибки валидации не содержат user/password/URL.
+- Guard-тесты (12, чистые, без сети/DDL): отказ без/с пустым `TEST_DATABASE_URL`; отсутствие fallback на `DATABASE_URL`; чужой протокол; `?host=10.0.0.5` и `?sslmode=disable`; remote host, произвольный домен, percent-закодированный remote; отсутствие порта/user/password; namespace `crm_test`/`production`; уникальность и шаблон создаваемых имён; сборка target из частей. Runner-тесты: отказ до DDL без разрешения/с fallback; отказ до DDL при remote и query-подмене.
+
+### Актуализация по замечаниям review (не R1/R2, но требовалось в отчёте)
+- **Картина audit уточнена** (прежняя формулировка «только braces» была неполной): полный `npm audit` — 21 finding (8 moderate, 12 high, 1 critical); critical — во вложенном дереве deprecated `@better-auth/cli` (better-auth 1.4.22 + drizzle-orm 0.41.0), основной стек better-auth 1.7.7 / drizzle-orm 0.45.3 — другие экземпляры. `npm audit --omit=dev` — 4 moderate в цепочке drizzle-kit→esm-loader→core-utils→esbuild (advisory о dev server): production audit **не чистый**, evidence об использовании уязвимого esbuild server приложением нет; при подготовке deployment — пересмотр toolchain, автоматический downgrade drizzle-kit не выполняется. Force-fixes не применялись.
+- **Исправлено утверждение отчёта о FK**: `task_completions.owner_id` имеет и inline FK на `user(id)` (restrict), и composite FK (task_id, owner_id); фактически сгенерированный SQL содержит обе связи.
+- Незаблокирующие замечания приняты к сведению без изменений кода (вне R1/R2): enforceable server-only boundary у client.ts — до первого app-подключения; политику auth timestamp timezone — подтвердить в TASK-004; дополнить owner-update сценарии (смена project_id/parent_id у task, task/owner у completion) в будущих service-тестах.
+- Оценка нового официального CLI `auth` вместо deprecated `@better-auth/cli` — отдельное предложение вне коррекции (требует проверки совместимости вывода с закреплённой better-auth 1.7.7; текущая сгенерированная схема сверена review побайтово).
+
+### Проверки после коррекции (Node v24.21.0 / npm 11.19.0)
+
+| Команда | Результат |
+| --- | --- |
+| `npm ci` | exit 0 |
+| `npm run lint` / `npm run typecheck` | exit 0 / exit 0 (strict) |
+| `npm test` | exit 0 — 4 UI tests, без БД |
+| `npm run test:db`, два последовательных запуска | оба exit 0 — **47 passed** (28 schema + 12 guard + 7 runner); после прогонов в кластере только `orbit_dev` и служебный `postgres` |
+| `npm run build` | exit 0 |
+| `CI=1 E2E_PORT=3161 npm run test:e2e` | exit 0 — 47 passed |
+| `git diff --check` / `git status` после коммитов | чисто |
+
+Коммиты коррекции: fix-коммит + обновление отчёта (полный latest SHA — в ответе пользователю).
+
+---
+
+## Исходная реализация (до коррекции R1/R2)
 
 ## TASK
 
