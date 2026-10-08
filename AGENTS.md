@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: FOUNDATIONS; TASK-001 принят, TASK-002 возвращён на исправления после review. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: FOUNDATIONS; TASK-001 и TASK-002 приняты; TASK-003 ещё не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
@@ -35,3 +35,5 @@ TODO означает в том числе подготовленную, но е
 ## Проверки
 TASK-001 добавил package.json, npm scripts dev/start/lint/typecheck/test/build и README. Целевой runtime Node 24 LTS. Review — reports/TASK-001.md; тесты foundation не подтверждают будущие DB/auth/task flows.
 Дальнейшие проверки соразмерны изменениям: правила дат — unit, безопасность — integration с двумя пользователями, интерфейс — browser/E2E и мобильные размеры.
+
+TASK-002 добавил test:e2e (production build + Chromium). Для независимого запуска: CI=1 E2E_PORT=<свободный loopback port> npm run test:e2e; CI=1 исключает reuse стороннего сервера. После TASK-002 текущая регрессия: 4 Vitest и 47 browser tests. Проверки интерфейса не подтверждают auth/DB.

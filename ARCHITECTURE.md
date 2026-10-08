@@ -63,7 +63,7 @@ User-authorized ChatGPT integration must call existing task services using a sco
 - https://better-auth.com/docs/reference/options
 
 ## INITIAL SETUP: уточнения и границы
-Архитектура преимущественно целевая. TASK-001 реализовал только Next.js foundation, зависимости и команды проверок; БД, auth и task services пока отсутствуют. Используется именно shadcn/ui на Tailwind, не произвольная замена.
+Архитектура преимущественно целевая. TASK-001 реализовал Next.js foundation; TASK-002 — responsive shell, five routes и local theme selection. БД, auth и task services пока отсутствуют. Используется именно shadcn/ui на Tailwind, не произвольная замена.
 
 ### Структура кода после соответствующих TASK
 - src/app: App Router, layouts, route handlers, Server Actions; минимальная HTTP-обвязка.
@@ -98,3 +98,8 @@ Next 16.4.0 / React 19.3.0 / Tailwind 4.3.3 через @tailwindcss/turbopack; T
 ## Клиенты и общий сервер (уточнение пользователя)
 Первый релиз — веб/PWA онлайн. Далее планируются приложения iOS и macOS; Telegram возможен, формат (бот/Mini App) пока не выбран. Native UI frameworks пока не утверждены. Офлайн и синхронизация локальных изменений — отдельный будущий этап.
 Общий сервер — один источник данных и бизнес-правил. Next.js Server Actions служат веб-клиенту, а HTTP API должен предоставлять операции будущим клиентам без привязки к внутреннему формату Server Actions. До первого CRUD TASK зафиксировать versioned API contracts, validation/errors и разделение transport/services. Auth для native, Telegram linking и MCP credentials проектируются в соответствующих отдельных TASK; не использовать общий admin token. Реализации API и native приложений сейчас нет.
+
+## Проверенное состояние после TASK-002 (2026-10-08)
+Route-group (workspace) использует общий AppShell; / перенаправляет на /today, дополнительно /inbox /upcoming /projects /settings. Desktop/sidebar от 960 px, mobile header/bottom nav ниже; UI strings в src/lib/i18n/ru.ts. Данные на экранах — честные development placeholders, не ответ DB.
+shadcn radix-nova Button/Select, consolidated radix-ui и cn package по generated CLI; CSS role surface — alias card. ThemeProvider next-themes: root class, default system, orbit-theme в localStorage. Theme selection локальная, account persistence в TASK-005. Runtime Next/React/Tailwind versions не менялись.
+Vitest 4 screen-render tests + Playwright 47 browser tests, production build/boot в составе E2E. Независимый review подтвердил mobile areas >=44×44, keyboard/refresh/system preference/navigation/no overflow. Реальные устройства/auth/DB/PWA этим не подтверждены.

@@ -67,3 +67,5 @@ TASK-001: только нейтральная стартовая страниц�
 ## Уточнения TASK-002
 Маршруты /today, /inbox, /upcoming, /projects, /settings; / → /today. Общая оболочка, breakpoint 960 px. Первый app shell содержит реальные nav links и пустые поясняющие экраны, без mock data/counts/search/quick-add. Settings доступен из sidebar и mobile header.
 Сдержанный indigo accent, системные шрифты, light/dark tokens; next-themes хранит light/dark/system под orbit-theme локально. Server/account persistence позднее, в TASK-005. Реально используемые shadcn Button/Select, skip link и visible focus. Полный task details/мобильные sheets после data TASK.
+
+TASK-002 принят: surface реализован как alias shadcn card; minimum touch target 44×44 проверяется для theme trigger/options, mobile Orbit/Settings и bottom nav. Реальный дизайн task rows/details появится после data TASK.

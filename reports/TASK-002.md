@@ -1,6 +1,6 @@
 # TASK-002 — независимый review Codex
 
-Дата: 2026-10-08. Статус: REVIEW — повторная проверка пройдена, R1 закрыт; локальная интеграция ожидается.
+Дата: 2026-10-08. Статус: DONE — повторная проверка пройдена, R1 закрыт, локальная интеграция и проверки main завершены.
 
 ## Проверенные ревизии и scope
 - База audit: 223e75cee2025e0644a0aee3f0de59a424d65f83; starting SHA: 586dc4316970d93166a69e727f75baab81fc1380.
@@ -38,4 +38,6 @@ Node 24.21.0 / npm 11.19.0 из /tmp/orbit-node24, системный Node не 
 - Необязательные рекомендации первичного review: Settings non-color active indicator, текст заглушек, default Playwright server reuse. Они не являются незакрытыми обязательными замечаниями и не блокируют этот shell TASK.
 
 ## Интеграция
-Ожидается local merge --no-ff в main и проверки интегрированного дерева. Push/deploy не выполняются; task ветка/worktree сохраняются. TASK-003 ещё не выдан.
+Local merge --no-ff: **96d31addf4251bc0be563c5c0124aa2839b23a36**, без конфликтов, история GLM и Codex review сохранена. Принятая task ветка и main совпали по src/tests/package files/configs/README (git diff --exit-code PASS).
+В интегрированной main на Node 24 повторены npm ci --offline --no-audit --no-fund, lint, typecheck, 4 Vitest tests, CI=1 E2E_PORT=3137 npm run test:e2e (production build + 47 Chromium tests) — **PASS, exit 0**. Quality gate shell использовал set -e; ошибки команд не скрывались.
+Статус DONE выставлен после проверок. Координационные документы актуализированы, новых изменений app source Codex не делал. Main и task worktree чистые после commits; ветка/worktree GLM сохраняются. Push/deploy не выполнены, TASK-003 ещё не выдан.
