@@ -74,5 +74,7 @@ TASK-002 принят: surface реализован как alias shadcn card; mi
 /login — самостоятельная русская email/password форма с labels/autocomplete/pending/generic error, без signup/reset/social links и без workspace nav. Theme сохранена; controls >=44 px, 360/390/1280px и keyboard. Settings получает только реальную кнопку Выйти; account preferences/timezone — TASK-005. Five workspace routes после auth guard сохраняют текущие честные data placeholders.
 
 
-## TASK-005: account preferences (задание)
+## TASK-005: account preferences (реализовано и принято)
 Settings добавляет IANA timezone с label/example, явным сохранением и accessible feedback. Theme selector сохраняет выбор аккаунту и прежние touch/keyboard controls; pending/error видимы, failed optimistic preview откатывается. Defaults UTC/system; timezone не угадывается по browser/IP. DB theme применяется на всех workspace routes и в новом context; при смене аккаунта local theme cache не перезаписывает настройки другого user. Login/local presentation остаётся доступным без preferences query; account section/logout сохраняются. Даты задач пока placeholders, применение timezone к расписанию — следующий этап.
+
+TASK-005 принят: theme save preview с подтверждением/error rollback, timezone explicit save/Enter с disabled input/button при pending. Server account defaults/cache authority и account switch/stale response behaviour проверены; новые controls >=44px, mobile/keyboard regression сохранена. Реальные iPhone/macOS устройства не проверены.

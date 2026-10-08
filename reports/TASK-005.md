@@ -92,3 +92,12 @@ Node 24.21.0: lint/typecheck PASS без warnings, npm test 15 PASS; DB 47 PASS;
 Постоянного отдельного dev-mode suite нет: реальный dev replay проверен независимо и executor procedure сохранена в отчёте; это неблокирующее ограничение, не причина расширять TASK. Root settings/defaults/owner isolation/Origin/no-store/upsert semantics остаются ранее подтверждёнными. Real devices/production proxy/deployment не проверялись, прежние limiter/tooling audit ограничения сохраняются.
 
 Следующий шаг: локальный no-ff merge в чистую main, integration checks и no-env build, затем DONE. TASK-006 этим review не выдан; push/deploy не разрешены.
+
+
+## Локальная интеграция — DONE, 2026-10-08
+
+Принятая реализация `2c3298b382c798838e2ec19ef004d392526c09aa`, review commit `6f8d863f3a6bff3e2c6349f98bb7946257feb1f0`, локальный merge --no-ff **`40f72596ec0c7d758f786cde65f59ec91467e822`**. Main перед merge была чистой, конфликтов нет, история сохранена.
+
+На интегрированной main независимо: npm ci --offline; lint/typecheck; 15 unit/pure; 47 DB; 51 auth; CI=1 E2E_PORT=3243 — 63 E2E; build без .env/DATABASE_URL/BETTER_AUTH_SECRET/BETTER_AUTH_URL — все PASS/exit 0. Auth/E2E logs без lifecycle errors. Settings API и workspace Dynamic, no runtime fallback. Suites использовали только own unique test DB; реальные personal accounts/dev DB не создавались/не мигрировались. TEST_DATABASE_URL передан из ignored локальной конфигурации без вывода секретов и без записи .env в main.
+
+TASK-005 DONE, Foundations завершён, TASK-006 не выдан. Координационные статусы актуализированы; push/deploy/изменение защитных настроек не выполнялись. Реальные устройства/production proxy не проверены. Следующий пункт очереди — project CRUD TASK-006, начало только после отдельного assignment.

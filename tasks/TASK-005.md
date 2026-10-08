@@ -1,7 +1,7 @@
 # TASK-005 — account settings: timezone/theme
 
 ## Статус и исходное состояние
-NEEDS_FIXES — независимое review 2026-10-08: R1/R2 закрыты, R1b StrictMode guard в reports/TASK-005.md task ветки. Приёмки/интеграции нет.
+DONE — независимое review 2026-10-08 завершено, R1/R2/R1b закрыты. Локальный merge 40f72596ec0c7d758f786cde65f59ec91467e822 и main integration gates PASS; reports/TASK-005.md.
 База review: `738dbec9a333147484284d63e3e51a4c5cde0312` (принятый TASK-004).
 Ветка `task/TASK-005`, worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-005`.
 Стартовый SHA assignment проверить через git rev-parse HEAD и записать в отчёт; координационный commit между базой и стартом не является реализацией GLM.
