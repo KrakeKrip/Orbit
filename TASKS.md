@@ -1,6 +1,6 @@
 # Orbit — очередь MVP
 
-Этап EVERYDAY CORE, 2026-10-08. TASK-001–007 приняты и локально интегрированы после независимого review. Работают foundation, shell/themes, PostgreSQL, Better Auth, account settings, Projects и реальные Inbox one-off tasks create/rename/complete/reopen/soft delete. TASK-007 DONE, review — reports/TASK-007.md. Следующий пункт очереди TASK-008 (даты и Today/Upcoming) не выдан.
+Этап EVERYDAY CORE, 2026-10-08. TASK-001–007 приняты и локально интегрированы после независимого review. Работают foundation, shell/themes, PostgreSQL, Better Auth, account settings, Projects и реальные Inbox one-off tasks create/rename/complete/reopen/soft delete. TASK-007 DONE, review — reports/TASK-007.md. TASK-008 (даты и Today/Upcoming) подготовлен для GLM: tasks/TASK-008.md, отдельная ветка/worktree, TODO до исполнения.
 Статусы: TODO → IN_PROGRESS → REVIEW → DONE; NEEDS_FIXES / BLOCKED при необходимости.
 Каждый следующий TASK зависит от успешной интеграции предыдущего. Строка очереди не разрешает начать реализацию.
 
@@ -13,7 +13,7 @@
 | TASK-005 | DONE | Настройки timezone/theme, проверка сохранения и существующего sign-out, сохранение после refresh; IANA validation и owner isolation |
 | TASK-006 | DONE | Projects create/rename/archive/unarchive, server ownership, исключение архивных данных; tests с двумя пользователями |
 | TASK-007 | DONE | Task CRUD, quick-add/Inbox, one-off complete/reopen/soft delete, стабильный порядок; refresh persistence и IDOR tests |
-| TASK-008 | TODO | Today/Upcoming, user-local даты, независимые deadline warnings без дублей; timezone boundary tests |
+| TASK-008 | TODO (выдан) | Today/Upcoming, user-local даты, независимые deadline warnings без дублей; timezone boundary tests |
 | TASK-009 | TODO | Project tasks, parent/subtask один уровень, atomic move/delete, priority/notes, полноценный task details sheet |
 | TASK-010 | TODO | Owner-scoped search по title/notes, loading/error/empty states, shortcuts Q / Esc, rollback ошибок сохранения |
 | TASK-011 | TODO | DAILY/WEEKDAYS/WEEKLY и completion history, transaction/revision/idempotency, конкуренция, overdue/Friday/timezone tests |

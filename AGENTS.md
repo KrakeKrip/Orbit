@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: EVERYDAY CORE. TASK-001–007 приняты и локально интегрированы. Работают auth, account settings, Projects и реальные one-off задачи в Inbox: create/rename/complete/reopen/soft delete. TASK-007 DONE после R1/R2/R3/R3b и main integration gates. TASK-008 не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: EVERYDAY CORE. TASK-001–007 приняты и локально интегрированы. Работают auth, account settings, Projects и реальные one-off задачи в Inbox: create/rename/complete/reopen/soft delete. TASK-007 DONE после R1/R2/R3/R3b и main integration gates. TASK-008 подготовлен для GLM, TODO: planning fields, Today/Upcoming и user-local calendar rules; tasks/TASK-008.md, отдельная ветка/worktree. Реализации TASK-008 ещё нет. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
