@@ -1,0 +1,81 @@
+# TASK-005 — отчёт исполнителя (GLM)
+
+## Статус
+
+READY_FOR_REVIEW.
+
+## Исходное состояние (проверено до изменений)
+
+- Worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-005`; ветка `task/TASK-005`; дерево чистое.
+- База review `738dbec9a333147484284d63e3e51a4c5cde0312` (принятый TASK-004); **стартовый полный SHA: `d5c949249a359616f5d4fd78fea8b852f2e13b4f`** (assignment-коммит координатора, единственный коммит над базой).
+- Node v24.21.0 / npm 11.19.0; Docker PostgreSQL Orbit healthy на 127.0.0.1:55432; localhost:3000, CRM, main не затрагивались.
+- Local `.env` подготовлен из значений `.env.example`/рабочего окружения (тот же Orbit PostgreSQL; секрет сгенерирован на месте): untracked, `git check-ignore` подтверждён; значения не выводились и не коммитились. `npm ci` exit 0, lockfile не менялся (новых зависимостей нет — Intl/ имеющийся стек).
+
+## Реализовано
+
+### 1. Pure contracts — `src/lib/settings.ts` (новый)
+`SETTINGS_THEME_VALUES` (light/dark/system), `DEFAULT_SETTINGS` (UTC/system), `resolveCanonicalTimezone` (trim; ≤100 chars; явное отсечение offset-подобных форм `^UTC±/^GMT±/^\d`, которые Intl в Node 24 иначе ПРИНИМАЕТ — проверено эмпирически; валидация через `Intl.DateTimeFormat` + `resolvedOptions().timeZone` — канонизация aliases; `UTC` принимается, хотя отсутствует в `Intl.supportedValuesOf('timeZone')`), `parseSettingsPatch` (строгий разбор: непустой plain object, только timezone/theme, типы, без raw input в ошибке).
+
+### 2. Service — `src/server/settings/service.ts` (новый, server-only)
+`getAccountSettings(actorId)`: SELECT строго `WHERE user_id = actor.id`; отсутствующая строка → defaults **без INSERT** (settings row не создаётся чтением и не добавлена в signup/bootstrap). `updateAccountSettings(actorId, patch)`: один атомарный `INSERT … ON CONFLICT (user_id) DO UPDATE`, set включает **только переданные поля** + явный `updatedAt`; при отсутствии строки создаёт её с defaults для остальных полей; `created_at` сохраняется. Конкурентные обновления разных полей сохраняют оба; одного поля — завершившийся последним. Никакого cross-request cache; ошибки сервиса не подменяются defaults.
+
+### 3. HTTP — `src/app/api/v1/settings/route.ts` (новый)
+GET: query → 400; 200 `{settings:{timezone,theme}}` из service. PATCH, задокументированный порядок проверок (покрыт тестами): transport (Content-Type ≠ application/json → 415; размер — pre-check Content-Length И потоковое чтение с лимитом 2 KiB → 413; malformed JSON → 400) → `requireUser` (401) → Origin (403) → валидация полей (400 `VALIDATION_ERROR` + опциональное `field`) → mutation. Origin-защита — **точное** сравнение с configured `BETTER_AUTH_URL` origin (`readAuthBaseOrigin`, новый export в `src/server/auth/env.ts`); missing/`null`/hostile → 403; Host/X-Forwarded-* не читаются. Session до mutation: анонимный вызов не создаёт row. Все ответы, включая ошибки: `Cache-Control: private, no-store`; тела ошибок без email/tokens/stack/SQL.
+
+### 4. UI / account theme
+- `(workspace)/layout.tsx`: `requireUserOrRedirect` + `getAccountSettings` → клиентский мост `AccountThemeSync` (`src/components/orbit/account-theme-sync.tsx`, новый) применяет server theme на всех пяти маршрутах; **setTheme берётся из ref, эффект — только по изменению серверного пропа**: `setTheme` в next-themes пересоздаётся при каждом изменении темы (useCallback по значению — проверено по исходникам), наивный `[theme, setTheme]` депс перезаписывал свежий локальный выбор (найдено прогоном, исправлено). Мост не отправляет PATCH.
+- `settings/page.tsx`: server-side загрузка настроек; `AccountThemeSelect` (новый): optimistic preview + PATCH, pending guard (без гонок собственных сохранений), подтверждение только после 200, при ошибке — откат к последней подтверждённой account theme и видимая ошибка; значение Select — из серверного состояния аккаунта (не из localStorage: чужой cache не отображается и не сохраняется). `TimezoneField` (новый): label + IANA-пример + явное сохранение (кнопка/Enter), локальная pure-проверка с понятным сообщением, server 400 → invalid-подсказка, сетевая ошибка → draft сохраняется для retry, «Сохранено» только после server success. Login/root layout настройки не читают.
+- `src/lib/i18n/ru.ts`: все новые строки; описание Settings/theme hint обновлены честно (timezone будет использоваться следующими этапами).
+
+### 5. Тесты
+- **Pure** `tests/settings-validation.test.ts` (11): UTC/зоны/aliases/канонизация, offset/неизвестные/длина/типы, строгий PATCH parse, defaults. Suite `npm test`: 4 UI + 11 pure = **15**.
+- **Integration** `tests/auth/settings.auth.test.ts` (20): defaults без INSERT (и повторно), all-answers no-store, query 400, anonymous/tampered/revoked 401 без мутаций (плюс документированный порядок: аноним+hostile → 401, не 403), 17 невалидных payload'ов → 400 + row не создаётся, создание theme-only/timezone-only, сохранение created_at + рост updated_at, канонизация на сервере, идемпотентный повтор (ровно 1 строка), конкурентные разные поля → оба изменения, конкурентное одно поле → last-completed-wins, hostile/`null`/missing Origin → 403 без мутаций, точный Origin → 200, 415/413/query-400, actor isolation U/V + прямой чужой `user_id` в body отвергается.
+  Фикстуры: отдельные синтетические U/V этого запуска (не общие A/B); сессии минтируются **server-side через поддерживаемый API** — новый export `signInLocalUser` в `src/server/auth/bootstrap-core.ts` (sign-in endpoint, тот же секрет запуска, без собственного session protocol): HTTP sign-in limiter (10/60s) намеренно исчерпывается auth-flow, а порядок vitest-файлов по размеру недетерминирован — fixtures не конкурируют за production bucket; сама лимитер-защита не ослаблена и по-прежнему тестируется HTTP-сценариями.
+  Адаптация принятого auth-flow (разрешена TASK как fixtures-изоляция): счётчик сессий в тесте «rejected signup не создаёт строк» скоуплен на собственный fixture email вместо глобального count по таблице (соседние suite создают легитимные сессии своих пользователей; намерение теста сохранено).
+- **E2E**: `tests/e2e/settings.spec.ts` (новый, 5): timezone невалид/валид/refresh; тема → серверная истина после `localStorage.clear()` + reload; server failure через route-intercept → rollback темы без ложного «Сохранено», timezone draft переживает ошибку и retry успешен; mobile 360 (header → settings, keyboard Enter, reload); **смена аккаунта** в одном контексте: B (dark) → logout → login C → применяется system/UTC C, а не локальный dark-cache прежнего пользователя (9-й sign-in за прогон — в бюджете limiter'а 10/60s).
+  Изоляция owner'ов: settings.spec — пользователь B (+C через UI), сериализован `describe.configure({mode:"default"})`; theme.spec — пользователь A, сериализован; **мутирующие keyboard-тесты из navigation.spec (360/390) перенесены в theme.spec** (детерминированное предусловие мышью, прежние assertions сохранены) — в navigation.spec остались немутирующие измерения touch targets. keyboard-тесты дополнены мышиным предусловием также из-за гонки «фокус+Enter до гидрации» (найдено флейком). auth.setup сохраняет storageState B (+1 тест). `tests/e2e/credentials.ts` + `scripts/e2e-server.ts`: синтетический пользователь C. Итог E2E: **62** (56 прежних с сохранёнными assertions + настройки).
+
+## Проверки (фактические)
+
+| Команда | Результат |
+| --- | --- |
+| `npm ci` | exit 0, lockfile неизменен |
+| `npm run lint` / `npm run typecheck` | exit 0 / exit 0 (strict), без warnings |
+| `npm test` | exit 0 — **15 passed** (4 UI + 11 pure) |
+| `npm run test:db` | exit 0 — **47 passed** (без изменений схемы) |
+| `npm run test:auth` №1 / №2 (последовательно) | exit 0 — **51/51** оба (31 прежних + 20 settings); 0 совпадений `idle client error`/`terminating connection`/`57P01`/`uncaughtException` в обоих логах |
+| `CI=1 E2E_PORT=3227` / `3228` (последовательно) | exit 0 — **62/62** оба; 0 lifecycle-паттернов; [WebServer] только ожидаемые WARN «Invalid password» из сценария ошибки входа |
+| `npm run build` без `.env` (env переносился и возвращён) | exit 0; ƒ Dynamic: /api/auth/[...all], /api/v1/me, **/api/v1/settings**, /inbox, /login, /projects, /settings, /today, /upcoming; ○ Static: /, /_not-found, /icon.svg |
+| Leftovers после всех прогонов | orbit_test\*-баз: **0**, соединений: 0; слушателей на e2e-портах нет; маркер/completion потреблены; test-results/.auth — только gitignored storageState A/B |
+| `git diff --check` / `git status` | чисто |
+
+Инцидент честно: один ручной запуск `npm run test:e2e` **без CI** (19:05, выполнен ошибочно в цепочке команд, вывод в /dev/null) оставил свою базу по задокументированной reuse-политике вне CI (живой сервер-владелец не сигналится); сервер позже завершился без зачистки. База удалена вручную (своя orbit_test\*, 0 соединений). Поведение воспроизведено и проверено диагностическим экспериментом: **падающие CI-прогоны зачищают свои базы полностью** (failing-run эксперимент с временным spec: новый leftover не появился), принятые gates оставляют 0 leftovers.
+
+## Решения в рамках TASK (для сведения Codex)
+
+1. **Порядок проверок PATCH**: parsing → auth → origin → validation → mutation (задокументирован в route.ts и зафиксирован тестами, включая «аноним + hostile Origin → 401»).
+2. **signInLocalUser в bootstrap-core** — fixture-сессии мимо HTTP-лимитера (обоснование выше); HTTP-сценарии лимитера не тронуты.
+3. **Скоупинг session-count в auth-flow** — изоляция fixtures без ослабления намерения теста.
+4. **Перенос keyboard-тестов выбора темы** из navigation.spec в theme.spec + сериализация theme/settings specs по владельцам — прямая реализация требования «parallel theme scenarios изолированы по owner/fixture».
+5. **Origin-проверка** — точное сравнение origins через `new URL(...).origin` с expected из `readAuthBaseOrigin` (единый источник истины с auth-конфигом).
+6. Лимит PATCH body 2 KiB (пример из TASK), enforce при потоковом чтении с TextDecoder({stream:true}).
+
+## Известные ограничения / не проверено
+
+- Real iPhone/macOS устройства и production deployment не проверялись; Origin-политика за reverse proxy (TLS-терминация, forwarded заголовки) — предмет deployment-этапа.
+- Timezone сейчас только сохраняется/канонизируется: Today/Upcoming/recurrence её пока не используют — UI явно сообщает об этом; browser locale/IP не анализируются.
+- Конкурентная запись одного поля проверяется как «итог ∈ переданных значений» (строгий порядок завершения не asserted); revision/ETag не требуются по TASK.
+- Sign-in limiter остаётся single-process memory (принято в TASK-004); durable/distributed защита — до deployment.
+- Theme flash при первом рендере после login (локальный cache → server value на mount) допустим по TASK; подтверждённое значение другого actor не отображается в контролах и не сохраняется.
+- `Intl`-канонизация зависит от ICU runtime (aliases могут резолвиться по-разному на других системах); тесты не зависят от конкретного alias-результата.
+- npm audit не пересчитывался (новых зависимостей нет); прежние tooling-ограничения TASK-003/004 действуют.
+
+## Git
+
+- Ветка `task/TASK-005`, worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-005`.
+- Стартовый SHA `d5c949249a359616f5d4fd78fea8b852f2e13b4f`; реализация — обычные новые коммиты поверх assignment; latest full SHA сообщён после commit (в файл не вписывался).
+- Merge/push/amend/rebase/reset/stash не выполнялись; main, другие worktree, localhost:3000, CRM, coordination docs не менялись; secrets только в untracked `.env`.
+
+## Итог
+
+TASK-005 реализован по scope (timezone/theme persistence, защищённый GET/PATCH /api/v1/settings, Settings UI + account theme sync). TASK приёмкой не считается; остановка до независимого review Codex; TASK-006 не начинался.

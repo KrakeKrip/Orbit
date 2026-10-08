@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 export const e2ePort = Number(process.env.E2E_PORT ?? 3123);
 export const userAEmail = "e2e-user-a@orbit.test";
 export const userBEmail = "e2e-user-b@orbit.test";
+export const userCEmail = "e2e-user-c@orbit.test";
 
 function derive(name: string): string {
   return (
@@ -23,6 +24,7 @@ function derive(name: string): string {
 
 export const userAPassword = derive("user-a-password");
 export const userBPassword = derive("user-b-password");
+export const userCPassword = derive("user-c-password");
 export const e2eSecret = createHash("sha256")
   .update(`orbit-e2e-secret:${e2ePort}`)
   .digest("hex");
