@@ -2,6 +2,27 @@
 
 2026-10-08. **NEEDS_FIXES**. Реализация не принята, merge/push/deployment не выполнены. TASK-004 не выдан.
 
+## Повторное review коррекции R1/R2 — текущий результат
+Проверен HEAD `d200fa60342fc7fccea57dccea0809c03f2ca874`, fix commit `3b2240fdbce150ae9d21f9b7975dc1e251815fd8`, старт коррекции `736d460bbf4c42813f62db5e81b275c25ef83a42`. Коррекция ограничена девятью файлами test runner/guard/docs, dependencies/schema/migrations/UI не менялись. Рабочее дерево и diff --check чистые.
+
+**R2 закрыто:** query параметры запрещены, разрешены только PostgreSQL protocols и явные local host/port/user/password; pg подключения собраны из проверенных компонентов, IPv6 нормализован. Независимые guard assertions прошли.
+
+**R1 в prepareTestDatabase исправлено, но в полной test команде остаётся открытым.** Новый runner создаёт уникальную DB без предварительного DROP и удаляет свой ресурс. Однако новый regression test выполняет то же запрещённое удаление фиксированной существующей БД:
+
+### R1b [P1] Sentinel-тест удаляет существующую orbit_test
+`tests/db/runner.db.test.ts:44,64–66`: `sentinelDb = "orbit_test"`, затем `DROP DATABASE IF EXISTS "orbit_test" WITH (FORCE)` перед CREATE. Этот файл включён в обычный `npm run test:db`. На машине с существующей orbit_test suite уничтожит данные и отключит клиентов ещё до «доказательства», что runner сохраняет sentinel. Флаг sentinelCreated ставится ПОСЛЕ удаления чужого ресурса и проблему не решает. Не считать тестовое окружение основанием для удаления ранее существующих данных.
+
+Исправить только sentinel fixture и связанные cleanup/assertions/отчёт: новое уникальное имя sentinel DB, CREATE без предварительного DROP/IF NOT EXISTS, флаг ownership только после успешного CREATE; cleanup лишь успешно созданного fixture. Проверить, что prepareTestDatabase и teardown сохраняют этот заранее созданный fixture и его строку. Если нужна проверка строго фиксированного orbit_test, она допустима только в отдельном полностью изолированном кластере, созданном самим тестом; на текущем local cluster нельзя удалять/пересоздавать фиксированную DB. Исправление namespace generator для этого не требуется. Все cleanup пути должны соблюдать ownership, включая сбои setup/assertions.
+
+**Независимые gates после коррекции:** Node 24.21.0/npm 11.19.0; npm ci --offline по cache, lint, typecheck, 4 UI tests — PASS. Через временный reviewer config выполнены реальные обновлённые globalSetup/teardown и два безопасных файла (schema.db.test.ts + db-target.test.ts): **43 PASS = 28 schema + 15 guard**. После teardown запрос pg_database не обнаружил оставшихся orbit_test_* временных баз. Полный npm run test:db и runner.db.test.ts намеренно не запускались из-за R1b. `CI=1 E2E_PORT=3171 npm run test:e2e` — production build и 47 browser tests PASS. main не изменён.
+
+Executor report указывает разбиение «28 schema + 12 guard + 7 runner», фактически текущие исходники содержат 15 guard + 4 runner = те же 47 total; исправить counts. Исторический раздел исходного отчёта допустим с обозначением, что он описывает состояние ДО коррекции.
+
+**Передача GLM:** исправить R1b в той же ветке, обычными новыми коммитами. R2 повторно не переделывать; scope не расширять. Самостоятельно выполнить безопасный полный DB suite дважды, остальные обязательные gates, обновить executor report, вернуть latest full SHA. Без merge/push/amend/rebase/reset; TASK-004 не начинать.
+
+---
+Ниже сохранено первоначальное review для истории; его R2 закрыто и заменено текущим результатом выше.
+
 ## Проверенная история и scope
 - База audit: `af5d1f82dcd828272eadb4baa8ab19a79744e27d`.
 - Assignment/start: `a140480cf5b1d6f3dd76bd07c9ec6f6476279ba0`.
