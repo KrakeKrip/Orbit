@@ -72,3 +72,7 @@ Use as primary personal task list for 14 consecutive days with no critical bugs 
 
 ## Уточнение account preferences для TASK-005
 Настройки аккаунта: timezone (именованная IANA zone или UTC) и theme light/dark/system. Defaults нового аккаунта — UTC/system, пока пользователь явно не сохранит другое. Настройки сохраняются в PostgreSQL и доступны после refresh/нового входа на другом browser context. Browser local theme — визуальный cache, при авторизации настройки аккаунта имеют приоритет; изменение одного поля не сбрасывает другое. Ошибка сохранения видима и не считается успешной записью. Timezone расчёты Today/Upcoming/recurrence реализуются в соответствующих последующих TASK.
+
+
+## Уточнение projects для TASK-006
+Создание/переименование/архивирование/восстановление собственных проектов. Архив сохраняет проект и связанные задачи; активные и архивные проекты показываются отдельно, default list только active. Повторяющиеся названия разрешены, trim и максимум 120 Unicode code points. Rename доступен также в архиве; повтор archive сохраняет дату архива, restore не меняет id/name/order. Удаление/ручная сортировка/sharing и список задач внутри проекта не входят в TASK-006; task data/queries — следующие этапы.
