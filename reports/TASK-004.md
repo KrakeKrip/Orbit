@@ -125,3 +125,22 @@ Acceptance: два последовательных auth и E2E прогона �
 ### Передача
 
 Та же ветка/worktree, исправить только R3c и связанный test/fixture reporting. R1b/R2 и штатное закрытие фактического пула приняты. Обычные новые commits, без merge/push/amend/rebase/reset; main/3000/CRM/защитные настройки не менять. TASK-005 не начинать.
+
+
+## Финальное review a0bc778 — 2026-10-08
+
+**APPROVED для локальной интеграции. R1/R1b/R2/R3/R3b/R3c закрыты.** Проверен `a0bc778283526ce02fd7d5de6cc9033f92985907` относительно `b3f28a4a828afd3b17dd8ba68ca174a4ae4811fa`: 7 файлов, 651 insertions/191 deletions. Последняя коррекция меняет только test lifecycle/reporting, без src изменений. Предыдущие NEEDS_FIXES разделы — история review, актуален этот вердикт.
+
+Completion result синхронно сохраняется до exit, проверяется принадлежность по unique DB имени и clean flag; missing/invalid/mismatched/unclean result приводит к throw из globalTeardown даже после удаления fixture DB. Обычный reuse вне CI остаётся вне acceptance gate. Реестр pool, provisioning и приватный CLI сохраняют ранее подтверждённое поведение.
+
+Независимые gates Node 24.21.0:
+- lint без warnings, strict typecheck, UI 4 PASS; DB 47 PASS.
+- test:auth **2×31 PASS**, exit 0; оба лога без idle client error / terminating connection / 57P01 / uncaughtException.
+- CI=1 E2E_PORT=3214/3215 test:e2e **2×56 PASS**, exit 0; оба лога без lifecycle errors.
+- Независимая полная fault reproduction на собственном E2E run порта 3216: добавлено одно synthetic pg соединение только к newly-created DB этого запуска; normal pool close не завершает дополнительного клиента → emergency termination клиента SQLSTATE 57P01 → completion clean:false → globalTeardown throw → **весь npm run test:e2e exit 1**, 56 assertions PASS + 1 teardown error. Это ожидаемый отказ негативного сценария, подтверждающий R3c, а не failing acceptance gate. Fixture DB удалена штатной аварийной зачисткой.
+- No-env build не повторялся в task worktree последнего раунда: src/package/Next config не изменились, предыдущий архивный no-env build e161f51 PASS. На main после merge проверить build без runtime env как интеграционный gate.
+- История обычных новых commits, git status/diff --check чисты перед записью этого review. Конкретные реальные устройства/production не проверялись; public signup OFF и auth runtime/ownership boundaries остаются подтверждёнными synthetic HTTP/browser tests.
+
+Неблокирующие ограничения: один app/DATABASE_URL на процесс global registry; deterministic synthetic duplicate response branch отдельно не покрыта (уникальный returned id проверяется против БД); memory limiter/trusted proxy требуют пересмотра до deployment; прежние dependency/tooling audit findings не исправлялись force-update. Local E2E markers предполагают один запуск в checkout, не параллельные suites в одной папке. Наличие runner namespace-pattern само по себе не является универсальным доказательством владения: emergency cleanup применяется только с локальным маркером данного запуска; непроверенные внешние marker files не использовать.
+
+Следующий шаг координатора: локальный merge --no-ff в чистую main, интеграционные проверки, затем DONE. TASK-005 этим review не выдан; push/deploy не разрешены.
