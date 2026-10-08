@@ -26,6 +26,27 @@ function requireValue(
   return value;
 }
 
+/**
+ * Origin настроенного BETTER_AUTH_URL (scheme://host[:port], без пути).
+ * Используется cookie-mutation endpoints для точной server-side Origin
+ * проверки: разрешённый origin не берётся из Host/X-Forwarded-*.
+ */
+export function readAuthBaseOrigin(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const baseURL = requireValue(env, "BETTER_AUTH_URL", "auth runtime");
+  let parsedBaseURL: URL;
+  try {
+    parsedBaseURL = new URL(baseURL);
+  } catch {
+    throw new Error("BETTER_AUTH_URL is not a valid absolute http(s) URL.");
+  }
+  if (parsedBaseURL.protocol !== "https:" && parsedBaseURL.protocol !== "http:") {
+    throw new Error("BETTER_AUTH_URL must use http or https.");
+  }
+  return parsedBaseURL.origin;
+}
+
 export function readAuthRuntimeConfig(
   env: Record<string, string | undefined> = process.env,
 ): AuthRuntimeConfig {
@@ -51,16 +72,5 @@ export function readAuthRuntimeConfig(
     );
   }
 
-  const baseURL = requireValue(env, "BETTER_AUTH_URL", "auth runtime");
-  let parsedBaseURL: URL;
-  try {
-    parsedBaseURL = new URL(baseURL);
-  } catch {
-    throw new Error("BETTER_AUTH_URL is not a valid absolute http(s) URL.");
-  }
-  if (parsedBaseURL.protocol !== "https:" && parsedBaseURL.protocol !== "http:") {
-    throw new Error("BETTER_AUTH_URL must use http or https.");
-  }
-
-  return { databaseUrl, secret, baseURL: parsedBaseURL.origin };
+  return { databaseUrl, secret, baseURL: readAuthBaseOrigin(env) };
 }

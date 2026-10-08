@@ -91,8 +91,13 @@ describe("hostile origin и публичный signup", () => {
         [signupEmail],
       );
       expect(rows[0].count).toBe("0");
+      // Сессии считаются по собственному fixture email этого теста, а не
+      // глобально: соседние suite создают легитимные сессии своих
+      // синтетических пользователей, не имеющие отношения к отвергнутому
+      // signup (изоляция mutable fixtures, TASK-005).
       const sessions = await client.query<{ count: string }>(
-        `SELECT count(*)::text AS "count" FROM "session"`,
+        `SELECT count(*)::text AS "count" FROM "session" WHERE "user_id" IN (SELECT "id" FROM "user" WHERE "email" = $1)`,
+        [signupEmail],
       );
       expect(sessions.rows[0].count).toBe("0");
     });

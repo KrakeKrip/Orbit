@@ -44,6 +44,59 @@ export type ProvisionedUser = {
   email: string;
 };
 
+/**
+ * Серверный sign-in для синтетических fixtures integration-тестов: сессия
+ * создаётся поддерживаемым Better Auth API (sign-in endpoint, без
+ * собственного session protocol) с ТЕМ ЖЕ секретом, что и runtime
+ * instance, поэтому cookie валидна для реального HTTP этого запуска.
+ * Нужно потому, что HTTP sign-in лимитер runtime (10/60s на IP) намеренно
+ * исчерпывается auth-flow suite, а порядок vitest-файлов по размеру
+ * недетерминирован: fixtures не должны конкурировать за production bucket.
+ * Сама лимитер-защита не ослабляется и продолжает тестироваться
+ * HTTP-сценариями auth-flow.
+ */
+export async function signInLocalUser(
+  connectionString: string,
+  input: { email: string; password: string; secret: string },
+): Promise<{ sessionCookie: string }> {
+  const pool = new Pool({ connectionString, max: 1 });
+  try {
+    const auth = betterAuth({
+      database: drizzleAdapter(drizzle(pool), {
+        provider: "pg",
+        schema: { user, session, account, verification },
+        transaction: true,
+      }),
+      secret: input.secret,
+      emailAndPassword: {
+        enabled: true,
+        autoSignIn: false,
+      },
+      telemetry: {
+        enabled: false,
+      },
+    });
+    const result = await auth.api.signInEmail({
+      body: { email: input.email, password: input.password },
+      returnHeaders: true,
+    });
+    const cookies = result.headers?.getSetCookie() ?? [];
+    const sessionCookie = cookies
+      .map((line) => line.split(";", 1)[0])
+      .filter((pair) => pair.includes("="))
+      .join("; ");
+    if (sessionCookie === "") {
+      throw new ProvisioningError(
+        "PROVISIONING_FAILED",
+        "Sign-in did not return a session cookie.",
+      );
+    }
+    return { sessionCookie };
+  } finally {
+    await pool.end();
+  }
+}
+
 export async function provisionLocalUser(
   connectionString: string,
   input: { email: string; password: string; name: string },

@@ -161,18 +161,10 @@ for (const width of [360, 390]) {
       );
       expect(scrollWidth).toBeLessThanOrEqual(width);
     });
-
-    test("выбор темы с клавиатуры работает при мобильной ширине", async ({
-      page,
-    }) => {
-      await page.goto("/settings");
-      const trigger = page.locator("#theme-select");
-      await trigger.focus();
-      await page.keyboard.press("Enter");
-      await page.keyboard.press("ArrowDown");
-      await page.keyboard.press("Enter");
-      await expect(page.locator("html")).toHaveClass(/light/);
-      await expect(trigger).toBeFocused();
-    });
   });
 }
+
+// Выбор темы теперь сохраняется в аккаунте (TASK-005): мутирующий
+// клавиатурный сценарий перенесён в theme.spec и выполняется последовательно
+// с остальными theme-тестами одного владельца; здесь остаются немутирующие
+// измерения touch targets (select открывается, но тема не выбирается).

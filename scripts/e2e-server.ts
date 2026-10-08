@@ -17,6 +17,8 @@ import {
   userAPassword,
   userBEmail,
   userBPassword,
+  userCEmail,
+  userCPassword,
 } from "../tests/e2e/credentials.ts";
 
 /**
@@ -125,6 +127,14 @@ async function main(): Promise<void> {
       email: userBEmail,
       password: userBPassword,
       name: "E2E User B",
+    });
+    // Пользователь C — изолированный fixture для сценария смены аккаунта
+    // (TASK-005): theme-мутации B не пересекаются с проверкой чужих
+    // настроек при повторном входе в том же browser storage.
+    await provisionLocalUser(databaseUrl, {
+      email: userCEmail,
+      password: userCPassword,
+      name: "E2E User C",
     });
 
     const { getRequestHandlers } = await import(
