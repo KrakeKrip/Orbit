@@ -27,7 +27,7 @@ export const ru = {
     inbox: {
       title: "Входящие",
       description:
-        "Задачи без запланированной даты и проекта; добавляйте их быстрым вводом.",
+        "Задачи без запланированной даты; добавляйте их быстрым вводом.",
       empty: {
         title: "Задач пока нет",
         description: "Добавьте первую задачу через поле выше.",
@@ -36,7 +36,7 @@ export const ru = {
     upcoming: {
       title: "Предстоящее",
       description:
-        "Здесь появятся задачи на ближайшие 7 дней, сгруппированные по дням.",
+        "Задачи на ближайшие 7 дней по дням.",
       empty: {
         title: "Задач пока нет",
         description:
@@ -54,6 +54,11 @@ export const ru = {
     },
   },
   tasks: {
+    deadlineBadge: {
+      label: "Дедлайн: ",
+      overdue: "просрочен",
+      today: "сегодня",
+    },
     tabs: {
       open: "Открытые",
       completed: "Завершённые",
@@ -96,6 +101,48 @@ export const ru = {
     },
     listError: "Не удалось обновить список задач.",
     retry: "Повторить",
+    refresh: "Обновить",
+    refreshing: "Обновление…",
+    schedule: {
+      action: "Планирование",
+      plannedDate: "Дата выполнения",
+      plannedTime: "Время выполнения",
+      deadlineDate: "Дедлайн",
+      save: "Сохранить",
+      saving: "Сохранение…",
+      cancel: "Отмена",
+      noChanges: "Изменений нет",
+      invalid: "Проверьте даты: используйте календарь или формат ГГГГ-ММ-ДД.",
+      timeNeedsDate: "Время можно задать только вместе с датой выполнения.",
+      clearHint: "Очистка даты выполнения также очищает время.",
+      error: "Не удалось сохранить расписание. Попробуйте ещё раз.",
+    },
+    badges: {
+      deadline: "Дедлайн: ",
+      planned: "План: ",
+      overdue: "просрочен",
+      dueToday: "сегодня",
+    },
+    today: {
+      sections: {
+        planOverdue: "Просрочен план",
+        planToday: "На сегодня",
+        deadlineOverdue: "Дедлайн просрочен",
+        deadlineToday: "Дедлайн сегодня",
+        planOverdueNeutral: "План до сегодня",
+        deadlineOverdueNeutral: "Дедлайн до сегодня",
+      },
+      deadlineLater: "Дедлайн: ",
+    },
+    upcoming: {
+      range: (startDateDisplay: string, endDateDisplay: string) =>
+        `Период: ${startDateDisplay} — ${endDateDisplay}`,
+      todayMarker: "сегодня",
+      invalidStart: "Некорректная дата начала периода. Используйте формат ГГГГ-ММ-ДД.",
+      prev: "Предыдущие 7 дней",
+      next: "Следующие 7 дней",
+      current: "Ближайшие 7 дней",
+    },
   },
   projects: {
     tabs: {

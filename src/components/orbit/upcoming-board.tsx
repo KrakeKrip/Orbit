@@ -1,0 +1,266 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { TaskItemsList } from "@/components/orbit/task-items-list";
+import { useTaskWrites } from "@/components/orbit/use-task-writes";
+import type { TaskDTO } from "@/lib/tasks";
+import { addCivilDays, formatCivilDateDisplay } from "@/lib/calendar";
+import { groupUpcomingTasks, type UpcomingDayGroup } from "@/lib/task-view";
+import { ru } from "@/lib/i18n/ru";
+
+type StatusMode = "open" | "completed" | "all";
+
+type UpcomingPayload = {
+  tasks: TaskDTO[];
+  context: {
+    timezone: string;
+    today: string;
+    asOf: string;
+    startDate?: string;
+    endDate?: string;
+  };
+};
+
+/**
+ * Реальный экран Предстоящее (TASK-008): 7 инклюзивных civil-day групп по
+ * plannedDate, prev/next/current навигация с диапазоном в URL
+ * (history.replaceState — reload сохраняет диапазон через SSR), complete/
+ * reopen в completed-режиме с нейтральными датами, shared rows/actions
+ * через useTaskWrites. Quick-add отсутствует по scope; latest request
+ * wins (requestSeq), stale suppression по mounted/actor.
+ */
+export function UpcomingBoard({
+  initialTasks,
+  initialTimezone,
+  initialToday,
+  initialAsOf,
+  initialStart,
+  actorId,
+}: {
+  initialTasks: TaskDTO[];
+  initialTimezone: string;
+  initialToday: string;
+  initialAsOf: string;
+  initialStart: string;
+  actorId: string;
+}) {
+  const [tasks, setTasks] = useState(initialTasks);
+  const [context, setContext] = useState({
+    timezone: initialTimezone,
+    today: initialToday,
+    asOf: initialAsOf,
+  });
+  const [startDate, setStartDate] = useState(initialStart);
+  const [statusMode, setStatusMode] = useState<StatusMode>("open");
+  const [listError, setListError] = useState(false);
+  const [listPending, setListPending] = useState(false);
+
+  const mountedRef = useRef(true);
+  const actorRef = useRef(actorId);
+  const requestSeqRef = useRef(0);
+
+  useEffect(() => {
+    actorRef.current = actorId;
+  }, [actorId]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const refetch = useCallback(
+    async (mode: StatusMode, rangeStart: string): Promise<boolean> => {
+      const requestedActorId = actorRef.current;
+      setListPending(true);
+      const requestSeq = ++requestSeqRef.current;
+      try {
+        const response = await fetch(
+          `/api/v1/tasks?view=upcoming&status=${mode}&start=${rangeStart}`,
+        );
+        if (
+          !mountedRef.current ||
+          actorRef.current !== requestedActorId ||
+          requestSeq !== requestSeqRef.current
+        ) {
+          return false;
+        }
+        if (!response.ok) {
+          setListError(true);
+          return false;
+        }
+        const payload = (await response.json()) as UpcomingPayload;
+        setTasks(payload.tasks);
+        setContext({
+          timezone: payload.context.timezone,
+          today: payload.context.today,
+          asOf: payload.context.asOf,
+        });
+        setListError(false);
+        return true;
+      } catch {
+        if (mountedRef.current && actorRef.current === requestedActorId) {
+          setListError(true);
+        }
+        return false;
+      } finally {
+        if (mountedRef.current && actorRef.current === requestedActorId) {
+          setListPending(false);
+        }
+      }
+    },
+    [],
+  );
+
+  const writes = useTaskWrites({
+    actorId,
+    // Upcoming без create input: логичный control после delete — «Обновить».
+    createFocusElementId: "upcoming-refresh-button",
+    onConfirmed: useCallback(
+      () => refetch(statusMode, startDate),
+      [refetch, statusMode, startDate],
+    ),
+  });
+
+  function navigate(newStart: string): void {
+    if (listPending || writes.anyInFlight()) {
+      return;
+    }
+    // Диапазон в URL: reload через SSR вернёт тот же диапазон.
+    window.history.replaceState(null, "", `/upcoming?start=${newStart}`);
+    setStartDate(newStart);
+    void refetch(statusMode, newStart);
+  }
+
+  const endDate = addCivilDays(startDate, 6);
+  const groups: UpcomingDayGroup[] = groupUpcomingTasks(
+    tasks,
+    startDate,
+    endDate,
+  );
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-2" role="group" aria-label={ru.nav.upcoming}>
+          {(["open", "completed", "all"] as const).map((value) => (
+            <Button
+              key={value}
+              type="button"
+              variant={statusMode === value ? "default" : "outline"}
+              aria-pressed={statusMode === value}
+              className="min-h-11 px-4"
+              onClick={() => {
+                setStatusMode(value);
+                void refetch(value, startDate);
+              }}
+            >
+              {value === "open"
+                ? ru.tasks.tabs.open
+                : value === "completed"
+                  ? ru.tasks.tabs.completed
+                  : "Все"}
+            </Button>
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {context.today} · {context.timezone}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 px-4"
+          onClick={() => void refetch(statusMode, startDate)}
+          disabled={listPending}
+          id="upcoming-refresh-button"
+        >
+          {listPending ? ru.tasks.refreshing : ru.tasks.refresh}
+        </Button>
+      </div>
+
+      <p className="mt-3 text-sm font-medium leading-6" data-testid="upcoming-range">
+        {ru.tasks.upcoming.range(
+          formatCivilDateDisplay(startDate),
+          formatCivilDateDisplay(endDate),
+        )}
+      </p>
+
+      {listError ? (
+        <div className="mt-4 rounded-xl border bg-card p-4">
+          <p role="alert" className="text-sm text-destructive">
+            {ru.tasks.listError}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-2 min-h-11 px-4"
+            onClick={() => void refetch(statusMode, startDate)}
+            disabled={listPending}
+          >
+            {ru.tasks.retry}
+          </Button>
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex flex-col gap-6" data-testid="upcoming-groups">
+        {groups.map((group) => (
+          <section
+            key={group.date}
+            aria-label={group.date}
+            data-group-date={group.date}
+          >
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {formatCivilDateDisplay(group.date)}
+              {group.date === context.today
+                ? ` · ${ru.tasks.upcoming.todayMarker}`
+                : ""}
+            </h2>
+            <div className="mt-2">
+              <TaskItemsList
+                tasks={group.tasks}
+                today={context.today}
+                completedMode={statusMode === "completed"}
+                writes={writes}
+                emptyState={{
+                  title: ru.pages.upcoming.empty.title,
+                  description: ru.pages.upcoming.empty.description,
+                }}
+              />
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 px-4"
+          onClick={() => navigate(addCivilDays(startDate, -7))}
+          disabled={listPending || writes.anyInFlight()}
+        >
+          {ru.tasks.upcoming.prev}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 px-4"
+          onClick={() => navigate(addCivilDays(startDate, 7))}
+          disabled={listPending || writes.anyInFlight()}
+        >
+          {ru.tasks.upcoming.next}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 px-4"
+          onClick={() => navigate(context.today)}
+          disabled={listPending || writes.anyInFlight()}
+        >
+          {ru.tasks.upcoming.current}
+        </Button>
+      </div>
+    </div>
+  );
+}

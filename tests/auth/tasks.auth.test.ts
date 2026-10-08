@@ -217,10 +217,17 @@ beforeAll(async () => {
 });
 
 describe("GET /api/v1/tasks (Inbox collection)", () => {
-  test("пустой default open list, no-store", async () => {
+  test("пустой default open list с context, no-store", async () => {
     const response = await tasksCall({ cookie: uCookie });
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ tasks: [] });
+    const payload = response.body as {
+      tasks: unknown[];
+      context: { timezone: string; today: string; asOf: string; view: string };
+    };
+    expect(payload.tasks).toEqual([]);
+    expect(payload.context.timezone).toBe("UTC");
+    expect(payload.context.view).toBe("inbox");
+    expect(/^\d{4}-\d{2}-\d{2}$/.test(payload.context.today)).toBe(true);
     expect(response.cacheControl).toBe("private, no-store");
   });
 
@@ -390,10 +397,11 @@ describe("POST /api/v1/tasks", () => {
     expect(jsonp.status).toBe(415);
     expect(jsonp.body).toMatchObject({ error: { code: "UNSUPPORTED_MEDIA_TYPE" } });
 
+    // TASK-008: task streaming лимит поднят до 4 KiB (title500emoji+schedule).
     const oversize = await tasksCall({
       method: "POST",
       cookie: uCookie,
-      rawBody: `{"title":"${"a".repeat(3000)}"}`,
+      rawBody: `{"title":"${"a".repeat(5000)}"}`,
     });
     expect(oversize.status).toBe(413);
 
@@ -473,7 +481,7 @@ describe("item GET/PATCH: rename, no-op, completion journal", () => {
     expect(foreign.status).toBe(404);
     expect(foreign.body).toEqual(unknown.body);
     const vList = await tasksCall({ cookie: vCookie });
-    expect(vList.body).toEqual({ tasks: [] });
+    expect((vList.body as { tasks: unknown[] }).tasks).toEqual([]);
   });
 
   test("rename: revision+1, updated_at обновлён, created_at сохранён", async () => {

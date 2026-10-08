@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import TodayPage from "@/app/(workspace)/today/page";
-import UpcomingPage from "@/app/(workspace)/upcoming/page";
+import { ru as src_ru } from "@/lib/i18n/ru";
 import { TasksView } from "@/components/orbit/tasks-view";
 import { ProjectsView } from "@/components/orbit/projects-view";
 import type { TaskDTO } from "@/lib/tasks";
@@ -11,22 +10,20 @@ import type { ProjectDTO } from "@/lib/projects";
 // unit-уровень покрывает клиентские TasksView/ProjectsView (empty/список/
 // escaping); полный flow — HTTP integration и browser E2E. /today и
 // /upcoming — placeholders до TASK-008.
-const screens = [
-  { name: "Сегодня", page: TodayPage },
-  { name: "Предстоящее", page: UpcomingPage },
-] as const;
+// /today и /upcoming — server-driven экраны (actor/context/БД), unit
+// покрытие через E2E; TasksView/ProjectsView ниже рендерятся напрямую.
 
 describe("экраны рабочей области", () => {
-  it.each(screens)(
-    "$name рендерится с одним h1 и пояснением о подключении данных",
-    ({ name, page: Screen }) => {
-      const html = renderToStaticMarkup(<Screen />);
-
-      expect(html.match(/<h1/g)?.length).toBe(1);
-      expect(html).toContain(name);
-      expect(html).toContain("будут подключены на следующих этапах");
-    },
-  );
+  it("placeholders today/upcoming остаются в ru.ts для будущих данных", () => {
+    // Server-driven Today/Upcoming покрыты browser E2E; строки placeholders
+    // сохранены (пояснение о подключении данных остаётся контрактом ru.ts).
+    expect(src_ru.pages.today.description).toContain(
+      "появятся просроченные задачи",
+    );
+    expect(src_ru.pages.upcoming.description).toContain(
+      "Задачи на ближайшие 7 дней",
+    );
+  });
 });
 
 function task(id: string, title: string, completed = false): TaskDTO {
@@ -36,6 +33,9 @@ function task(id: string, title: string, completed = false): TaskDTO {
     title,
     projectId: null,
     parentId: null,
+    plannedDate: null,
+    plannedTime: null,
+    deadlineDate: null,
     completedAt: completed ? timestamp : null,
     revision: 0,
     createdAt: timestamp,
@@ -57,7 +57,7 @@ function project(id: string, name: string, archived = false): ProjectDTO {
 describe("TasksView (unit render)", () => {
   it("пустой список: tabs, quick-add форма и honest empty state открытых", () => {
     const html = renderToStaticMarkup(
-      <TasksView initialOpen={[]} initialCompleted={[]} actorId="user-1" />,
+      <TasksView initialOpen={[]} initialCompleted={[]} actorId="user-1" today="2026-06-15" />,
     );
 
     expect(html).toContain("Открытые");
@@ -82,6 +82,7 @@ describe("TasksView (unit render)", () => {
           task("33333333-3333-4333-8333-333333333333", "Завершённая", true),
         ]}
         actorId="user-1"
+        today="2026-06-15"
       />,
     );
 

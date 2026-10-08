@@ -1,15 +1,28 @@
+import {
+  addCivilDays,
+  CIVIL_DATE_MAX,
+  normalizeCivilTime,
+  parseCivilDate,
+  parseCivilTime,
+} from "./calendar";
+
 /**
- * Чистые контракты и валидация tasks (TASK-007, Inbox one-off subset):
- * без импортов БД/auth и без server-only. Title: trim, 1–500 Unicode code
- * points (согласовано с PG char_length, не UTF-16 units); NUL и
- * unpaired surrogates отвергаются до PostgreSQL (иначе сервер возвращал бы
- * 500 на некорректный Unicode). Дубликаты разрешены; markup — данные, UI
- * рендерит текстом. Write-контракт этого TASK: create ровно {title},
- * PATCH — непустой subset {title?, completed?}; project/parent/notes/
- * priority/dates/recurrence/order через API не меняются.
+ * Pure contracts и валидация tasks (TASK-007 Inbox subset + TASK-008
+ * planning): без импортов БД/auth и без server-only. Title: trim, 1–500
+ * Unicode code points (согласовано с PG char_length, не UTF-16 units); NUL
+ * и unpaired surrogates отвергаются до PostgreSQL. Дубликаты разрешены.
+ * Write-контракт: create {title, plannedDate?, plannedTime?, deadlineDate?}
+ * (отсутствующие planning → NULL), PATCH — непустой subset {title?,
+ * completed?, plannedDate?, plannedTime?, deadlineDate?}; null разрешён
+ * только для schedule fields; project/parent/notes/priority/recurrence/
+ * owner/revision/order через API не меняются.
  */
 
 export const TASK_TITLE_MAX_LENGTH = 500;
+
+/** Streaming JSON body limit задач: 500-code-point emoji title + schedule
+ * поля должны помещаться; shared default/Settings/Projects/DELETE — 2 KiB. */
+export const TASKS_MAX_JSON_BODY_BYTES = 4096;
 
 export const TASK_LIST_STATUS_VALUES = ["open", "completed", "all"] as const;
 
@@ -20,17 +33,90 @@ export type TaskDTO = {
   title: string;
   projectId: string | null;
   parentId: string | null;
+  plannedDate: string | null;
+  plannedTime: string | null;
+  deadlineDate: string | null;
   completedAt: string | null;
   revision: number;
   createdAt: string;
   updatedAt: string;
 };
 
+export type TaskViewName = "inbox" | "today" | "upcoming";
+
 export function isValidTaskListStatus(value: unknown): value is TaskListStatus {
   return (
     typeof value === "string" &&
     (TASK_LIST_STATUS_VALUES as readonly string[]).includes(value)
   );
+}
+
+export type TaskCollectionViewQuery = {
+  view: TaskViewName;
+  status: TaskListStatus;
+  /** Только для view=upcoming; undefined → context.today на сервере. */
+  startDate?: string;
+};
+
+export type TaskCollectionViewParseResult =
+  | { ok: true; query: TaskCollectionViewQuery }
+  | { ok: false };
+
+/**
+ * Разбор query коллекции: view=inbox|today|upcoming (default inbox),
+ * status=open|completed|all (default open), start=YYYY-MM-DD только для
+ * view=upcoming. Дубликаты/неизвестные keys/значения → invalid; start вне
+ * supported диапазона (включая start+6) → invalid.
+ */
+export function parseTaskCollectionViewQuery(
+  searchParams: URLSearchParams,
+): TaskCollectionViewParseResult {
+  const otherKeys = [...searchParams.keys()].filter(
+    (key) => key !== "view" && key !== "status" && key !== "start",
+  );
+  if (otherKeys.length > 0) {
+    return { ok: false };
+  }
+  const viewValues = searchParams.getAll("view");
+  if (viewValues.length > 1) {
+    return { ok: false };
+  }
+  const view = viewValues[0] ?? "inbox";
+  if (view !== "inbox" && view !== "today" && view !== "upcoming") {
+    return { ok: false };
+  }
+  const statusValues = searchParams.getAll("status");
+  if (statusValues.length > 1) {
+    return { ok: false };
+  }
+  const status = statusValues[0] ?? "open";
+  if (status !== "open" && status !== "completed" && status !== "all") {
+    return { ok: false };
+  }
+  const startValues = searchParams.getAll("start");
+  if (startValues.length > 1) {
+    return { ok: false };
+  }
+  let startDate: string | undefined;
+  if (startValues.length === 1) {
+    if (view !== "upcoming") {
+      return { ok: false };
+    }
+    const parsed = parseCivilDate(startValues[0]);
+    if (!parsed.ok) {
+      return { ok: false };
+    }
+    // Весь диапазон start..start+6 обязан быть в supported датах.
+    try {
+      if (addCivilDays(parsed.value, 6) > CIVIL_DATE_MAX) {
+        return { ok: false };
+      }
+    } catch {
+      return { ok: false };
+    }
+    startDate = parsed.value;
+  }
+  return { ok: true, query: { view, status, startDate } };
 }
 
 export function parseTaskListStatusQuery(
@@ -94,9 +180,18 @@ export function parseTaskTitle(
 export type TaskPatch = {
   title?: string;
   completed?: boolean;
+  /** undefined = поле не передано; null = явная очистка (только schedule). */
+  plannedDate?: string | null;
+  plannedTime?: string | null;
+  deadlineDate?: string | null;
 };
 
-export type TaskPatchField = "title" | "completed";
+export type TaskPatchField =
+  | "title"
+  | "completed"
+  | "plannedDate"
+  | "plannedTime"
+  | "deadlineDate";
 
 export type TaskPatchParseResult =
   | { ok: true; patch: TaskPatch }
@@ -119,7 +214,13 @@ export function parseTaskPatch(input: unknown): TaskPatchParseResult {
   }
   const patch: TaskPatch = {};
   for (const key of keys) {
-    if (key !== "title" && key !== "completed") {
+    if (
+      key !== "title" &&
+      key !== "completed" &&
+      key !== "plannedDate" &&
+      key !== "plannedTime" &&
+      key !== "deadlineDate"
+    ) {
       return { ok: false };
     }
     if (key === "completed") {
@@ -127,6 +228,32 @@ export function parseTaskPatch(input: unknown): TaskPatchParseResult {
         return { ok: false, field: "completed" };
       }
       patch.completed = record[key] as boolean;
+      continue;
+    }
+    if (key === "plannedDate" || key === "deadlineDate") {
+      const value = record[key];
+      if (value === null) {
+        patch[key] = null;
+        continue;
+      }
+      const parsed = parseCivilDate(value);
+      if (!parsed.ok) {
+        return { ok: false, field: key };
+      }
+      patch[key] = parsed.value;
+      continue;
+    }
+    if (key === "plannedTime") {
+      const value = record[key];
+      if (value === null) {
+        patch.plannedTime = null;
+        continue;
+      }
+      const parsed = parseCivilTime(value);
+      if (!parsed.ok) {
+        return { ok: false, field: "plannedTime" };
+      }
+      patch.plannedTime = parsed.value;
       continue;
     }
     const parsed = parseTaskTitle(record[key]);
@@ -138,22 +265,75 @@ export function parseTaskPatch(input: unknown): TaskPatchParseResult {
   return { ok: true, patch };
 }
 
-/** Строгий разбор create body: ровно {title:string}. */
-export function parseTaskCreate(
-  input: unknown,
-): { ok: true; title: string } | { ok: false; field?: "title" } {
+export type TaskPlanningValues = {
+  plannedDate: string | null;
+  plannedTime: string | null;
+  deadlineDate: string | null;
+};
+
+export type TaskCreateParseResult =
+  | { ok: true; value: { title: string } & TaskPlanningValues }
+  | {
+      ok: false;
+      field?: "title" | "plannedDate" | "plannedTime" | "deadlineDate";
+    };
+
+/**
+ * Строгий разбор create body: {title} + опциональные planning fields.
+ * Отсутствующие planning → NULL; явный null → NULL; plannedTime без
+ * результирующего plannedDate → 400 (field=plannedTime). Unknown поля —
+ * отклонение.
+ */
+export function parseTaskCreate(input: unknown): TaskCreateParseResult {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return { ok: false };
   }
-  const keys = Object.keys(input as Record<string, unknown>);
-  if (keys.length !== 1 || keys[0] !== "title") {
+  const record = input as Record<string, unknown>;
+  const keys = Object.keys(record);
+  const allowed = new Set([
+    "title",
+    "plannedDate",
+    "plannedTime",
+    "deadlineDate",
+  ]);
+  if (keys.length === 0 || keys.some((key) => !allowed.has(key))) {
     return { ok: false };
   }
-  const parsed = parseTaskTitle((input as Record<string, unknown>).title);
-  if (!parsed.ok) {
+  const title = parseTaskTitle(record.title);
+  if (!title.ok) {
     return { ok: false, field: "title" };
   }
-  return { ok: true, title: parsed.title };
+  let plannedDate: string | null = null;
+  if (record.plannedDate !== undefined && record.plannedDate !== null) {
+    const parsed = parseCivilDate(record.plannedDate);
+    if (!parsed.ok) {
+      return { ok: false, field: "plannedDate" };
+    }
+    plannedDate = parsed.value;
+  }
+  let plannedTime: string | null = null;
+  if (record.plannedTime !== undefined && record.plannedTime !== null) {
+    const parsed = parseCivilTime(record.plannedTime);
+    if (!parsed.ok) {
+      return { ok: false, field: "plannedTime" };
+    }
+    plannedTime = parsed.value;
+  }
+  let deadlineDate: string | null = null;
+  if (record.deadlineDate !== undefined && record.deadlineDate !== null) {
+    const parsed = parseCivilDate(record.deadlineDate);
+    if (!parsed.ok) {
+      return { ok: false, field: "deadlineDate" };
+    }
+    deadlineDate = parsed.value;
+  }
+  if (plannedTime !== null && plannedDate === null) {
+    return { ok: false, field: "plannedTime" };
+  }
+  return {
+    ok: true,
+    value: { title: title.title, plannedDate, plannedTime, deadlineDate },
+  };
 }
 
 /** Преобразование строки БД в DTO (timestamps ISO8601; owner/секреты нет). */
@@ -162,6 +342,9 @@ export function toTaskDTO(row: {
   title: string;
   projectId: string | null;
   parentId: string | null;
+  plannedDate: string | null;
+  plannedTime: string | null;
+  deadlineDate: string | null;
   completedAt: Date | null;
   revision: number;
   createdAt: Date;
@@ -172,6 +355,9 @@ export function toTaskDTO(row: {
     title: row.title,
     projectId: row.projectId,
     parentId: row.parentId,
+    plannedDate: row.plannedDate,
+    plannedTime: normalizeCivilTime(row.plannedTime),
+    deadlineDate: row.deadlineDate,
     completedAt: row.completedAt === null ? null : row.completedAt.toISOString(),
     revision: row.revision,
     createdAt: row.createdAt.toISOString(),

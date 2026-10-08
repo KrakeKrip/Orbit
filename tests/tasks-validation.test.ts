@@ -61,11 +61,44 @@ describe("parseTaskTitle", () => {
 });
 
 describe("parseTaskCreate", () => {
-  test("valid: ровно {title}", () => {
+  test("valid: ровно {title} (planning defaults null)", () => {
     expect(parseTaskCreate({ title: " Задача " })).toEqual({
       ok: true,
-      title: "Задача",
+      value: { title: "Задача", plannedDate: null, plannedTime: null, deadlineDate: null },
     });
+    expect(parseTaskCreate({ title: "Задача", plannedDate: null })).toEqual({
+      ok: true,
+      value: { title: "Задача", plannedDate: null, plannedTime: null, deadlineDate: null },
+    });
+  });
+
+  test("valid: planning fields + time без date → 400", () => {
+    expect(
+      parseTaskCreate({
+        title: "A",
+        plannedDate: "2026-01-05",
+        plannedTime: "09:30",
+        deadlineDate: "2026-01-10",
+      }),
+    ).toEqual({
+      ok: true,
+      value: {
+        title: "A",
+        plannedDate: "2026-01-05",
+        plannedTime: "09:30",
+        deadlineDate: "2026-01-10",
+      },
+    });
+    expect(parseTaskCreate({ title: "A", plannedTime: "09:30" })).toEqual({
+      ok: false,
+      field: "plannedTime",
+    });
+    const badDate = parseTaskCreate({ title: "A", plannedDate: "2026-13-01" });
+    expect(badDate.ok).toBe(false);
+    expect(badDate.ok ? undefined : badDate.field).toBe("plannedDate");
+    const badDeadline = parseTaskCreate({ title: "A", deadlineDate: "1899-12-31" });
+    expect(badDeadline.ok).toBe(false);
+    expect(badDeadline.ok ? undefined : badDeadline.field).toBe("deadlineDate");
   });
 
   test("unknown/identity/fields запрещены", () => {
@@ -186,6 +219,9 @@ describe("toTaskDTO", () => {
       title: "Задача",
       projectId: null,
       parentId: null,
+      plannedDate: null,
+      plannedTime: null,
+      deadlineDate: null,
       completedAt: null,
       revision: 3,
       createdAt: new Date("2026-01-02T03:04:05.678Z"),
@@ -196,6 +232,9 @@ describe("toTaskDTO", () => {
       title: "Задача",
       projectId: null,
       parentId: null,
+      plannedDate: null,
+      plannedTime: null,
+      deadlineDate: null,
       completedAt: null,
       revision: 3,
       createdAt: "2026-01-02T03:04:05.678Z",
@@ -207,6 +246,9 @@ describe("toTaskDTO", () => {
       title: "Готово",
       projectId: "0b8f6c1e-7c14-4f0e-9a51-2b6d9c44f003",
       parentId: null,
+      plannedDate: "2026-01-05",
+      plannedTime: null,
+      deadlineDate: null,
       completedAt: new Date("2026-02-01T00:00:00.000Z"),
       revision: 1,
       createdAt: new Date("2026-01-02T03:04:05.678Z"),
@@ -214,5 +256,7 @@ describe("toTaskDTO", () => {
     });
     expect(completed.completedAt).toBe("2026-02-01T00:00:00.000Z");
     expect(completed.projectId).toBe("0b8f6c1e-7c14-4f0e-9a51-2b6d9c44f003");
+    expect(completed.plannedDate).toBe("2026-01-05");
+    expect(completed.plannedTime).toBeNull();
   });
 });
