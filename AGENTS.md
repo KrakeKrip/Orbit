@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: FOUNDATIONS завершён; TASK-001–005 приняты и локально интегрированы. Auth и account timezone/theme settings проверены, task/project CRUD ещё отсутствует. TASK-006 NEEDS_FIXES после review 3036da3: Unicode create input, pending rename isolation и точный JSON media type; review d22a65e в task/TASK-006. Реализация не принята, TASK-007 не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: EVERYDAY CORE. TASK-001–006 приняты и локально интегрированы. Auth, account settings и Projects list/create/rename/archive/restore работают; task CRUD ещё отсутствует. TASK-006 DONE после закрытия R1/R2/R3 и main integration gates. TASK-007 не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
@@ -43,3 +43,5 @@ TASK-003 добавил PostgreSQL/Drizzle schema и миграции; npm run t
 TASK-004 принят после R1/R1b/R2/R3/R3b/R3c: 4 UI/47 DB/31 auth/56 browser checks, настоящий CLI PTY и аварийный E2E exit-status проверены. Main build без env PASS; runtime auth требует env и bootstrap. Auth/E2E только собственные unique DB, фактический app pool закрывается до DROP; completion result связывает shutdown status с итогом runner. Review — reports/TASK-004.md. TASK-005 settings persistence принят, review — reports/TASK-005.md.
 
 TASK-005 DONE: GET/PATCH /api/v1/settings, account defaults UTC/system, owner-scoped field-specific upsert, IANA validation, account theme bridge и Settings UI. Main 15 pure/UI/47 DB/51 auth/63 E2E и build без env PASS. Delayed response/account switch/timezone pending и реальный dev StrictMode success/error проверены. Реальные устройства/production не проверены; timezone алгоритмы расписания и CRUD — следующие TASK.
+
+TASK-006 DONE: owner-scoped project service и GET/POST collection, GET/PATCH item, реальный /projects с active/archive, Unicode names и pending rename guard. Main 29 unit/47 DB/72 auth/71 E2E и no-env build PASS; review — reports/TASK-006.md. Archive сохраняет связанные tasks; project task list/delete/reorder/sharing вне scope. Реальные устройства/deployment не проверены.

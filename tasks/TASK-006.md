@@ -1,7 +1,7 @@
 # TASK-006 — Projects: создание, переименование, архив и восстановление
 
 ## Статус / исходное состояние
-NEEDS_FIXES — независимое review `3036da329c96f428102fb8dbd1de11969f415aa4` выявило R1/R2/R3 [P2]: Unicode create input, pending rename isolation, JSON media type. Отчёт `reports/TASK-006.md`, review commit `d22a65ec7d3b19f2702c9164b64b3888a49543b1` в task/TASK-006. Исправления в той же ветке/worktree; main не интегрирована, TASK-007 не выдан. База review: `9b2ba6465f2c5bda5aba88cf8f26cd0ffdd0cc2c` (принятый TASK-005).
+DONE — принят `fcd5d87744a45e7e2edacad3edc6dfe674b35237` после закрытия R1/R2/R3, review commit `4765b6b9ef4e8df3132599bd6b289e81d7f670ef`, локальный merge `60778c5902438fbcd6647d44cf4810b14117a965`. Main integration gates PASS: 29 unit/47 DB/72 auth/71 E2E и build без env. Отчёт reports/TASK-006.md. TASK-007 не выдан. Ниже сохранён исходный assignment. База review: `9b2ba6465f2c5bda5aba88cf8f26cd0ffdd0cc2c` (принятый TASK-005).
 Ветка `task/TASK-006`, worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-006`. Starting SHA assignment проверить через git rev-parse HEAD и записать в report; координационный commit над review-базой не является реализацией GLM.
 Прочитать AGENTS.md, PRODUCT.md, ARCHITECTURE.md, DESIGN.md, DECISIONS.md, этот TASK, последние разделы reports/TASK-004.md и TASK-005.md.
 Приняты: authenticated shell five routes, Better Auth signup OFF/login/logout, requireUser/server-only boundaries, PostgreSQL projects table и owner composite FK, account settings GET/PATCH, IANA validation и theme sync. /projects пока development placeholder, project service/API отсутствуют. Tasks CRUD/реальных задач ещё нет.

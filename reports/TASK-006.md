@@ -42,3 +42,10 @@ R1: native UTF-16 maxLength убран; pure validation по 120 code points с�
 
 Нормальные rename/error/retry/focus/unmount/browser regressions сохранены. Mounted lifecycle guard симметричен по коду и не менялся коррекцией; executor real Next dev evidence прочитан, независимый dev replay в этом раунде не выполнялся. Реальные устройства/production proxy/deployment не проверены; прежние ограничения остаются.
 Следующий шаг: local no-ff merge в чистую main, integration gates и DONE. TASK-007 этим review не назначен; push/deploy не разрешены.
+
+
+## Локальная интеграция — DONE, 2026-10-08
+
+Принята реализация `fcd5d87744a45e7e2edacad3edc6dfe674b35237`, review commit `4765b6b9ef4e8df3132599bd6b289e81d7f670ef`, локальный merge --no-ff **`60778c5902438fbcd6647d44cf4810b14117a965`**. Main была чистой, конфликтов нет, история сохранена.
+На интегрированной main: npm ci --offline; lint/typecheck; **29 unit**, **47 DB**, **72 auth**, CI=1 E2E_PORT=3255 — **71 browser**, build без .env/DATABASE_URL/BETTER_AUTH_SECRET/BETTER_AUTH_URL — все PASS/exit 0. Auth/E2E logs без lifecycle error patterns. Конфигурация TEST_DATABASE_URL передана из ignored worktree .env без печати секретов и без записи .env в main. Тесты использовали собственные unique DB; реальные аккаунты/dev DB не создавались/не мигрировались. После всех прогонов orbit_test_* DB/connections — 0.
+TASK-006 DONE; координационные статусы актуализированы. TASK-007 не назначен. Push/deploy/изменения защитных настроек не выполнялись. Реальные устройства/production proxy не проверены.

@@ -80,5 +80,5 @@ Settings добавляет IANA timezone с label/example, явным сохр�
 TASK-005 принят: theme save preview с подтверждением/error rollback, timezone explicit save/Enter с disabled input/button при pending. Server account defaults/cache authority и account switch/stale response behaviour проверены; новые controls >=44px, mobile/keyboard regression сохранена. Реальные iPhone/macOS устройства не проверены.
 
 
-## TASK-006: Projects (задание)
+## TASK-006: Projects (реализовано и принято)
 /projects становится реальным list/create/rename/archive/restore экраном с «Активные» и «Архив», accessible controls, explicit saving/error/retry, create по Enter и rename cancel/focus return. Project name — текст, без неработающего перехода на task view; sidebar topology не меняется. Архив не означает удаление, task counts/список/quick-add пока отсутствуют. 360/390/1280px, 44px touch controls, long Unicode names, light/dark/system. Pending form исключает double submit/потерю draft; delayed responses после ухода/смены actor не изменяют новый UI, lifecycle эффекты симметричны под StrictMode.
