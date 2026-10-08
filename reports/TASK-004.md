@@ -93,3 +93,35 @@ Acceptance: два последовательных auth и E2E прогона �
 ### Следующая передача GLM
 
 Та же ветка/worktree; исправить только R1b/R3b и связанные regression tests/test lifecycle, обновить executor report. R2 закрыт. Обычные новые commits, без amend/rebase/reset/merge/push, main/3000/CRM не трогать. TASK-005 не начинать. После повторных gates вернуть latest SHA и READY_FOR_REVIEW либо точную BLOCKED диагностику.
+
+
+## Review e161f51 — 2026-10-08, актуальный вердикт
+
+**NEEDS_FIXES: осталось одно замечание R3c [P2].** Проверен `e161f51f7624a4a3ae1f3164d8f09c65b7817769` относительно `622781ae70d8b0aa3c58e7424fa7bea579d9924a`: 9 файлов, 644 insertions/202 deletions. R1/R1b/R2 закрыты; штатный lifecycle R3/R3b теперь подтверждён. Main не изменена, merge/push/deploy не выполнены, TASK-005 не выдан.
+
+### Закрытые замечания / независимые проверки
+
+- Компенсация provisioning теперь использует возвращённый primary key и нормализованный email, без поиска кандидатов по времени/email. Успешно созданный account/session также удаляется FK cascade при post-check отказе. Независимая AFTER INSERT session injection повторена: отказ, **0 users / 0 accounts / 0 sessions**. Account INSERT failure, case-normalized duplicate, concurrent provisioning входят в прошедшую suite. Случайный synthetic duplicate id отсутствует в БД и не совпадает с чужим primary key; отдельный deterministic тест именно synthetic response остаётся неблокирующим пробелом, а не незакрытым R1.
+- globalThis registry объединяет source core и compiled Next pool в одном процессе; closeDbPool закрывает реальные app connections. Одно app/одно DATABASE_URL на процесс — документированное ограничение; переключение targets/multiple apps сейчас не требуется.
+- npm ci --offline, lint без warnings, strict typecheck, 4 UI tests: PASS, exit 0. DB suite 47 PASS.
+- test:auth **два последовательных прогона, 26/26**, оба exit 0. Lifecycle error patterns отсутствуют.
+- CI=1 E2E_PORT=3207/3208 test:e2e **два последовательных прогона, 56/56**, оба exit 0. Lifecycle error patterns отсутствуют. Публичный signup OFF, session/API/login/logout/actor isolation и прежняя UI регрессия сохранены.
+- Build без .env/DATABASE_URL/BETTER_AUTH_SECRET/BETTER_AUTH_URL в свежем git archive snapshot с собственной npm ci PASS, workspace/login/API Dynamic.
+- CLI PTY повторён на собственных synthetic DB/inputs: positive 0, duplicate EMAIL_EXISTS 2, no 0, Ctrl+C 130; password echo отсутствует, terminal mode восстановлен.
+- Новые gates не являются проверкой production/реальных iOS/macOS устройств. Прежние rate-limit/proxy/audit ограничения остаются; новый dependency audit в этом review не выполнялся.
+
+### R3c [P2] Нечистая остановка E2E server всё ещё превращается в PASS всего gate
+
+`tests/e2e/global-teardown.ts:132–149`: teardown проверяет, что PID исчез и база удалена, но не проверяет результат остановки. `scripts/e2e-server.ts` при forced termination удаляет fixture DB и выходит с 1, поэтому globalTeardown видит dropped=true и возвращается успешно. Playwright в этой последовательности не переносит exit 1 вспомогательного server process в итоговый exit code.
+
+Независимое детерминированное воспроизведение **без изменения исходников приложения**: третий собственный E2E run (CI=1, порт 3209). После старта по маркеру именно этого запуска открыто одно дополнительное synthetic pg соединение только к его newly-created DB. Teardown после closeDbPool обнаруживает остаток, аварийно терминирует его (client SQLSTATE **57P01**), сообщает `[WebServer] [e2e-server] unclean shutdown: 0 connection(s) required forced termination` и выполняет exit(1). Однако полный `npm run test:e2e` выдаёт **56 passed (16.2s), exit 0**. Цифра 0 в сообщении — остаток после аварийной termination, а не отсутствие аварийной termination. Собственная test DB удалена; сторонние данные/процессы не затронуты.
+
+Это оставшаяся часть acceptance R3b: forced cleanup не должен считаться успешным gate. Штатные два чистых прогона и исправленное закрытие pool принимаются; переделывать их без необходимости не требуется.
+
+Исправить передачу результата shutdown в runner: например, отдельный локальный completion result для конкретного запуска (успех/ошибка и идентичность ресурса), который globalTeardown проверяет после выхода server, либо другой надёжный способ получить фактический exit status. Само отсутствие DB/PID не подтверждает clean shutdown. Missing/failed completion при CI shutdown должен давать ненулевой итог, включая ситуацию, когда аварийная зачистка уже удалила DB. Не добавлять HTTP teardown endpoint, не скрывать logs, не обходить защитные hooks и не увеличивать scope до production lifecycle. Для reuseExistingServer вне CI сохранить явно документированное поведение.
+
+Добавить детерминированную регрессию: успешная остановка даёт exit 0; synthetic leftover connection к собственной уникальной БД → forced cleanup → **весь E2E gate exit != 0**, при этом собственные ресурсы зачищены. Проверять не только server exit(1), а конечный результат runner/команды. После исправления два обычных последовательных E2E должны оставаться чистыми; повторить релевантные static/auth/DB gates соразмерно изменениям. Обновить executor report и вернуть READY_FOR_REVIEW с новым полным SHA.
+
+### Передача
+
+Та же ветка/worktree, исправить только R3c и связанный test/fixture reporting. R1b/R2 и штатное закрытие фактического пула приняты. Обычные новые commits, без merge/push/amend/rebase/reset; main/3000/CRM/защитные настройки не менять. TASK-005 не начинать.
