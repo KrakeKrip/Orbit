@@ -117,10 +117,12 @@ composite FK (в том числе на UPDATE), SQL checks, round trip DATE/TIM
 | `/today`      | сессия      | Сегодня                    |
 | `/inbox`      | сессия      | Входящие                   |
 | `/upcoming`   | сессия      | Предстоящее                |
-| `/projects`   | сессия      | Проекты                    |
+| `/projects`   | сессия      | Проекты (создание/архив)   |
 | `/settings`   | сессия      | Настройки (timezone, тема, выход) |
 | `/api/v1/me`  | сессия      | GET identity endpoint      |
 | `/api/v1/settings` | сессия | GET/PATCH timezone/theme аккаунта |
+| `/api/v1/projects` | сессия | GET list (status=active/archived/all), POST create |
+| `/api/v1/projects/[projectId]` | сессия | GET item, PATCH rename/archive (DELETE нет) |
 
 Все workspace-маршруты защищены на сервере: анонимный браузер перенаправляется
 на `/login`, API отвечает `401 {"error":{"code":"UNAUTHENTICATED"}}`.
@@ -202,6 +204,27 @@ Login и /login не читают настройки аккаунта.
 («Системная / Светлая / Тёмная», `localStorage` ключ `orbit-theme`). После
 входа приоритет имеет тема аккаунта (см. раздел выше).
 
+## Проекты
+
+`/projects` — первый реальный CRUD-раздел: создание, переименование,
+архивирование и восстановление собственных проектов. Активные и архивные
+проекты показываются отдельными списками (по умолчанию — активные); архив
+**не удаляет** проект и не трогает связанные задачи. Повторяющиеся имена
+разрешены; имя — 1–120 Unicode code points с trim; rename доступен и в
+архиве. Имя проекта — текст, перехода на task view пока нет (список задач
+внутри проекта — будущий этап).
+
+API (cookie-auth, owner-scoped service, actor только из сессии):
+`GET /api/v1/projects?status=active|archived|all`, `POST` `{name}` → 201,
+`GET/PATCH /api/v1/projects/[projectId]` (PATCH — непустой subset
+`{name?, archived?}`). Сортировка стабильная (sort_order, created_at, id);
+DELETE и ручная сортировка отсутствуют. Ошибки — envelope
+`{error:{code,field?}}`: 400 (validation/UUID/лишний query), 401, 403
+(точная Origin-защита mutations), 404 (чужой и неизвестный id
+неразличимы), 413/415, 500; все ответы `private, no-store`; mutations
+ограничены 2 KiB JSON. Значения `id/owner_id/sort_order` из payload
+отвергаются.
+
 ## Production-сборка и запуск
 
 ```sh
@@ -263,7 +286,7 @@ UI-строки интерфейса централизованы в `src/lib/i1
 Данных задач и серверной бизнес-логики пока нет. Пока отсутствуют и не
 притворяются работающими:
 
-- CRUD задач и проектов, сервисный слой, API besides identity/settings endpoints;
+- CRUD задач (список задач внутри проекта появится позже), project deletion/reordering/colors/sharing, API besides identity/settings/projects endpoints;
 - смена email/пароля, восстановление пароля, сессии «на других устройствах»;
 - применение timezone к расписанию: Сегодня/Предстоящее/повторения пока не
   используют настройки (см. раздел «Настройки аккаунта»);
