@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: FOUNDATIONS; TASK-001 принят, TASK-002 подготовлен к передаче. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: FOUNDATIONS; TASK-001 принят, TASK-002 возвращён на исправления после review. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
