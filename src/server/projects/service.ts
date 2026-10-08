@@ -116,7 +116,9 @@ export async function updateProject(
         : patch.archived
           ? { archivedAt: sql`coalesce(${projects.archivedAt}, now())` }
           : { archivedAt: null }),
-      updatedAt: new Date(),
+      // now() из БД: server write теми же часами, что и created_at
+      // (кросс-часовые сравнения node/pg при скью VM дают flaky).
+      updatedAt: sql`now()`,
     })
     .where(and(eq(projects.id, projectId), eq(projects.ownerId, actorId)))
     .returning({

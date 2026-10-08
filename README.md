@@ -115,7 +115,7 @@ composite FK (в том числе на UPDATE), SQL checks, round trip DATE/TIM
 | `/`           | —           | перенаправление на `/today` |
 | `/login`      | анонимно    | Вход (email/password)      |
 | `/today`      | сессия      | Сегодня                    |
-| `/inbox`      | сессия      | Входящие                   |
+| `/inbox`      | сессия      | Входящие (quick-add задач) |
 | `/upcoming`   | сессия      | Предстоящее                |
 | `/projects`   | сессия      | Проекты (создание/архив)   |
 | `/settings`   | сессия      | Настройки (timezone, тема, выход) |
@@ -123,6 +123,8 @@ composite FK (в том числе на UPDATE), SQL checks, round trip DATE/TIM
 | `/api/v1/settings` | сессия | GET/PATCH timezone/theme аккаунта |
 | `/api/v1/projects` | сессия | GET list (status=active/archived/all), POST create |
 | `/api/v1/projects/[projectId]` | сессия | GET item, PATCH rename/archive (DELETE нет) |
+| `/api/v1/tasks` | сессия | GET Inbox list (status=open/completed/all), POST create |
+| `/api/v1/tasks/[taskId]` | сессия | GET item, PATCH rename/complete, DELETE soft delete |
 
 Все workspace-маршруты защищены на сервере: анонимный браузер перенаправляется
 на `/login`, API отвечает `401 {"error":{"code":"UNAUTHENTICATED"}}`.
@@ -225,6 +227,29 @@ DELETE и ручная сортировка отсутствуют. Ошибки
 ограничены 2 KiB JSON. Значения `id/owner_id/sort_order` из payload
 отвергаются.
 
+## Входящие: базовые one-off задачи
+
+`/inbox` — первая реальная работа с задачами: quick-add (label «Название
+задачи», Enter), переименование, завершение/повторное открытие и soft
+delete с подтверждением («Удалить задачу?» + Подтвердить/Отмена). Открытые
+и завершённые показываются отдельными списками; задача без даты в активном
+проекте тоже попадает во Входящие; задачи архивных проектов и с датами на
+экране не показываются (server-side фильтр). Заголовок — 1–500 Unicode
+code points, дубликаты разрешены, NUL/unpaired surrogates отвергаются.
+
+API (cookie-auth, owner-scoped, actor только из сессии):
+`GET /api/v1/tasks?status=open|completed|all`, `POST` `{title}` → 201,
+`GET/PATCH/DELETE /api/v1/tasks/[taskId]`; PATCH — непустой subset
+`{title?, completed?}`. Мутации транзакционны с row lock задачи; archive
+проекта сериализуется row lock'ом проекта (409 `PROJECT_ARCHIVED` при
+конфликте), child/recurrence задачи → 409 `UNSUPPORTED_TASK`. Завершение
+пишет journal `task_completions` тем же server timestamp в той же
+транзакции; повторные завершения — no-op без новых записей. Удаление —
+soft delete (deleted_at, revision+1) с каскадным скрытием собственных
+активных прямых подзадач тем же timestamp; физического DELETE нет, undo
+пока не реализован. Ошибки: 400/401/403/404/409/413/415/500, все ответы
+`private, no-store`.
+
 ## Production-сборка и запуск
 
 ```sh
@@ -286,7 +311,7 @@ UI-строки интерфейса централизованы в `src/lib/i1
 Данных задач и серверной бизнес-логики пока нет. Пока отсутствуют и не
 притворяются работающими:
 
-- CRUD задач (список задач внутри проекта появится позже), project deletion/reordering/colors/sharing, API besides identity/settings/projects endpoints;
+- Задачи: даты/дедлайны, notes/priority editing, project assignment/move, subtask UI, recurrence, completion history UI, search; project deletion/reordering/colors/sharing; API besides identity/settings/projects/tasks endpoints;
 - смена email/пароля, восстановление пароля, сессии «на других устройствах»;
 - применение timezone к расписанию: Сегодня/Предстоящее/повторения пока не
   используют настройки (см. раздел «Настройки аккаунта»);

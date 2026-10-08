@@ -18,6 +18,9 @@ test.describe("тема оформления, 1280px", () => {
 
     await expect(page.locator("html")).toHaveClass(htmlClass("light"));
     await expect(page.locator("#theme-select")).toContainText("Светлая");
+    // Тема сохраняется в аккаунте: ждём подтверждение server save до reload,
+    // иначе reload может отрендерить прежнее серверное значение.
+    await expect(page.getByText("Тема сохранена")).toBeVisible();
     expect(await page.evaluate(() => localStorage.getItem("orbit-theme"))).toBe(
       "light",
     );
@@ -34,6 +37,7 @@ test.describe("тема оформления, 1280px", () => {
     await page.getByRole("combobox", { name: "Тема" }).click();
     await page.getByRole("option", { name: "Тёмная" }).click();
     await expect(page.locator("html")).toHaveClass(htmlClass("dark"));
+    await expect(page.getByText("Тема сохранена")).toBeVisible();
 
     await page.getByRole("link", { name: "Входящие", exact: true }).click();
     await expect(page).toHaveURL(/\/inbox$/);
@@ -123,6 +127,7 @@ test.describe("тема на мобильной ширине, 360px", () => {
     await page.getByRole("combobox", { name: "Тема" }).click();
     await page.getByRole("option", { name: "Тёмная" }).click();
     await expect(page.locator("html")).toHaveClass(htmlClass("dark"));
+    await expect(page.getByText("Тема сохранена")).toBeVisible();
 
     await page.reload();
     await expect(page.locator("html")).toHaveClass(htmlClass("dark"));

@@ -1,18 +1,29 @@
-import { Inbox } from "lucide-react";
-import { EmptyView } from "@/components/orbit/empty-view";
+import { TasksView } from "@/components/orbit/tasks-view";
 import { PageHeader } from "@/components/orbit/page-header";
 import { ru } from "@/lib/i18n/ru";
+import { requireUserOrRedirect } from "@/server/auth/session";
+import { listInboxTasks } from "@/server/tasks/service";
+import { toTaskDTO } from "@/lib/tasks";
 
-export default function InboxPage() {
-  const page = ru.pages.inbox;
+export default async function InboxPage() {
+  // Actor и начальные списки только из проверенной сессии; открытые и
+  // завершённые Inbox-задачи загружаются независимо.
+  const user = await requireUserOrRedirect();
+  const [open, completed] = await Promise.all([
+    listInboxTasks(user.id, "open"),
+    listInboxTasks(user.id, "completed"),
+  ]);
 
   return (
     <div>
-      <PageHeader title={page.title} description={page.description} />
-      <EmptyView
-        icon={Inbox}
-        title={page.empty.title}
-        description={page.empty.description}
+      <PageHeader
+        title={ru.pages.inbox.title}
+        description={ru.pages.inbox.description}
+      />
+      <TasksView
+        initialOpen={open.map(toTaskDTO)}
+        initialCompleted={completed.map(toTaskDTO)}
+        actorId={user.id}
       />
     </div>
   );

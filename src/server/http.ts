@@ -93,3 +93,34 @@ export function hasJsonContentType(request: Request): boolean {
     .toLowerCase();
   return mediaType === "application/json";
 }
+
+/**
+ * Чтение body с подсчётом размера и жёстким лимитом (для DELETE без media
+ * requirement): важно только «пусто/непусто» и превышение лимита.
+ */
+export async function readBodySizeWithLimit(
+  request: Request,
+  maxBytes: number = MAX_JSON_BODY_BYTES,
+): Promise<{ ok: true; bytes: number } | { ok: false; tooLarge: boolean }> {
+  const declaredLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    return { ok: false, tooLarge: true };
+  }
+  if (!request.body) {
+    return { ok: true, bytes: 0 };
+  }
+  const reader = request.body.getReader();
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      return { ok: false, tooLarge: true };
+    }
+  }
+  return { ok: true, bytes: total };
+}
