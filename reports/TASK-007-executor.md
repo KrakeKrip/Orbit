@@ -2,7 +2,33 @@
 
 ## Статус
 
-READY_FOR_REVIEW (после коррекции R1/R2/R3 по review reports/TASK-007.md; старт коррекции `fe95c5be5d799317ade3722398efcf03d8501ec8`).
+READY_FOR_REVIEW (после коррекции R3b по повторному review reports/TASK-007.md; R1/R2/R3 закрыты Codex, не менялись; старт коррекции R3b `b28b80b5dacca602d6db0431cf1c15989f717f08`).
+
+## Correction R3b (второй этап NEEDS_FIXES)
+
+Изменены только: `src/components/orbit/tasks-view.tsx`, `tests/e2e/inbox.spec.ts` (+1 регрессия, 82 → 83). Service/schema/API/transactions/completion/locking/R1/R2 не переделывались.
+
+Корень: при DELETE pending обе кнопки confirmation disabled и сфокусированная «Отмена» теряла фокус в BODY; failure-ветки handleDelete (HTTP refusal и network rejection) показывали ошибку и возвращали кнопки, но не восстанавливали фокус. Исправление: обе failure-ветки после `setDeleteError` (при живом mounted) ставят `deleteFocus {target:"cancel"}` с новым nonce — post-commit effect возвращает фокус в безопасную enabled «Отмену» живого confirmation. Unmount/смена actor: setDeleteFocus не вызывается и effect этого компонента не срабатывает — фокус наружу не переносится. Escape/cancel при deletePending по-прежнему игнорируются; success → quick-add; cancel/Escape в обычном режиме → trigger; rename focus — без изменений (все прежние assertions сохранены).
+
+Regression (inbox.spec +1, **83**): «R3b: отказ DELETE (500 и network) возвращает фокус в confirmation» — две фазы на одной задаче: (1) held DELETE → HTTP 500 → ошибка видима, Cancel enabled и **focused**; Escape после отказа → confirmation закрыт, фокус на trigger, DELETE не повторился; (2) network rejection (route.abort) → тот же failure focus lifecycle; финальный успешный DELETE → строка скрыта, фокус на quick-add. Pending-policy asserted (Cancel disabled во время DELETE).
+
+## Проверки после коррекции R3b (Node v24.21.0 / npm 11.19.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| `npm run lint` / `npm run typecheck` | exit 0 / exit 0, без warnings |
+| `npm test` | exit 0 — 44 passed |
+| `npm run test:db` | exit 0 — 47 passed |
+| `npm run test:auth` №1 / №2 (последовательно) | exit 0 — **101/101** оба; 0 lifecycle-паттернов |
+| `CI=1 E2E_PORT=3270` / `3271` / `3272` (три прогона) | exit 0 — **83/83** все (82 + R3b regression); 0 lifecycle-паттернов |
+| `npm run build` без `.env` | exit 0 |
+| Leftovers | orbit_test\*-баз: 0; `git diff --check` чист; изменения — 1 компонент + 1 spec |
+
+Ограничения — без изменений к предыдущим раундам (реальные устройства/production proxy не проверялись; даты/notes/priority/project assignment/subtasks/recurrence вне scope; limiter single-process; clock skew устранён server-side `now()` в раунде реализации).
+
+---
+
+# Предыдущие раунды (исходная реализация и R1/R2/R3)
 
 ## Correction R1/R2/R3 (этап NEEDS_FIXES)
 

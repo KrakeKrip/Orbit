@@ -393,10 +393,29 @@ export function TasksView({
         }
         return;
       }
+      // R3b: при pending обе кнопки confirmation disabled и focus падал в
+      // BODY. После отказа pending снят — возвращаем фокус в живой
+      // confirmation на безопасную «Отмену» (enabled). Unmount/смена actor:
+      // setDeleteFocus не вызывается, effect этого компонента не сработает.
       setDeleteError(ru.tasks.delete.error);
+      if (mountedRef.current) {
+        focusNonceRef.current += 1;
+        setDeleteFocus({
+          target: "cancel",
+          id: task.id,
+          nonce: focusNonceRef.current,
+        });
+      }
     } catch {
+      // Network rejection DELETE — тот же failure focus lifecycle.
       if (mountedRef.current) {
         setDeleteError(ru.tasks.delete.error);
+        focusNonceRef.current += 1;
+        setDeleteFocus({
+          target: "cancel",
+          id: task.id,
+          nonce: focusNonceRef.current,
+        });
       }
     } finally {
       deleteInFlight.current = false;

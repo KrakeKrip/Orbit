@@ -324,6 +324,91 @@ test.describe("входящие: quick-add/rename/complete (desktop 1280)", () =
     await page.unroute("**/api/v1/tasks/**");
   });
 
+  test("R3b: отказ DELETE (500 и network) возвращает фокус в confirmation", async ({
+    page,
+  }) => {
+    const name = `R3b ${run}`;
+    let deleteCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let mode: "error500" | "network" = "error500";
+    await page.route("**/api/v1/tasks/**", async (route) => {
+      if (route.request().method() !== "DELETE") {
+        await route.fallback();
+        return;
+      }
+      deleteCount += 1;
+      await gate;
+      if (mode === "error500") {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: '{"error":{"code":"INTERNAL"}}',
+        });
+        return;
+      }
+      await route.abort();
+    });
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(name);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const row = page.locator("li[data-task-id]", { hasText: name });
+    await expect(row).toBeVisible();
+    const taskId = await row.getAttribute("data-task-id");
+    expect(taskId).not.toBeNull();
+
+    const cancel = () => page.locator(`#task-delete-cancel-${taskId}`);
+    const trigger = () => page.locator(`#task-delete-trigger-${taskId}`);
+
+    // Фаза 1: held DELETE → HTTP 500.
+    await row.getByRole("button", { name: "Удалить" }).click();
+    await expect(page.getByText("Удалить задачу?")).toBeVisible();
+    await expect(cancel()).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Enter");
+    await expect(cancel()).toBeDisabled();
+    release();
+    await expect(page.getByText("Не удалось удалить задачу")).toBeVisible();
+    await expect(row).toBeVisible();
+    await expect(cancel()).toBeEnabled();
+    // R3b: после отказа и снятия pending фокус в живом confirmation.
+    await expect(cancel()).toBeFocused();
+
+    // Escape после отказа: отмена + фокус на trigger; DELETE не повторился.
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("Удалить задачу?")).toHaveCount(0);
+    await expect(trigger()).toBeFocused();
+    expect(deleteCount).toBe(1);
+
+    // Фаза 2: network rejection DELETE.
+    mode = "network";
+    await row.getByRole("button", { name: "Удалить" }).click();
+    await expect(page.getByText("Удалить задачу?")).toBeVisible();
+    await expect(cancel()).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Enter");
+    release();
+    await expect(page.getByText("Не удалось удалить задачу")).toBeVisible();
+    await expect(cancel()).toBeEnabled();
+    await expect(cancel()).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("Удалить задачу?")).toHaveCount(0);
+    await expect(trigger()).toBeFocused();
+    expect(deleteCount).toBe(2);
+
+    // Retry-delete: успешное удаление, фокус на quick-add.
+    await page.unroute("**/api/v1/tasks/**");
+    await row.getByRole("button", { name: "Удалить" }).click();
+    await expect(page.getByText("Удалить задачу?")).toBeVisible();
+    await row.getByRole("button", { name: "Удалить", exact: true }).click();
+    await expect(page.locator("li[data-task-id]", { hasText: name })).toHaveCount(0);
+    const activeId = await page.evaluate(() => document.activeElement?.id ?? "");
+    expect(activeId).toBe("task-title-input");
+  });
+
   test("delayed complete + навигация: stale ответ не меняет UI", async ({
     page,
   }) => {
