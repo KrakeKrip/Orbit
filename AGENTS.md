@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: EVERYDAY CORE. TASK-001–006 приняты и локально интегрированы. Auth, account settings и Projects list/create/rename/archive/restore работают; task CRUD ещё отсутствует. TASK-006 DONE после закрытия R1/R2/R3 и main integration gates. TASK-007 NEEDS_FIXES после повторного review 61a2add: R1/R2 закрыты, осталось R3b — focus после отказа DELETE. Report/review b28b80b в task/TASK-007; реализация не принята, TASK-008 не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: EVERYDAY CORE. TASK-001–007 приняты и локально интегрированы. Работают auth, account settings, Projects и реальные one-off задачи в Inbox: create/rename/complete/reopen/soft delete. TASK-007 DONE после R1/R2/R3/R3b и main integration gates. TASK-008 не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
@@ -45,3 +45,5 @@ TASK-004 принят после R1/R1b/R2/R3/R3b/R3c: 4 UI/47 DB/31 auth/56 bro
 TASK-005 DONE: GET/PATCH /api/v1/settings, account defaults UTC/system, owner-scoped field-specific upsert, IANA validation, account theme bridge и Settings UI. Main 15 pure/UI/47 DB/51 auth/63 E2E и build без env PASS. Delayed response/account switch/timezone pending и реальный dev StrictMode success/error проверены. Реальные устройства/production не проверены; timezone алгоритмы расписания и CRUD — следующие TASK.
 
 TASK-006 DONE: owner-scoped project service и GET/POST collection, GET/PATCH item, реальный /projects с active/archive, Unicode names и pending rename guard. Main 29 unit/47 DB/72 auth/71 E2E и no-env build PASS; review — reports/TASK-006.md. Archive сохраняет связанные tasks; project task list/delete/reorder/sharing вне scope. Реальные устройства/deployment не проверены.
+
+TASK-007 DONE: tasks API/service с owner-scoped transactions, completion journal/no-op/reopen/soft delete; Inbox quick-add/rename/complete/reopen/delete confirmation. Read/network errors отделены от write outcomes; pending actions и keyboard focus/error/cancel/retry проверены. Main 44 unit/47 DB/101 auth/83 E2E и no-env build PASS. Dates/notes/priority/project assignment/subtasks/recurrence UI ещё отсутствуют; реальные устройства/deployment не проверены. Review — reports/TASK-007.md.

@@ -70,3 +70,10 @@ R3b: HTTP refusal и network rejection DELETE создают новый focus ta
 Исходный controlled production Chromium/API probe повторён независимо на собственном server **3274**/unique test DB: после held DELETE500 activeElement — **BUTTON task-delete-cancel-<id>**, control enabled; Escape/open/cancel корректны. R1: подтверждённая task есть в БД, aborted read даёт createError=false/read retry=1; retry network abort без pageerrors. R2: current toggle row rename/delete disabled, force-click не открывает confirmation. Probe exit0, server/pool/DB закрыты через completion-aware finalization.
 
 Самостоятельный dev replay в этом раунде не выполнялся; executor исходный real Next dev evidence сохранён, permanent dev suite отсутствует. Реальные устройства/production proxy/deployment не проверены, прежние deployment/limiter/audit ограничения сохраняются. Следующий шаг — local no-ff merge в чистую main, integration gates и DONE. TASK-008 не назначен; push/deploy не разрешены.
+
+
+## Локальная интеграция — DONE, 2026-10-08
+
+Принята реализация `e7fded5766735a993ebf8be7c2cf0ae786379600`, review commit `1322b75b822dd0169a8c49586c59ee0c15ec4af6`, local no-ff merge **`23934fcc8e97f18a3e9f69e56b4b4252a84502ea`**. Main перед merge чистая, конфликтов нет, история сохранена.
+На интегрированной main независимо: npm ci --offline; lint/typecheck; **44 unit**, **47 DB**, **101 auth**; CI=1 E2E_PORT=3275 — **83 browser**; build без .env/DATABASE_URL/BETTER_AUTH_SECRET/BETTER_AUTH_URL — все PASS/exit0. Auth/E2E logs без lifecycle error patterns. TEST_DATABASE_URL передан из ignored task-worktree .env без печати секретов/записи .env в main; тесты использовали только own unique DB. После всех прогонов orbit_test_* DB/connections — 0. Пользовательские accounts/dev DB не создавались/не мутировались.
+TASK-007 DONE; координационные статусы актуализированы. TASK-008 не назначен, push/deploy/protective hooks changes не выполнялись. Реальные устройства/production proxy не проверены.
