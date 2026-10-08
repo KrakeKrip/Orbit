@@ -1,27 +1,39 @@
 import { Client } from "pg";
+import { loadDotEnv, resolveTestDatabaseTarget } from "./db-target";
 
 /**
- * Помощник DB-тестов: короткоживущее подключение на каждый тест.
- * Клиенты всегда закрываются в finally — висящих процессов не остаётся.
+ * Помощник DB-тестов: короткоживущее подключение к базе, созданной раннером
+ * этого запуска. Имя базы приходит через ORBIT_TEST_DB_NAME (global-setup),
+ * сервер и креденшелы — только из проверенных частей TEST_DATABASE_URL
+ * (сырой URL в pg не передаётся). Клиенты закрываются в finally.
  */
 
-export function testDatabaseUrl(): string {
-  try {
-    process.loadEnvFile(".env");
-  } catch {
-    // .env может отсутствовать: TEST_DATABASE_URL берётся из окружения.
+function runnerTarget() {
+  loadDotEnv();
+  const target = resolveTestDatabaseTarget();
+  const name = process.env.ORBIT_TEST_DB_NAME ?? "";
+  if (!/^orbit_test_[0-9]+_[a-z0-9]+$/.test(name)) {
+    throw new Error(
+      "ORBIT_TEST_DB_NAME is not set by the runner: run the DB suite via npm run test:db.",
+    );
   }
-  const url = process.env.TEST_DATABASE_URL;
-  if (!url) {
-    throw new Error("TEST_DATABASE_URL is not set.");
-  }
-  return url;
+  return { ...target, database: name };
+}
+
+export function runnerDatabaseName(): string {
+  return runnerTarget().database;
+}
+
+export function adminConfig() {
+  const target = runnerTarget();
+  return { ...target, database: "postgres" };
 }
 
 export async function withDbClient<T>(
   fn: (client: Client) => Promise<T>,
 ): Promise<T> {
-  const client = new Client({ connectionString: testDatabaseUrl() });
+  const { host, port, user, password, database } = runnerTarget();
+  const client = new Client({ host, port, user, password, database });
   await client.connect();
   try {
     return await fn(client);
