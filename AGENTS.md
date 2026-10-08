@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: FOUNDATIONS завершён; TASK-001–005 приняты и локально интегрированы. Auth и account timezone/theme settings проверены, task/project CRUD ещё отсутствует. TASK-006 подготовлен для GLM, TODO; реализация ещё не проверена. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: FOUNDATIONS завершён; TASK-001–005 приняты и локально интегрированы. Auth и account timezone/theme settings проверены, task/project CRUD ещё отсутствует. TASK-006 NEEDS_FIXES после review 3036da3: Unicode create input, pending rename isolation и точный JSON media type; review d22a65e в task/TASK-006. Реализация не принята, TASK-007 не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
