@@ -2,7 +2,40 @@
 
 ## Статус
 
-READY_FOR_REVIEW.
+READY_FOR_REVIEW (после коррекции R1/R2/R3 по review reports/TASK-006.md; старт коррекции `d22a65ec7d3b19f2702c9164b64b3888a49543b1`).
+
+## Correction R1/R2/R3 (этап NEEDS_FIXES)
+
+Изменены только: `src/server/http.ts`, `src/components/orbit/projects-view.tsx`, `tests/auth/projects.auth.test.ts`, `tests/auth/settings.auth.test.ts`, `tests/e2e/projects.spec.ts`. Service/schema/ownership/main не менялись.
+
+### R3 — точный media type application/json
+`hasJsonContentType` теперь сравнивает media type **точно**: part до `;` → trim → lowercase === `application/json`. `application/jsonp` и похожие префиксы → 415 без записи; `application/json;charset=UTF-8` и регистр token'а принимаются. Regressions: POST jsonp → 415 без записи, PATCH jsonp → 415 без мутаций, PATCH с parameters → 200 (projects.auth); settings jsonp → 415 (settings.auth — общий helper, ослабления нет).
+
+### R1 — ввод полного 120-code-point имени
+`maxLength={200}` убран из create input: HTML maxLength считает UTF-16 units и молча резал non-BMP имена (120 🦄 = 240 units → 100). Лимит 120 code points остаётся в pure-валидации (`parseProjectName`), клиентская invalid-подсказка без запроса при 121.
+Regression: `keyboard.insertText` (путь реальной вставки) 120 🦄 → в поле ровно 120 code points (assert через `Array.from(value).length`) → create → строка в списке → reload сохраняет; 121 → сообщение «Введите название проекта», draft 121 сохранён, строки нет.
+
+### R2 — чужой rename закрыт на время pending rename
+`openRename` guard: `if (renamePending || renameInFlight.current) return;`; все rename triggers получают `disabled={archivePending || renamePending}` (раньше только archivePending). Пока PATCH P в pending, «Переименовать» у Q недоступен — поздний ответ P физически не может закрыть/изменить форму Q; 500-вариант P остаётся ошибкой в форме P.
+Regression: два проекта P/Q → held route `**/api/v1/projects/**` → rename P submit → Q trigger **disabled** asserted → force-click не открывает форму Q (textbox Q count 0) → релиз 200 → закрывается только форма P, Q trigger снова enabled. Cancel/focus-return/error-retry/lifecycle/StrictMode поведение не менялось.
+
+## Проверки после коррекции (Node v24.21.0 / npm 11.19.0)
+
+| Команда | Результат |
+| --- | --- |
+| `npm run lint` / `npm run typecheck` | exit 0 / exit 0, без warnings |
+| `npm test` | exit 0 — 29 passed |
+| `npm run test:db` | exit 0 — 47 passed |
+| `npm run test:auth` №1 / №2 (последовательно) | exit 0 — **72/72** оба (71 + media-type regressions); 0 lifecycle-паттернов в обоих логах |
+| `CI=1 E2E_PORT=3251` / `3252` (последовательно) | exit 0 — **71/71** оба (69 + R1-emoji и R2-rename-Q regressions); 0 lifecycle-паттернов |
+| `npm run build` без `.env` | exit 0 |
+| Leftovers | orbit_test\*-баз: 0; `git diff --check` чист; изменения — 2 src + 3 test файла |
+
+Известные ограничения — без изменений к исходному раунду (реальные устройства/production proxy не проверялись; task list внутри проекта/deletion/reorder/sharing вне scope; strict ordering одного поля не asserted; limiter single-process).
+
+---
+
+# Предыдущий раунд (исходная реализация)
 
 ## Исходное состояние (проверено до изменений)
 

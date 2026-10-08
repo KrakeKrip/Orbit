@@ -173,6 +173,11 @@ export function ProjectsView({
   }
 
   function openRename(project: ProjectDTO): void {
+    // Пока сохранение rename не завершилось, другой editor не открывается:
+    // завершение прежнего запроса не должно закрывать/менять новую форму.
+    if (renamePending || renameInFlight.current) {
+      return;
+    }
     setRenameId(project.id);
     setRenameDraft(project.name);
     setRenameInvalid(false);
@@ -292,7 +297,6 @@ export function ProjectsView({
             type="text"
             autoComplete="off"
             className="min-h-11 max-w-72"
-            maxLength={200}
             placeholder={ru.projects.create.placeholder}
             value={createDraft}
             onChange={(event) => {
@@ -460,7 +464,7 @@ export function ProjectsView({
                         id={`rename-trigger-${project.id}`}
                         className="min-h-11 px-4"
                         onClick={() => openRename(project)}
-                        disabled={archivePending}
+                        disabled={archivePending || renamePending}
                       >
                         {ru.projects.rename.action}
                       </Button>

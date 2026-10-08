@@ -84,9 +84,12 @@ export async function readJsonBodyWithLimit(
   }
 }
 
-/** Требует application/json (parameters допускаются); иначе 415. */
+/** Требует точный media type application/json (parameters/регистр
+ * token'а допускаются); application/jsonp и прочие похожие префиксы — 415. */
 export function hasJsonContentType(request: Request): boolean {
-  return (request.headers.get("content-type") ?? "").startsWith(
-    "application/json",
-  );
+  const mediaType = (request.headers.get("content-type") ?? "")
+    .split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  return mediaType === "application/json";
 }

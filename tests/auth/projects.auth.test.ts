@@ -320,6 +320,14 @@ describe("POST /api/v1/projects", () => {
     });
     expect(missing.status).toBe(403);
 
+    const jsonp = await projectsCall("POST", {
+      cookie: uCookie,
+      contentType: "application/jsonp",
+      payload: { name: "JSONP" },
+    });
+    expect(jsonp.status).toBe(415);
+    expect(jsonp.body).toMatchObject({ error: { code: "UNSUPPORTED_MEDIA_TYPE" } });
+
     const exact = await projectsCall("POST", {
       cookie: uCookie,
       origin: authBaseURL(),
@@ -536,6 +544,29 @@ describe("item GET/PATCH: rename/archive/restore", () => {
       path: `${COLLECTION_PATH}/${projectId}`,
       payload: { archived: false },
     });
+  });
+
+  test("точный media type: application/jsonp → 415 без мутаций; параметры → success", async () => {
+    const rowBefore = await projectRow(projectId);
+
+    const jsonp = await projectsCall("PATCH", {
+      cookie: uCookie,
+      path: `${COLLECTION_PATH}/${projectId}`,
+      contentType: "application/jsonp",
+      payload: { name: "JSONP" },
+    });
+    expect(jsonp.status).toBe(415);
+    expect(jsonp.body).toMatchObject({ error: { code: "UNSUPPORTED_MEDIA_TYPE" } });
+    expect(await projectRow(projectId)).toEqual(rowBefore);
+
+    const withParams = await projectsCall("PATCH", {
+      cookie: uCookie,
+      path: `${COLLECTION_PATH}/${projectId}`,
+      contentType: "application/json;charset=UTF-8",
+      payload: { name: "Параметры Content-Type" },
+    });
+    expect(withParams.status).toBe(200);
+    expect(projectOf(withParams, "project").name).toBe("Параметры Content-Type");
   });
 
   test("archive не трогает связанную task (fixture в собственной БД)", async () => {

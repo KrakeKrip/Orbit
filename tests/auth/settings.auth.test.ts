@@ -445,6 +445,15 @@ describe("PATCH: transport", () => {
     });
     expect(noType.status).toBe(415);
     expectErrorBody(noType.body, "UNSUPPORTED_MEDIA_TYPE");
+
+    // Похожий media type application/jsonp не принимается (точный match).
+    const jsonp = await settingsCall("PATCH", {
+      cookie: uCookie,
+      contentType: "application/jsonp",
+      payload: { theme: "dark" },
+    });
+    expect(jsonp.status).toBe(415);
+    expectErrorBody(jsonp.body, "UNSUPPORTED_MEDIA_TYPE");
   });
 
   test("oversize body: 413 (не только по Content-Length)", async () => {

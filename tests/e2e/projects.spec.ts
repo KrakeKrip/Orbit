@@ -102,6 +102,89 @@ test.describe("проекты: создание/переименование/а�
     ).toBeVisible();
   });
 
+  test("120 emoji code points: вставка без обрезания, 121 отклоняется", async ({
+    page,
+  }) => {
+    await page.goto("/projects");
+    const input = page.getByLabel("Название проекта");
+    // keyboard.insertText — путь реальной вставки; HTML maxLength считает
+    // UTF-16 units и молча резал бы non-BMP имена, поэтому лимит только
+    // pure-валидацией по code points.
+    await input.click();
+    await page.keyboard.insertText("🦄".repeat(120));
+    const inserted = await input.evaluate(
+      (el) => Array.from((el as HTMLInputElement).value).length,
+    );
+    expect(inserted).toBe(120);
+    await input.press("Enter");
+    const row = page
+      .locator("li[data-project-id]")
+      .filter({ hasText: "🦄".repeat(120) });
+    await expect(row).toBeVisible();
+
+    await page.reload();
+    await expect(row).toBeVisible();
+
+    // 121 code point отклоняется локальной валидацией: сообщение + draft сохранён.
+    await input.click();
+    await page.keyboard.insertText("🦄".repeat(121));
+    await input.press("Enter");
+    await expect(page.getByText("Введите название проекта")).toBeVisible();
+    const invalidLength = await input.evaluate(
+      (el) => Array.from((el as HTMLInputElement).value).length,
+    );
+    expect(invalidLength).toBe(121);
+  });
+
+  test("rename Q недоступен при pending rename P; поздний ответ P не меняет Q", async ({
+    page,
+  }) => {
+    await page.goto("/projects");
+    for (const name of [`Rename P ${run}`, `Rename Q ${run}`]) {
+      await page.getByLabel("Название проекта").fill(name);
+      await page.getByRole("button", { name: "Создать проект" }).click();
+      await expect(
+        page.locator("li[data-project-id]", { hasText: name }),
+      ).toBeVisible();
+    }
+
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let fulfilled = false;
+    await page.route("**/api/v1/projects/**", async (route) => {
+      await gate;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: '{"project":{"id":"held","name":"held","archivedAt":null,"createdAt":"2026-01-01T00:00:00.000Z","updatedAt":"2026-01-01T00:00:00.000Z"}}',
+      });
+      fulfilled = true;
+    });
+
+    const pRow = page.locator("li[data-project-id]", { hasText: `Rename P ${run}` });
+    const pTrigger = pRow.getByRole("button", { name: "Переименовать" });
+    await pTrigger.click();
+    await page.getByLabel("Переименовать").fill(`Rename P ${run} — новое`);
+    await page.getByRole("button", { name: "Сохранить" }).click();
+
+    // Пока save P в pending: чужой trigger заблокирован, editor Q не
+    // открывается (даже force-click по disabled кнопке не открывает форму).
+    const qRow = page.locator("li[data-project-id]", { hasText: `Rename Q ${run}` });
+    const qTrigger = qRow.getByRole("button", { name: "Переименовать" });
+    await expect(qTrigger).toBeDisabled();
+    await qTrigger.click({ force: true }).catch(() => undefined);
+    await expect(qRow.getByRole("textbox")).toHaveCount(0);
+
+    release();
+    await expect.poll(() => fulfilled).toBe(true);
+    // Ответ P закрывает только форму P; Q-триггер снова доступен.
+    await expect(page.getByLabel("Переименовать")).toHaveCount(0);
+    await expect(qTrigger).toBeEnabled();
+    await page.unroute("**/api/v1/projects/**");
+  });
+
   test("failed mutation: список/строка/draft сохраняются, retry успешен", async ({
     page,
   }) => {
