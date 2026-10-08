@@ -50,3 +50,33 @@ Pure enum/timezone canonicalization, defaults UTC/system, offset rejection, ст
 ## Передача GLM
 
 Та же ветка/worktree. Исправить только R1/R2 и связанные regressions, обновить reports/TASK-005-executor.md. Обычные новые commits без amend/rebase/reset/merge/push/deploy; main/3000/CRM/coord docs/защитные настройки не менять. Вернуть full latest SHA и READY_FOR_REVIEW либо точную BLOCKED диагностику. TASK-006 не начинать.
+
+
+## Повторное review 050ce13 — 2026-10-08
+
+**NEEDS_FIXES: R1/R2 закрыты в production; осталось R1b [P2] для Next dev/StrictMode.** Проверен `050ce13a00286227f8607db5381a3391263bb218` относительно `08b348c020840eec0dc4f6f53afdc6316f448b1d`: фактически 5 файлов (4 implementation/test + executor report), 205 insertions/20 deletions. Service/API/schema не менялись. Merge/push/deploy не выполнялись, TASK-006 не выдан.
+
+### Закрытые R1/R2
+Независимый Chromium probe повторён на собственном production server 3237/unique DB: delayed PATCH A → настоящий logout/login B → delayed 500. У B server theme=system/prefers dark; html до/после **dark**, local cache после **system**. Прежний callback больше не перекрашивает B. Timezone delayed response: input **disabled во время pending**, результат Asia/Tokyo показан и сохранённое состояние корректно подтверждается. Прежние обычные error/retry/keyboard assertions и новые browser regressions прошли.
+
+### R1b [P2] mounted guard навсегда false после StrictMode effect replay
+`src/components/orbit/account-theme-select.tsx:59–69`: ref инициализируется true только при рендере, эффект содержит один cleanup со сбросом false. Setup не восстанавливает true. React StrictMode в Next dev выполняет setup → cleanup → setup, сохраняя ref; после этого isCurrentSave всегда false даже для живого компонента текущего actor.
+
+Независимое воспроизведение на настоящем `next dev` с настройками проекта (StrictMode не выключался), собственный порт **3236**, synthetic account, новая собственная PostgreSQL test DB:
+- Выбор dark: PATCH **200**, DB theme **dark**, UI спустя ответ всё ещё **«Сохранение темы…»**, «Тема сохранена» отсутствует.
+- Следующий выбор light тоже записывает DB light, но UI не подтверждает save. На failed PATCH rollback/error handling по той же причине пропускаются.
+Production E2E используют next build, поэтому все 63 assertions проходят и dev-регрессию не видят.
+
+Исправить симметричный lifecycle guard: каждый setup эффекта восстанавливает mounted=true, cleanup ставит false; сохранить проверки принадлежности actor/неактуальных async completions. Не выключать StrictMode и не удалять guard. Убедиться, что actor-specific state не применяется после ухода/смены пользователя.
+
+Acceptance: тест или реальный dev browser сценарий с StrictMode replay — normal 200 подтверждает save и сбрасывает pending, failed/network error откатывает theme и показывает ошибку. Сохранить production regressions delayed A failure после login B, уход со Settings и timezone disabled при pending. Не перерабатывать service/API/schema.
+
+### Независимые проверки исправленного commit
+Node 24.21.0: lint/typecheck PASS без warnings, npm test 15 PASS; DB 47 PASS; auth 51 PASS; CI=1 E2E_PORT=3235 — 63 PASS, все exit 0, logs без lifecycle errors. По одному auth/E2E прогону Codex; заявленные 2× — executor evidence, не выдаются за повтор Codex.
+Дополнительные production probes подтвердили R1/R2; реальный dev probe подтвердил R1b. Все собственные server/browser/DB ресурсы закрыты, leftover orbit_test_* **0**. next dev автоматически добавил framework block в AGENTS.md и изменил generated next-env.d.ts; Codex вернул ровно эти автоматически созданные изменения к исходным HEAD bytes (дерево до запуска было чистым), не затрагивая пользовательские правки/историю. Product source координатором не реализовывался.
+Реальные устройства/production proxy не проверены, прежние ограничения сохраняются. TASK остаётся NEEDS_FIXES до закрытия dev regression.
+
+### Следующая передача GLM
+Та же ветка/worktree, только R1b lifecycle setup/reset и regression, обновить executor report. Обычные новые commits без merge/push/amend/rebase/reset/deploy. Не менять main/3000/CRM/coord docs/защитные настройки; не отключать StrictMode. После соответствующих gates вернуть latest SHA и READY_FOR_REVIEW. TASK-006 не начинать.
+
+Отдельный no-env build архивного snapshot 050ce13 с собственной npm ci также PASS: workspace и settings API Dynamic, runtime auth/DB env отсутствовали.
