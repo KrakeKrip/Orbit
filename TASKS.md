@@ -1,6 +1,6 @@
 # Orbit — очередь MVP
 
-Этап FOUNDATIONS, 2026-10-08. TASK-001 и TASK-002 приняты и локально интегрированы после независимого review. Реализованы Next.js foundation, адаптивная оболочка пяти разделов и локальный выбор темы. БД, auth и данные задач ещё отсутствуют. TASK-003 проверен: NEEDS_FIXES, R1/R2 в reports/TASK-003.md ветки task/TASK-003. Реализация не интегрирована; TASK-004 не выдан.
+Этап FOUNDATIONS, 2026-10-08. TASK-001–003 приняты и локально интегрированы после независимого review. Реализованы Next.js foundation, UI shell/themes и локальная PostgreSQL/Drizzle инфраструктура со схемой и миграциями. Auth, services, CRUD и реальные данные в интерфейсе ещё отсутствуют. TASK-004 ещё не выдан.
 Статусы: TODO → IN_PROGRESS → REVIEW → DONE; NEEDS_FIXES / BLOCKED при необходимости.
 Каждый следующий TASK зависит от успешной интеграции предыдущего. Строка очереди не разрешает начать реализацию.
 
@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | TASK-001 | DONE | Next.js/TS/Tailwind foundation, npm scripts, Vitest smoke, локальный README; без app shell, auth и DB |
 | TASK-002 | DONE | shadcn/ui, дизайн-токены, local light/dark/system, desktop sidebar и mobile bottom navigation с пустыми экранами; 360/390/768/1280 px и keyboard smoke |
-| TASK-003 | NEEDS_FIXES | Локальный PostgreSQL Compose, Drizzle, schema/migrations с owner/FK/check constraints и completion revision; apply на пустую dev DB, без auth flows |
+| TASK-003 | DONE | Локальный PostgreSQL Compose, Drizzle, schema/migrations с owner/FK/check constraints и completion revision; apply на пустую dev DB, без auth flows |
 | TASK-004 | TODO | Better Auth sessions, server signup OFF, локальный bootstrap пользователя, protected server boundary; тесты анонимного доступа и запрета signup |
 | TASK-005 | TODO | Настройки timezone/theme, sign-out, сохранение после refresh; IANA validation и owner isolation |
 | TASK-006 | TODO | Projects create/rename/archive/unarchive, server ownership, исключение архивных данных; tests с двумя пользователями |

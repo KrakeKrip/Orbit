@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: FOUNDATIONS; TASK-001 и TASK-002 приняты; TASK-003 после независимого review NEEDS_FIXES (R1/R2: безопасность DB runner); реализация не интегрирована. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: FOUNDATIONS; TASK-001–003 приняты и локально интегрированы; TASK-004 ещё не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
@@ -37,3 +37,5 @@ TASK-001 добавил package.json, npm scripts dev/start/lint/typecheck/test/
 Дальнейшие проверки соразмерны изменениям: правила дат — unit, безопасность — integration с двумя пользователями, интерфейс — browser/E2E и мобильные размеры.
 
 TASK-002 добавил test:e2e (production build + Chromium). Для независимого запуска: CI=1 E2E_PORT=<свободный loopback port> npm run test:e2e; CI=1 исключает reuse стороннего сервера. После TASK-002 текущая регрессия: 4 Vitest и 47 browser tests. Проверки интерфейса не подтверждают auth/DB.
+
+TASK-003 добавил PostgreSQL/Drizzle schema и миграции; npm run test:db — отдельная local PostgreSQL suite: 47 tests (28 schema,15 guard,4 runner), TEST_DATABASE_URL явный, namespace orbit_test, per-run unique DB/fixture без удаления существующих БД. Production build/UI tests по-прежнему не требуют env/БД. Auth flows/CRUD ещё отсутствуют. Audit/tooling ограничения и review — reports/TASK-003.md.

@@ -1,6 +1,10 @@
 # TASK-003 — независимое review Codex
 
-2026-10-08. **Review APPROVED — ожидает локальной интеграции и gates main.** R1/R2/R1b закрыты; TASK-004 не выдан, push/deployment не выполнялись.
+2026-10-08. **DONE — принято и локально интегрировано; gates main PASS.** R1/R2/R1b закрыты; TASK-004 не выдан, push/deployment не выполнялись.
+
+## Локальная интеграция и итог
+Merge --no-ff `c536b49ad979504e12a1595cb320334bbfac9592`; ветка task на review commit `1306624`, исходный executor HEAD `c10f34c9c62c93c7c38583726dc9d393dec2fc4c`. Main сохраняет историю и все координационные статусы.
+Main gates: npm ci --offline, lint/typecheck, 4 UI tests PASS; полный test:db 47 PASS. Для DB suite проверенный ignored env из worktree загружен только в память child process, секреты не копировались в main/отчёт. Main .env отсутствует: production build и 47 browser tests прошли без env/DB через CI=1 E2E_PORT=3191. Source/config/schema/tests/lockfile main идентичны проверенной task ветке; после DB teardown orbit_test_* отсутствуют. Push/deploy/TASK-004 не выполнялись. Ранее выявленные tooling audit и неблокирующие cleanup ограничения сохранены ниже; build не доказывает auth или production security.
 
 ## Финальное review R1b
 Проверен `c10f34c9c62c93c7c38583726dc9d393dec2fc4c`: изменены только sentinel fixture и executor report. Нет предварительного DROP фиксированной orbit_test; fixture создаётся под уникальным именем, cleanup ограничен своим успешно созданным ресурсом. История сохранена, дерево и diff --check от audit-базы чистые.
