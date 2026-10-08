@@ -2,7 +2,45 @@
 
 ## Статус
 
-READY_FOR_REVIEW (после коррекции R1/R2 по review reports/TASK-005.md от 2026-10-08; старт коррекции `08b348c020840eec0dc4f6f53afdc6316f448b1d`).
+READY_FOR_REVIEW (после коррекции R1b по повторному review reports/TASK-005.md; R1/R2 закрыты Codex в production и не менялись; старт коррекции R1b `12ac7775c9958db4d5f1cde7e51a47bf1af0b104`).
+
+## Correction R1b (StrictMode effect replay)
+
+Изменён только `src/components/orbit/account-theme-select.tsx` (симметрия lifecycle-эффекта).
+
+Корень: mounted-guard effect содержал один cleanup (`mounted=false`) без восстановления в setup. React StrictMode в `next dev` повторяет setup → cleanup → setup с сохранённым ref — после replay mounted оставался false навсегда, `isCurrentSave()` был всегда false даже для живого компонента текущего actor: успешный PATCH не подтверждался (UI застревал на «Сохранение темы…»), failure-rollback/alert пропускались. Production (next build) эффекты не переигрывает — поэтому 63 E2E оставались зелёными.
+
+Исправление: симметричный effect — каждый setup восстанавливает `mountedRef.current = true`, cleanup ставит false. Actor-проверка (`actorRef` против запрошенного) и подавление stale async completions после ухода/смены пользователя сохранены без изменений; StrictMode не отключался; guard R1 не удалялся.
+
+### Верификация на реальном next dev (StrictMode активен по умолчанию)
+
+Процедура повторяема: уникальная проверенная БД (prepareTestDatabase, namespace orbit_test) + synthetic пользователь (`provisionLocalUser`, credentials через env, не в отчёте) → `DATABASE_URL/BETTER_AUTH_URL/SECRET` этого запуска → `npm run dev -- --port 3238 --hostname 127.0.0.1` → временный untracked playwright-скрипт против живого dev-сервера (удалён после проверки):
+
+- `DEV_READY after 2s`;
+- `DEV-SUCCESS: 200 подтверждён, pending сброшен, html.dark после reload` — выбор «Тёмная»: «Тема сохранена» видима, «Сохранение темы…» отсутствует (pending сброшен после replay), persist после reload (server write);
+- `DEV-FAILURE: rollback к dark и alert видимы после 500` — route-intercept 500 → rollback к подтверждённой теме + role=alert;
+- `DEV CHECK PASS`, exit 0.
+
+Cleanup: dev-сервер остановлен (только слушатель 3238), dev-БД удалена, `next-env.d.ts` возвращён к HEAD-байтам (единственный side effect — dev-пути типов; AGENTS.md не менялся), временные скрипты удалены.
+
+## Проверки после коррекции R1b (Node v24.21.0 / npm 11.19.0)
+
+| Команда | Результат |
+| --- | --- |
+| `npm run lint` / `npm run typecheck` | exit 0 / exit 0, без warnings |
+| `npm test` | exit 0 — 15 passed |
+| `npm run test:db` | exit 0 — 47 passed |
+| `npm run test:auth` №1 / №2 (последовательно) | exit 0 — **51/51** оба; 0 lifecycle-паттернов |
+| `CI=1 E2E_PORT=3239` / `3240` (последовательно) | exit 0 — **63/63** оба; production regressions R1/R2 (delayed A failure после login, уход со Settings, timezone disabled при pending) зелёные; 0 lifecycle-паттернов |
+| `npm run build` без `.env` | exit 0 |
+| Real `next dev` browser probe | DEV CHECK PASS (см. выше); StrictMode не отключался |
+| Leftovers | orbit_test\*-баз: 0; `git diff --check` чист; изменение — один файл компонента |
+
+Известные ограничения — без изменений к предыдущим раундам (реальные устройства/production/reverse proxy не проверялись; timezone не влияет на расписание; limiter single-process; strict ordering конкурентной записи одного поля не asserted). Dev-mode постоянного автоматического regression в gates нет: production E2E StrictMode-переигрывание не воспроизводит; воспроизводимая dev-процедура описана выше и может быть закреплена как отдельный suite по решению Codex.
+
+---
+
+# Предыдущий раунд (исходная реализация)
 
 ## Correction R1/R2 (этап NEEDS_FIXES)
 

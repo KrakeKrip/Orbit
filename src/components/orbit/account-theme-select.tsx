@@ -62,12 +62,17 @@ export function AccountThemeSelect({
   useEffect(() => {
     actorRef.current = actorId;
   }, [actorId]);
-  useEffect(
-    () => () => {
+  // Симметричный lifecycle guard: каждый setup восстанавливает mounted=true,
+  // cleanup ставит false. React StrictMode (next dev) повторяет
+  // setup → cleanup → setup с тем же ref — асимметричный вариант навсегда
+  // оставлял mounted=false и пропускал успешные/ошибочные завершения
+  // сохранения (R1b). Реальный unmount по-прежнему гасит stale callbacks.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   async function handleChange(next: string): Promise<void> {
     if (inFlight.current) {
