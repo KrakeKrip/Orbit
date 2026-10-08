@@ -30,6 +30,19 @@ export function readAuthRuntimeConfig(
   env: Record<string, string | undefined> = process.env,
 ): AuthRuntimeConfig {
   const databaseUrl = requireValue(env, "DATABASE_URL", "database access");
+  let parsedDatabaseUrl: URL;
+  try {
+    parsedDatabaseUrl = new URL(databaseUrl);
+  } catch {
+    throw new Error("DATABASE_URL is not a valid URL.");
+  }
+  if (
+    parsedDatabaseUrl.protocol !== "postgresql:" &&
+    parsedDatabaseUrl.protocol !== "postgres:"
+  ) {
+    throw new Error("DATABASE_URL must use the postgresql protocol.");
+  }
+
   const secret = requireValue(env, "BETTER_AUTH_SECRET", "auth runtime");
 
   if (secret.length < MIN_SECRET_LENGTH) {

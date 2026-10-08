@@ -1,11 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import {
-  e2ePort,
-  e2eSecret,
-  userAPassword,
-  userBEmail,
-  userBPassword,
-} from "./tests/e2e/credentials";
+import { e2ePort } from "./tests/e2e/credentials";
 
 const port = e2ePort;
 const baseURL = `http://127.0.0.1:${port}`;
@@ -28,7 +22,6 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       E2E_PORT: String(port),
-      AUTH_E2E_SECRET: e2eSecret,
     },
   },
   projects: [

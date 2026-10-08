@@ -1,15 +1,14 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
-import { loadDotEnv } from "../db/db-target.ts";
 
 /**
  * Global teardown E2E (выполняется в runner-процессе после всех тестов).
  * Playwright спавнит webServer через shell, поэтому его SIGTERM получает
  * shell, а не node-процесс сервера. Здесь сигнал пересылается напрямую
- * pid сервера: сервер сам закрывает HTTP и удаляет СВОЮ per-run базу
- * (shutdown-обработчик в scripts/e2e-server.ts).
+ * pid сервера: сервер сам закрывает HTTP, закрывает пул приложения и
+ * удаляет СВОЮ per-run базу (shutdown-обработчик в scripts/e2e-server.ts).
  *
  * Удаление чужого ресурса невозможно: имя базы этим файлом не передаётся,
- * удаляет его только владелец-сервер.
+ * удаляет её только владелец-сервер.
  */
 
 const credentialsFile = "test-results/.auth/e2e-db.json";

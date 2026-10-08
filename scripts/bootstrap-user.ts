@@ -1,20 +1,23 @@
 import { createInterface, type Interface } from "node:readline";
+import { askHidden } from "./bootstrap-input.ts";
 import { ProvisioningError, provisionLocalUser } from "../src/server/auth/bootstrap-core.ts";
 
 /**
  * Локальная одноразовая bootstrap-процедура первого аккаунта (операторский CLI):
  *   npm run auth:bootstrap
  *
- * - Работает только с локальным PostgreSQL: host обязателен явно и должен быть
- *   loopback (127.0.0.1/localhost/::1), query-параметры запрещены;
- *   production/unknown targets отвергаются до любых операций.
+ * - Работает только с локальным PostgreSQL: протокол postgresql/postgres,
+ *   host обязателен явно и должен быть loopback (127.0.0.1/localhost/::1),
+ *   query-параметры запрещены; production/unknown targets отвергаются
+ *   до любых операций.
  * - Явное разрешение provisioning: интерактивное подтверждение "yes".
  * - Email/password вводятся оператором интерактивно; пароль читается скрыто
- *   (не argv, не stdout, не отчёты, не env).
+ *   через raw-mode stdin (не argv, не stdout, не отчёты, не env); после
+ *   чтения raw mode/listeners восстанавливаются, висячих хендлов нет.
  * - Повторный запуск с существующим email отказывает без изменения пароля,
  *   аккаунта и без создания сессии (никаких upsert/reset).
- * - Успех не оставляет активную сессию; при частичном сбое orphan user
- *   откатывается provisioning core.
+ * - Успех не оставляет активную сессию; при частичном сбое provisioning core
+ *   откатывает собственные строки (bootstrap-core.ts).
  */
 
 function loadDotEnv(): void {
@@ -31,17 +34,38 @@ function assertLocalDatabaseUrl(): string {
     console.error("DATABASE_URL is not set. Copy .env.example to .env first.");
     process.exit(1);
   }
-  const url = new URL(raw);
-  const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-  const host = url.hostname.replace(/^\[|\]$/g, "");
-  if (!localHosts.has(host)) {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    console.error("DATABASE_URL is not a valid URL.");
+    process.exit(1);
+  }
+  if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
     console.error(
-      `Refusing non-local database host: ${host}. Bootstrap is a local operator procedure only.`,
+      `Refusing protocol ${url.protocol}: only postgresql:// (or postgres://) is allowed.`,
     );
     process.exit(1);
   }
   if ([...url.searchParams.keys()].length > 0) {
     console.error("Refusing DATABASE_URL with query parameters.");
+    process.exit(1);
+  }
+  const rawHost = url.hostname.replace(/^\[|\]$/g, "");
+  let host = rawHost;
+  if (rawHost.includes("%")) {
+    try {
+      host = decodeURIComponent(rawHost);
+    } catch {
+      console.error("Refusing DATABASE_URL host: invalid percent-encoding.");
+      process.exit(1);
+    }
+  }
+  const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+  if (!localHosts.has(rawHost) || !localHosts.has(host)) {
+    console.error(
+      `Refusing non-local database host: ${host}. Bootstrap is a local operator procedure only.`,
+    );
     process.exit(1);
   }
   const port = url.port === "" ? "5432" : url.port;
@@ -51,38 +75,6 @@ function assertLocalDatabaseUrl(): string {
 function ask(rl: Interface, question: string): Promise<string> {
   return new Promise((resolve) => {
     rl.question(question, (answer: string) => resolve(answer.trim()));
-  });
-}
-
-function askHidden(question: string): Promise<string> {
-  return new Promise((resolve) => {
-    process.stdout.write(question);
-    const characters: string[] = [];
-    const wasRaw = process.stdin.isRaw ?? false;
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode(true);
-    }
-    const onData = (chunk: Buffer) => {
-      for (const character of chunk.toString("utf8")) {
-        if (character === "\r" || character === "\n") {
-          process.stdin.setRawMode?.(wasRaw);
-          process.stdin.off("data", onData);
-          process.stdout.write("\n");
-          resolve(characters.join(""));
-          return;
-        }
-        if (character === "\u0003") {
-          process.stdout.write("\n");
-          process.exit(130);
-        }
-        if (character === "\u007f" || character === "\b") {
-          characters.pop();
-          continue;
-        }
-        characters.push(character);
-      }
-    };
-    process.stdin.on("data", onData);
   });
 }
 
@@ -136,7 +128,7 @@ async function main(): Promise<void> {
       console.error(`Bootstrap refused (${error.code}): ${error.message}`);
       process.exit(2);
     }
-    console.error("Bootstrap failed. Nothing else was changed.");
+    console.error("Bootstrap failed.");
     process.exit(1);
   }
 }

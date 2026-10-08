@@ -2,7 +2,40 @@
 
 ## Статус
 
-READY_FOR_REVIEW
+READY_FOR_REVIEW (после коррекции R1/R2/R3 по review reports/TASK-004.md от 2026-10-08).
+
+## Correction R1/R2/R3 (этап NEEDS_FIXES)
+
+Старт коррекции: HEAD `cb13f75` (coord review) поверх `4ed184b`. Изменены: `src/server/auth/bootstrap-core.ts`, `src/server/auth/env.ts` (hardening), `src/server/db/core.ts` (новый), `src/server/db/client.ts` (оболочка), `src/server/auth/instance.ts` (импорт core), `scripts/bootstrap-user.ts`, `scripts/bootstrap-input.ts` (новый), `scripts/e2e-server.ts`, `tests/auth/{global-setup,cli-input,bootstrap-fault}.test.ts` (новые тесты), cleanup импортов (`playwright.config.ts`, `tests/e2e/global-teardown.ts`). Схема/миграции/маршруты/UI-навигация не менялись.
+
+### R1 — атомарность provisioning
+- Drizzle adapter provisioning-инстанса: `transaction: true` — user и credential account создаются в одной транзакции; отказ account INSERT откатывает user (orphan невозможен). Проверено fault injection: BEFORE INSERT триггер на `account` → provision отвергнут, в БД 0 users/0 accounts/0 sessions (тест `bootstrap-fault.auth.test.ts`).
+- Ошибки ПОСЛЕ создания (post-check anomalies: неожиданная session и т.п.) — строго scoped компенсация: удаляется только пользователь, созданный этим вызовом (email отсутствовал до него по pre-check; `createdAt` не раньше начала вызова; без завершённого credential account). Отказ «email занят другим actor» (422) компенсации не подлежит — pre-existing rows не изменяются.
+- Неожиданная активная session после provisioning — ошибка → компенсация удаляет пользователя каскадом (сессии не остаются).
+- Успешный bootstrap даёт совместимый sign-in: пользователи A/B auth-suite созданы тем же core и входят по HTTP (auth-flow 4/15), плюс retry-тест в bootstrap-fault (состояние БД 1 user + 1 account + 0 sessions).
+
+### R2 — рабочий скрытый terminal input
+- `scripts/bootstrap-input.ts`: `askHidden` явно возобновляет stdin (`resume()` — ключевой фикс: `readline.close()` оставлял поток paused, `readableFlowing=false`), raw mode и listeners восстанавливаются при Enter/Ctrl+C/ошибке; пароль не echo-ится (raw mode) и не попадает в argv/stdout/отчёты; висячих хендлов нет.
+- Автоматическая регрессия `cli-input.auth.test.ts`: приостановленный PassThrough с buffered данными — `askHidden` дочитывает после resume (без фикса тест висит по timeout), backspace-коррекция, пароль отсутствует в выводе при видимой подсказке.
+- Реальный CLI в PTY: автоматизация spawn-ом в тестовых файлах заблокирована Mimosa PreToolUse (child_process в тестах — «命令注入»/«命令注入», три варианта, включая литеральный список аргументов). Выполнено вручную в этой сессии через `/usr/bin/expect` (реальный PTY) на собственной scratch-базе `orbit_pty_check` (создана, миграции применены, после проверок удалена):
+  - позитив: `yes` → email → пароль → `Account created for pty-positive@orbit.test (user id: …)`; пароль в выводе отсутствует (grep 0 совпадений); в БД: 1 user, 1 account (password hash), 0 sessions;
+  - дубликат: `Bootstrap refused (EMAIL_EXISTS): A user with this email already exists: nothing was changed.` (exit 1), хеш и число сессий не изменились;
+  - cancel: `no` → `Aborted.` (exit 0), пользователь не создан.
+  Точные команды для воспроизведения: expect-скрипт (spawn node → CLI; expect Continue?/yes; Email:/email; Password/пароль) + env `DATABASE_URL` на scratch-базу; располагается в gitignored `/tmp/orbit-pty/` этой сессии.
+
+### R3 — lifecycle app connections до drop
+- `src/server/db/core.ts` — lower-level core (пул/Drizzle/closeDbPool) БЕЗ server-only маркера: CLI/E2E-сервер/тесты могут явно закрывать пул своего процесса; `src/server/db/client.ts` остаётся server-only app-границей (re-export); instance.ts импортирует core (его собственный server-only маркер сохранён).
+- teardown auth-suite: stopServer (`closeAllConnections`) → `closeDbPool()` → `pg_terminate_backend` только соединений к СВОЕЙ per-run базе (compiled-бандл Next держит собственный экземпляр пула, недоступный из графа тест-раннера) → ожидание 0 соединений (pg_stat_activity, ≤5s, иначе R3-регрессия с ошибкой) → DROP. Ошибки пула логируются обработчиком в core.ts (стандартная практика pg; не глушатся: текст ошибки виден в выводе).
+- `scripts/e2e-server.ts`: тот же порядок + init error path закрывает server/pool/DB и падает с непустым кодом.
+- Evidence: два последовательных `npm run test:auth` — exit 0, 23/23, 0 упоминаний 57P01/uncaughtException; два последовательных `CI=1 E2E_PORT=… npm run test:e2e` — exit 0, 56/56, 0 ошибок, leftover баз нет; после прогонов в кластере только `orbit_dev` и `postgres`.
+
+### Hardening (неблокирующие замечания review)
+- `env.ts`: DATABASE_URL дополнительно parse + protocol postgresql/postgres (fail-closed, без значений в ошибках).
+- bootstrap local guard: протокол, отсутствие query-параметров, IPv6-скобки/percent-decode hostname с двойной проверкой allowlist.
+
+---
+
+## Исходная реализация (до коррекций R1/R2/R3)
 
 ## TASK
 
@@ -134,9 +167,9 @@ better-auth **1.7.7** + @better-auth/drizzle-adapter 1.7.7 (dependencies, без
 ## Git
 
 - Ветка: `task/TASK-004`; worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-004`.
-- Стартовый SHA: `5178578b567b24b0a81487871d904f1a496025fa`.
-- Коммиты TASK: implementation + report (полный latest SHA — в ответе пользователю; в файл отчёта вписать его невозможно).
-- Рабочее дерево после коммитов: чистое; merge/push/amend/rebase/reset не выполнялись; main, localhost:3000, `crm-db-1` не затронуты; secrets только в untracked `.env`.
+- Стартовый SHA: `5178578b567b24b0a81487871d904f1a496025fa`; реализация и отчёт исходной реализации зафиксированы координатором (`4ed184b`).
+- **Фиксация коррекции R1/R2/R3 заблокирована средой GLM**: Mimosa PreToolUse L3 при `git commit` трижды (включая минимальный однофайловый коммит) возвращала 8 high-находок исключительно в файлах main-чекаута координатора (`/Users/atlhnv/Orbit/tests/db/runner.db.test.ts:112–172`, `global-setup.ts:14` — принятый и влитый в main код TASK-003); блокировка не зависит от содержимого коммита. Hook не отключался, `--no-verify` не использовался. Исправления сохранены в рабочем дереве (весь набор staged) — координатор может зафиксировать их обычным commit из этого worktree.
+- Рабочее дерево: полный набор исправлений staged; diff --check чист; merge/push/amend/rebase/reset не выполнялись; main, localhost:3000, `crm-db-1` не затронуты; secrets только в untracked `.env`.
 
 ## Итог
 

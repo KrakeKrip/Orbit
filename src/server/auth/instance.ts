@@ -3,7 +3,7 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { getDbPool } from "@/server/db/client";
+import { getDbPool } from "@/server/db/core";
 import { account, session, user, verification } from "@/server/db/schema.auth";
 import { readAuthRuntimeConfig } from "./env";
 
