@@ -46,3 +46,50 @@ Node 24.21.0/npm 11.19.0; Docker PostgreSQL Orbit loopback 55432.
 
 ## Передача GLM
 Та же ветка/worktree. Прочитать этот review, исправить R1/R2/R3 и связанные regression tests, актуализировать README/executor report. Обычные новые commits без amend/rebase/reset/merge/push; не менять main/старые TASK/coord docs. После исправления обязательные gates TASK-004, полный latest SHA и READY_FOR_REVIEW либо BLOCKED. Если PreToolUse Mimosa снова блокирует обычный commit — не отключать hook и не использовать --no-verify: сохранить рабочее дерево и вернуть точную диагностику; coordinator может обычным commit зафиксировать scoped исправления. TASK-005 не начинать.
+
+
+## Повторное независимое review исправлений — 2026-10-08
+
+**NEEDS_FIXES**. Проверен `5f8648e9d5ca4d6b9773edb68307e4c306b5b822`, коррекция относительно `cb13f757f7e94f4a67a0c5de4e4e2a64b260767c`: 14 файлов, 711 insertions/256 deletions. R2 закрыт; R1 и R3 закрыты частично. История сохранена, main не изменена, merge/push/deploy/TASK-005 не выполнялись. Ниже актуальный вердикт; первоначальные результаты выше остаются историческими.
+
+### R1b [P1] Ошибка после создания account оставляет пользователя и активную session
+
+`src/server/auth/bootstrap-core.ts:122–153`: компенсация удаляет кандидата только при отсутствии credential account. Поэтому явный отказ строки 114–118 из-за неожиданной session НЕ откатывает только что успешно созданный user/account/session: account уже существует, ветка удаления пропускается.
+
+Независимое воспроизведение на собственной уникальной БД со штатными миграциями: AFTER INSERT trigger на account добавляет synthetic session этому NEW.user_id. Вызов provisionLocalUser отвергается, но итог **1 user / 1 account / 1 session**. Это имитирует аномалию после создания credential и доказывает невыполнение прежнего acceptance про отсутствие активной сессии после отказа. Все synthetic ресурсы удалены teardown собственной БД.
+
+Отказ BEFORE INSERT account теперь действительно атомарен: независимая исходная fault injection даёт **0 user / 0 account**. `transaction: true` исправил этот сценарий; расширять транзакционный API самодельным hashing не нужно.
+
+Исправить rollback ошибок после успешного signup: при подтверждённом создании именно этим вызовом удалять его rows с каскадом, включая уже созданный account/session. Не подменять доказательство ownership pre-check email + createdAt: между pre-check и catch другой actor может создать строки, и поиск кандидатов по email/времени не доказывает принадлежность вызову. При отсутствии подтверждённого собственного id не удалять произвольные строки; для ошибок внутри signup опираться на поддерживаемую атомарность. Учитывать synthetic duplicate response Better Auth при autoSignIn=false, нормализацию email и реальный формат APIError (у APIError числовой statusCode, а status — строковый статус): проверка `status !== 422` сейчас не гарантирует обещанное исключение duplicate failures.
+
+Acceptance: регрессия unexpected session/ошибка после account creation даёт отказ и 0 собственных user/account/session; account INSERT failure продолжает давать 0 rows. Duplicate/case-normalized duplicate/race сохраняют чужие rows и password; successful provisioning совместим с sign-in. Проверки только на собственных unique БД. Не считать synthetic duplicate id доказательством созданного пользователя.
+
+### R3b [P2] Закрывается другой pool; принудительная termination всё ещё вызывает runtime errors
+
+`tests/auth/global-setup.ts:217–228` и `scripts/e2e-server.ts:67–73`: импорт closeDbPool из исходного core не закрывает экземпляр пула собранного Next bundle. Auth teardown сам признаёт это и вызывает pg_terminate_backend. E2E делает DROP WITH FORCE, пока pool compiled bundle ещё открыт.
+
+Независимые **два последовательных test:auth**: 23 assertions PASS, exit 0, но после каждого `[db] idle client error: terminating connection due to administrator command`. **Два последовательных E2E** (CI=1, порты 3203 и 3204): 56 assertions PASS, exit 0, но 4 и 6 аналогичных `[WebServer] [db] idle client error` соответственно. Обработчик pool error корректен как обычная runtime мера, но перенос ошибки из uncaughtException в console.error не означает чистое закрытие. Поиск только буквального `57P01` пропускает тот же PostgreSQL error без напечатанного SQLSTATE. Утверждение executor report о чистом lifecycle не подтверждено.
+
+Нужно закрыть фактический pool compiled приложения либо запускать приложение в собственном дочернем процессе, остановить его и дождаться выхода/нулевых соединений ПЕРЕД DROP из владельца fixture. Forced termination может быть emergency cleanup собственной БД, но не успешным нормальным teardown. Init failure paths должны соблюдать тот же порядок. Не добавлять публичную teardown API, не скрывать error logs и не останавливать чужие процессы/3000. E2E teardown должен проверять результат ожидания выхода, а не игнорировать false timeout и считать успехом.
+
+Acceptance: два последовательных auth и E2E прогона без idle client error / terminating connection / 57P01 / uncaughtException / hanging handles; фактическое закрытие приложения и его соединений до DROP; нет leftover своих test DB. Обновить отчёт точными фактическими logs, не только числом assertions и exit code.
+
+### R2 — CLOSED
+
+Независимый PTY-прогон настоящего `scripts/bootstrap-user.ts` (Node 24.21.0) на собственной unique БД: создание exit 0, duplicate EMAIL_EXISTS exit 2, подтверждение no exit 0, Ctrl+C при вводе пароля exit 130. Пароль отсутствует в output всех четырёх случаев; termios до/после совпадает. В БД после positive+duplicate — ровно 1 user/1 account. Прежний exit 13 устранён. Paused-stream regression из suite также PASS. Не требуется повторно переделывать ввод без новых оснований.
+
+### Фактические независимые gates
+
+- npm ci --offline с локальным cache PASS; lint без warnings, strict typecheck PASS, UI unit 4 PASS.
+- test:db 47 PASS. Первый sandbox запуск получил EPERM loopback connection; повтор с необходимым доступом PASS — это ограничение среды, не app failure.
+- test:auth дважды: 23 PASS / exit 0, но lifecycle errors R3b в обоих logs.
+- CI=1 E2E_PORT=3203/3204 test:e2e дважды: 56 PASS / exit 0, но lifecycle errors R3b.
+- Build БЕЗ .env/DATABASE_URL/BETTER_AUTH_SECRET/BETTER_AUTH_URL на свежем git archive snapshot `5f8648e` с собственной npm ci PASS: workspace/login/API Dynamic. Первые scratch attempts попали в sandbox IPC EPERM Turbopack и cached failure; свежая копия с необходимым IPC доступом прошла.
+- Fault injection: account failure 0 user/0 account; unexpected session refusal 1 user/1 account/1 session → R1b.
+- CLI PTY четыре сценария PASS, синтетические inputs, без echo/секретов в отчёте.
+- После всех suites/helper runs: leftover orbit_test_* DB **0**, git diff --check чист. Исходники продукта координатором не изменялись.
+- Реальные iOS/macOS устройства, production/deployment и новый dependency audit не проверялись этим повторным review. Прежние tooling ограничения сохраняются.
+
+### Следующая передача GLM
+
+Та же ветка/worktree; исправить только R1b/R3b и связанные regression tests/test lifecycle, обновить executor report. R2 закрыт. Обычные новые commits, без amend/rebase/reset/merge/push, main/3000/CRM не трогать. TASK-005 не начинать. После повторных gates вернуть latest SHA и READY_FOR_REVIEW либо точную BLOCKED диагностику.
