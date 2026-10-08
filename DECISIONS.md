@@ -14,3 +14,5 @@
 
 - ADR-010 — Уточнение пользователя: web first, затем iOS/macOS, возможно Telegram; офлайн позднее. Сохраняем стек и общий service layer; до CRUD уточняем versioned HTTP API для внешних клиентов, Server Actions не единственный transport. Технологии native UI/Telegram format/auth пока не утверждены.
 - ADR-011 — TASK-001 независимо проверен и интегрирован локальным merge 25a0a9ca47e337a02dd4d4ffe14001f90744b8fc. Foundation tests/build/HTTP/browser проходят на Node 24.21.0. Принят неблокирующий dev-tooling риск: braces advisory без патча и unsupported ESLint 9; production audit 0, повторить проверку обновлений до deployment. Подробности — reports/TASK-001.md. Remote/push/deploy отсутствуют.
+
+- ADR-012 — TASK-002 ограничен UI shell и локальной theme настройкой: Next route-group, five routes, 960 px breakpoint, next-themes light/dark/system + orbit-theme, shadcn Button/Select, restrained indigo. No mock tasks/counts или неработающих CRUD controls. Account theme persistence — TASK-005; возможные native clients/API не расширяют текущий scope.
