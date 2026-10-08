@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: FOUNDATIONS; TASK-001–004 приняты и локально интегрированы; auth/login/logout/session boundaries и локальный bootstrap проверены. TASK-005 подготовлен для GLM, TODO; реализация ещё не проверена. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: FOUNDATIONS; TASK-001–004 приняты и локально интегрированы; auth/login/logout/session boundaries и локальный bootstrap проверены. TASK-005 проверен: NEEDS_FIXES (UI delayed responses/draft lifecycle), код не интегрирован. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований

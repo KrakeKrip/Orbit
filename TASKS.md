@@ -1,6 +1,6 @@
 # Orbit — очередь MVP
 
-Этап FOUNDATIONS, 2026-10-08. TASK-001–004 приняты и локально интегрированы после независимого review. Реализованы foundation, UI shell/themes, PostgreSQL/Drizzle schema/migrations и Better Auth login/logout/bootstrap/session boundary. CRUD, account preferences и реальные задачи в интерфейсе ещё отсутствуют. TASK-004 DONE, review — reports/TASK-004.md. TASK-005 подготовлен для GLM: tasks/TASK-005.md, отдельная ветка/worktree, TODO до исполнения.
+Этап FOUNDATIONS, 2026-10-08. TASK-001–004 приняты и локально интегрированы после независимого review. Реализованы foundation, UI shell/themes, PostgreSQL/Drizzle schema/migrations и Better Auth login/logout/bootstrap/session boundary. CRUD, account preferences и реальные задачи в интерфейсе ещё отсутствуют. TASK-004 DONE, review — reports/TASK-004.md. TASK-005 проверен: NEEDS_FIXES, R1/R2 в reports/TASK-005.md task ветки; код не интегрирован, TASK-006 не выдан.
 Статусы: TODO → IN_PROGRESS → REVIEW → DONE; NEEDS_FIXES / BLOCKED при необходимости.
 Каждый следующий TASK зависит от успешной интеграции предыдущего. Строка очереди не разрешает начать реализацию.
 
@@ -10,7 +10,7 @@
 | TASK-002 | DONE | shadcn/ui, дизайн-токены, local light/dark/system, desktop sidebar и mobile bottom navigation с пустыми экранами; 360/390/768/1280 px и keyboard smoke |
 | TASK-003 | DONE | Локальный PostgreSQL Compose, Drizzle, schema/migrations с owner/FK/check constraints и completion revision; apply на пустую dev DB, без auth flows |
 | TASK-004 | DONE | Better Auth login/logout sessions, server signup OFF, локальный bootstrap пользователя, protected server boundary; тесты анонимного доступа и запрета signup |
-| TASK-005 | TODO (выдан) | Настройки timezone/theme, проверка сохранения и существующего sign-out, сохранение после refresh; IANA validation и owner isolation |
+| TASK-005 | NEEDS_FIXES | Настройки timezone/theme, проверка сохранения и существующего sign-out, сохранение после refresh; IANA validation и owner isolation |
 | TASK-006 | TODO | Projects create/rename/archive/unarchive, server ownership, исключение архивных данных; tests с двумя пользователями |
 | TASK-007 | TODO | Task CRUD, quick-add/Inbox, one-off complete/reopen/soft delete, стабильный порядок; refresh persistence и IDOR tests |
 | TASK-008 | TODO | Today/Upcoming, user-local даты, независимые deadline warnings без дублей; timezone boundary tests |
