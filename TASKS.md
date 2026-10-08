@@ -1,6 +1,6 @@
 # Orbit — очередь MVP
 
-Этап EVERYDAY CORE, 2026-10-08. TASK-001–006 приняты и локально интегрированы после независимого review. Работают foundation, shell/themes, PostgreSQL, Better Auth, account settings и Projects list/create/rename/archive/restore. TASK-006 DONE, review — reports/TASK-006.md. Task CRUD и реальные задачи в интерфейсе ещё отсутствуют; TASK-007 NEEDS_FIXES после review 22ba2d3: три UI замечания R1/R2/R3, report/review fe95c5b в task/TASK-007. Исправления в той же ветке/worktree; TASK-008 не выдан.
+Этап EVERYDAY CORE, 2026-10-08. TASK-001–006 приняты и локально интегрированы после независимого review. Работают foundation, shell/themes, PostgreSQL, Better Auth, account settings и Projects list/create/rename/archive/restore. TASK-006 DONE, review — reports/TASK-006.md. Task CRUD и реальные задачи в интерфейсе ещё отсутствуют; TASK-007 NEEDS_FIXES после review 61a2add: R1/R2 закрыты, осталось R3b (focus после DELETE failure), report/review b28b80b в task/TASK-007. Исправление в той же ветке/worktree; TASK-008 не выдан.
 Статусы: TODO → IN_PROGRESS → REVIEW → DONE; NEEDS_FIXES / BLOCKED при необходимости.
 Каждый следующий TASK зависит от успешной интеграции предыдущего. Строка очереди не разрешает начать реализацию.
 

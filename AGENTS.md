@@ -1,6 +1,6 @@
 # Orbit — правила координации
 
-Этап: EVERYDAY CORE. TASK-001–006 приняты и локально интегрированы. Auth, account settings и Projects list/create/rename/archive/restore работают; task CRUD ещё отсутствует. TASK-006 DONE после закрытия R1/R2/R3 и main integration gates. TASK-007 NEEDS_FIXES после review 22ba2d3: read/network error handling, pending actions текущей строки и keyboard delete confirmation. Report/review fe95c5b в task/TASK-007; реализация не принята, TASK-008 не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
+Этап: EVERYDAY CORE. TASK-001–006 приняты и локально интегрированы. Auth, account settings и Projects list/create/rename/archive/restore работают; task CRUD ещё отсутствует. TASK-006 DONE после закрытия R1/R2/R3 и main integration gates. TASK-007 NEEDS_FIXES после повторного review 61a2add: R1/R2 закрыты, осталось R3b — focus после отказа DELETE. Report/review b28b80b в task/TASK-007; реализация не принята, TASK-008 не выдан. Codex работает в /Users/atlhnv/Orbit, ветка main.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
