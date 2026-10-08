@@ -13,7 +13,7 @@ export function MobileHeader() {
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-background px-4 shell:hidden">
       <Link
         href="/today"
-        className="flex min-h-11 items-center text-base font-semibold tracking-tight"
+        className="flex min-h-11 min-w-11 items-center justify-center text-base font-semibold tracking-tight"
       >
         {ru.brand}
       </Link>

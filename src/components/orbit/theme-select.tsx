@@ -36,12 +36,13 @@ export function ThemeSelect() {
 
   return (
     <Select value={value} onValueChange={setTheme}>
-      <SelectTrigger id="theme-select" className="w-full max-w-56">
+      {/* min-h-11 перекрывает data-[size]:h-8: фактическая область нажатия >= 44px */}
+      <SelectTrigger id="theme-select" className="min-h-11 w-full max-w-56">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {THEME_OPTIONS.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <SelectItem key={option.value} value={option.value} className="min-h-11">
             {option.label}
           </SelectItem>
         ))}

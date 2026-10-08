@@ -114,3 +114,65 @@ test.describe("touch targets мобильной оболочки", () => {
     expect(settingsBox!.height).toBeGreaterThanOrEqual(44);
   });
 });
+
+for (const width of [360, 390]) {
+  test.describe(`touch targets выбора темы, ${width}px`, () => {
+    test.use({ viewport: { width, height: 740 } });
+
+    test("триггер, раскрытые options и ссылка Orbit >= 44x44 без выхода за viewport", async ({
+      page,
+    }) => {
+      await page.goto("/settings");
+
+      const orbitBox = await page
+        .getByRole("link", { name: "Orbit", exact: true })
+        .boundingBox();
+      expect(orbitBox).not.toBeNull();
+      expect(orbitBox!.width).toBeGreaterThanOrEqual(44);
+      expect(orbitBox!.height).toBeGreaterThanOrEqual(44);
+
+      const trigger = page.locator("#theme-select");
+      const triggerBox = await trigger.boundingBox();
+      expect(triggerBox).not.toBeNull();
+      expect(triggerBox!.width).toBeGreaterThanOrEqual(44);
+      expect(triggerBox!.height).toBeGreaterThanOrEqual(44);
+
+      await trigger.click();
+      const options = page.getByRole("option");
+      await expect(options).toHaveCount(3);
+      for (let i = 0; i < 3; i += 1) {
+        const box = await options.nth(i).boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.width, `option ${i}`).toBeGreaterThanOrEqual(44);
+        expect(box!.height, `option ${i}`).toBeGreaterThanOrEqual(44);
+        expect(box!.x, `option ${i} left edge`).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width, `option ${i} right edge`).toBeLessThanOrEqual(
+          width,
+        );
+        expect(box!.y + box!.height, `option ${i} bottom edge`).toBeLessThanOrEqual(
+          740,
+        );
+      }
+
+      await page.keyboard.press("Escape");
+      await expect(trigger).toBeFocused();
+      const scrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth,
+      );
+      expect(scrollWidth).toBeLessThanOrEqual(width);
+    });
+
+    test("выбор темы с клавиатуры работает при мобильной ширине", async ({
+      page,
+    }) => {
+      await page.goto("/settings");
+      const trigger = page.locator("#theme-select");
+      await trigger.focus();
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("Enter");
+      await expect(page.locator("html")).toHaveClass(/light/);
+      await expect(trigger).toBeFocused();
+    });
+  });
+}
