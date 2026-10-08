@@ -2,7 +2,43 @@
 
 ## Статус
 
-READY_FOR_REVIEW.
+READY_FOR_REVIEW (после коррекции R1/R2 по review reports/TASK-005.md от 2026-10-08; старт коррекции `08b348c020840eec0dc4f6f53afdc6316f448b1d`).
+
+## Correction R1/R2 (этап NEEDS_FIXES)
+
+Изменены только: `src/components/orbit/account-theme-select.tsx`, `src/components/orbit/timezone-field.tsx`, `src/app/(workspace)/settings/page.tsx` (проброс `actorId`), `tests/e2e/settings.spec.ts` (регрессии). Service/API/schema/persistence/owner isolation не менялись (подтверждены review).
+
+### R1 — lifecycle/actor guard сохранения темы
+
+Корень: `setTheme` из `useTheme()` — глобальный setter переживающего navigation root provider'а next-themes; catch/rollback старого экрана после unmount продолжал действовать и перекрашивал нового пользователя. Исправление: в `AccountThemeSelect` добавлены `mountedRef` (сброс в cleanup) и `actorRef` (текущий `actorId` с сервера, пробрасывается из settings page через `requireUserOrRedirect`); обработка завершения (успех/отказ/catch/rollback/finally/сброс pending) выполняется **только если экран жив и actor — тот же, что отправил запрос**; иначе — ранний return без setTheme/setState. Сам fetch НЕ прерывается (никакого abort на unmount): законная серверная запись прежнего аккаунта завершается, защищается только текущий UI. `actorId` — server-derived значение для клиентского guard'а, источником серверной identity он не является.
+
+Регрессии (settings.spec):
+1. **Смена аккаунта + поздний отказ** (переработанный leakage-тест, один sign-in C — бюджет limiter'а прежний): B (server dark) выбирает «Светлая» с удержанным route-intercept PATCH → optimistic light → настоящий logout B → настоящий login C (system, prefers light) → html light, select «Системная», timezone UTC → релиз 500 (доставка доказана `expect.poll`) → html остаётся light, `orbit-theme` ≠ "dark", «Тема сохранена» отсутствует. Без guard'а rollback старого обработчика перекрасил бы C в тёмную (confirmed B) — сценарий воспроизводит repro Codex.
+2. **Уход со Settings при pending** (в тесте error-rollback): удержанный 500, выбор «Светлая», переход по «Сегодня» (client navigation, unmount) → релиз → без repaint (html остаётся light), затем reload применяет серверную тёмную и восстанавливает cache. Обычный rollback для текущего actor на экране сохранён прежним тестом (alert + html dark + без «Сохранено»).
+
+### R2 — блокировка timezone-ввода на время pending
+
+`TimezoneField`: Input заблокирован (`disabled={pending}`) вместе с кнопкой — ответ применяется ровно к отправленному значению, новый ввод во время запроса невозможен и не может быть потерян или помечен сохранённым (вариант «disable input при pending» из review). Ошибка по-прежнему оставляет доступный retry draft, Enter/keyboard работают.
+
+Регрессия (новый тест): удержанный route → «Asia/Tokyo» + Enter → **input и кнопка disabled** asserted (кнопка в pending-лейбле «Сохранение…») → релиз 200 `{timezone:"Asia/Tokyo"}` → поле вновь доступно, значение Tokyo, «Часовой пояс сохранён» → далее обычное сохранение «Europe/Moscow» через реальный API (Enter/retry работают).
+
+## Проверки после коррекции (Node v24.21.0 / npm 11.19.0)
+
+| Команда | Результат |
+| --- | --- |
+| `npm run lint` / `npm run typecheck` | exit 0 / exit 0, без warnings |
+| `npm test` | exit 0 — 15 passed |
+| `npm run test:db` | exit 0 — 47 passed |
+| `npm run test:auth` №1 / №2 (последовательно) | exit 0 — **51/51** оба; 0 lifecycle-паттернов в обоих логах |
+| `CI=1 E2E_PORT=3233` / `3234` (последовательно) | exit 0 — **63/63** оба (62 + новая R2-регрессия); 0 lifecycle-паттернов |
+| `npm run build` без `.env` | exit 0; /api/v1/settings и workspace маршруты ƒ Dynamic |
+| Leftovers | orbit_test\*-баз: 0, соединений: 0; `git diff --check` чист; изменения — ровно 4 файла |
+
+Известные ограничения — без изменений к предыдущему раунду (реальные устройства/production/reverse proxy не проверялись; timezone не влияет на расписание; limiter single-process; strict ordering конкурентной записи одного поля не asserted).
+
+---
+
+# Предыдущий раунд (исходная реализация)
 
 ## Исходное состояние (проверено до изменений)
 

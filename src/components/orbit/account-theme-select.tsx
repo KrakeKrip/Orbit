@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import {
   Select,
@@ -35,11 +35,20 @@ async function patchSettingsTheme(theme: SettingsTheme): Promise<boolean> {
  * подтверждённой account theme и видима ошибка. Значение Select берётся из
  * серверного состояния аккаунта, а не из localStorage: устаревший cache
  * другого actor не отображается и не сохраняется.
+ *
+ * Lifecycle/actor guard (R1): завершение сохранения обрабатывается, только
+ * если экран жив и actor не сменился. setTheme из useTheme — глобальный
+ * setter переживающего navigation root provider'а: без guard'а отказ
+ * задержавшегося PATCH прежнего аккаунта перекрашивал бы нового (catch/
+ * rollback/finally защищены целиком, не только setState). Сам запрос не
+ * прерывается — законная серверная запись прежнего аккаунта завершается.
  */
 export function AccountThemeSelect({
   confirmedTheme,
+  actorId,
 }: {
   confirmedTheme: SettingsTheme;
+  actorId: string;
 }) {
   const { setTheme } = useTheme();
   const [confirmed, setConfirmed] = useState<SettingsTheme>(confirmedTheme);
@@ -47,11 +56,26 @@ export function AccountThemeSelect({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(false);
   const inFlight = useRef(false);
+  const mountedRef = useRef(true);
+  const actorRef = useRef(actorId);
+
+  useEffect(() => {
+    actorRef.current = actorId;
+  }, [actorId]);
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
 
   async function handleChange(next: string): Promise<void> {
     if (inFlight.current) {
       return;
     }
+    const requestedActorId = actorRef.current;
+    const isCurrentSave = () =>
+      mountedRef.current && actorRef.current === requestedActorId;
     const theme = next as SettingsTheme;
     setTheme(theme);
     setError(false);
@@ -60,18 +84,29 @@ export function AccountThemeSelect({
     inFlight.current = true;
     try {
       if (await patchSettingsTheme(theme)) {
+        if (!isCurrentSave()) {
+          return;
+        }
         setConfirmed(theme);
         setSaved(true);
       } else {
+        if (!isCurrentSave()) {
+          return;
+        }
         setTheme(confirmed);
         setError(true);
       }
     } catch {
+      if (!isCurrentSave()) {
+        return;
+      }
       setTheme(confirmed);
       setError(true);
     } finally {
-      setPendingTheme(null);
       inFlight.current = false;
+      if (isCurrentSave()) {
+        setPendingTheme(null);
+      }
     }
   }
 

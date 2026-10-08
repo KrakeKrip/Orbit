@@ -27,7 +27,7 @@ export default async function SettingsPage() {
           {ru.settings.theme.hint}
         </p>
         <div className="mt-3">
-          <AccountThemeSelect confirmedTheme={settings.theme} />
+          <AccountThemeSelect confirmedTheme={settings.theme} actorId={user.id} />
         </div>
       </section>
       <section className="mt-4 rounded-xl border bg-card p-4">
