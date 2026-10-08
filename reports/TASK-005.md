@@ -80,3 +80,15 @@ Node 24.21.0: lint/typecheck PASS без warnings, npm test 15 PASS; DB 47 PASS;
 Та же ветка/worktree, только R1b lifecycle setup/reset и regression, обновить executor report. Обычные новые commits без merge/push/amend/rebase/reset/deploy. Не менять main/3000/CRM/coord docs/защитные настройки; не отключать StrictMode. После соответствующих gates вернуть latest SHA и READY_FOR_REVIEW. TASK-006 не начинать.
 
 Отдельный no-env build архивного snapshot 050ce13 с собственной npm ci также PASS: workspace и settings API Dynamic, runtime auth/DB env отсутствовали.
+
+
+## Финальное review 2c3298b — 2026-10-08
+
+**APPROVED для локальной интеграции. R1/R2/R1b закрыты.** Проверен `2c3298b382c798838e2ec19ef004d392526c09aa` относительно `12ac7775c9958db4d5f1cde7e51a47bf1af0b104`: 2 файла (один product component + executor report), 49 insertions/6 deletions. Mounted guard теперь симметричен при StrictMode replay; actor checks и unmount stale-response suppression сохранены. Service/API/schema/dependencies не менялись.
+
+Независимые gates Node 24.21.0: lint/typecheck без warnings, 15 unit/pure, 47 DB, 51 auth, CI=1 E2E_PORT=3241 — 63 browser PASS, все exit 0, logs без lifecycle errors. Предыдущие delayed-response/account switch/timezone pending regressions сохранены.
+Реальный Next dev/StrictMode на собственном порту 3242/unique test DB/synthetic account: PATCH 200 → DB dark → pending отсутствует, «Тема сохранена» видима; следующий выбор light с контролируемым 500 → DB остаётся dark, html откатывается dark, alert видим. Все ресурсы закрыты. Первый probe остановился на неоднозначном getByRole(alert), поскольку Next добавляет route announcer alert; повтор с точным span locator завершился exit 0 — ошибка review-helper, не product defect. Автоматические next dev изменения AGENTS.md/generated next-env.d.ts возвращены к исходным HEAD bytes; пользовательских изменений до запуска не было.
+
+Постоянного отдельного dev-mode suite нет: реальный dev replay проверен независимо и executor procedure сохранена в отчёте; это неблокирующее ограничение, не причина расширять TASK. Root settings/defaults/owner isolation/Origin/no-store/upsert semantics остаются ранее подтверждёнными. Real devices/production proxy/deployment не проверялись, прежние limiter/tooling audit ограничения сохраняются.
+
+Следующий шаг: локальный no-ff merge в чистую main, integration checks и no-env build, затем DONE. TASK-006 этим review не выдан; push/deploy не разрешены.
