@@ -1,5 +1,5 @@
 import { Client } from "pg";
-import { loadDotEnv, resolveTestDatabaseTarget } from "./db-target";
+import { loadDotEnv, resolveTestDatabaseTarget } from "./db-target.ts";
 
 /**
  * Помощник DB-тестов: короткоживущее подключение к базе, созданной раннером
@@ -8,7 +8,9 @@ import { loadDotEnv, resolveTestDatabaseTarget } from "./db-target";
  * (сырой URL в pg не передаётся). Клиенты закрываются в finally.
  */
 
-function runnerTarget() {
+// Экспортируется для auth suite (tests/auth): тот же runner target,
+// созданный global-setup соответствующего запуска.
+export function runnerTarget() {
   loadDotEnv();
   const target = resolveTestDatabaseTarget();
   const name = process.env.ORBIT_TEST_DB_NAME ?? "";

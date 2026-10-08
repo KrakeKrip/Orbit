@@ -6,7 +6,7 @@ import {
   isRunnerCreatedDbName,
   resolveTestDatabaseTarget,
   type DbTarget,
-} from "./db-target";
+} from "./db-target.ts";
 
 /**
  * Подготовка изолированной test-базы (исправление R1).
@@ -96,4 +96,21 @@ export async function prepareTestDatabase(
       });
     },
   };
+}
+
+/**
+ * Аварийная зачистка собственной test-базы раннера (R3b): имя обязано
+ * соответствовать namespace-паттерну runner'а. Обычный DROP без FORCE —
+ * владелец-процесс обязан быть уже остановлен и соединений не иметь;
+ * ошибка DROP не глушится и означает незачищенный ресурс.
+ */
+export async function dropRunnerDatabase(target: DbTarget): Promise<void> {
+  if (!isRunnerCreatedDbName(target.database)) {
+    throw new Error(
+      `Refusing to drop unexpectedly named database ${JSON.stringify(target.database)}.`,
+    );
+  }
+  await withAdminClient(target, async (admin) => {
+    await admin.query(`DROP DATABASE "${target.database}"`);
+  });
 }
