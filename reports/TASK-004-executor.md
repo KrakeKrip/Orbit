@@ -2,7 +2,41 @@
 
 ## Статус
 
-READY_FOR_REVIEW (после коррекции R1b/R3b по повторному review, раздел «Повторное независимое review исправлений» в reports/TASK-004.md от 2026-10-08). R2 закрыт Codex, изменений ввода не выполнялось.
+READY_FOR_REVIEW (после коррекции R3c по review «Review e161f51» в reports/TASK-004.md от 2026-10-08). R1/R1b/R2 и штатный pool lifecycle R3b приняты Codex — не переделывались.
+
+## Correction R3c (третий этап NEEDS_FIXES)
+
+Старт коррекции: HEAD `b3f28a4a828afd3b17dd8ba68ca174a4ae4811fa` (coord accept, осталась R3c). Изменены: `tests/e2e/server-lifecycle.ts` (новый), `tests/e2e/run-finalization.ts` (новый), `tests/e2e/global-teardown.ts` (тонкая обёртка), `scripts/e2e-server.ts`, `tests/db/app-connections.ts` (опциональные таймауты, дефолты прежние), `tests/auth/e2e-shutdown.auth.test.ts` (новая регрессия, 5 тестов). Файлы под `src/` не менялись — no-env build этого раунда не пересчитывался (изменения не влияют на сборку приложения; последний проверенный build — в предыдущем раунде).
+
+### Суть исправления
+
+Проблема: сервер при forced termination удалял fixture DB и делал exit(1), но globalTeardown видел только «pid исчез + база удалена» и возвращал успех — весь `npm run test:e2e` был exit 0 (воспроизведение Codex).
+
+- **Completion result** (`tests/e2e/server-lifecycle.ts`): исход остановки конкретного запуска `{clean, remaining, database, detail?}` записывается синхронно (writeFileSync до process.exit) в локальный файл `test-results/.auth/e2e-shutdown.json` — без сетевых teardown-эндпоинтов. `performE2EServerShutdown()` объединяет серверную остановку: HTTP close → closeAppPoolAndConnections (закрытие фактического пула, ожидание 0 соединений; forced termination — только аварийная зачистка) → drop своей базы → запись исхода. `database` в исходе — идентичность ресурса.
+- **Runner-финализация** (`tests/e2e/run-finalization.ts`, `finalizeE2ERunResources`): после SIGTERM и выхода pid читает исход и принимает его ТОЛЬКО если он валиден и `outcome.database` совпадает с базой из маркера этого запуска. Missing/невалидный/чужой (identity mismatch) исход, а также `clean:false` → собственная база аварийно зачищается по имени из маркера (namespace-паттерн, dropRunnerDatabase) и финализация БРОСАЕТ ошибку — playwright завершает весь прогон с ненулевым кодом, даже когда зачистка уже удалила базу. Clean:true → верификация удаления базы; «clean, но база осталась» → зачистка + ошибка. Политика reuseExistingServer вне CI сохранена (живой сервер-владелец не сигналится и не проверяется). Stale completion сбрасывается при старте сервера и потребляется финализацией.
+- `global-teardown.ts` — тонкая обёртка над finalizeE2ERunResources; `scripts/e2e-server.ts` — shutdown через performE2EServerShutdown (clean:false → лог + exit(1)), init-catch записывает clean:false («init failed») перед throw; `closeAppPoolAndConnections` получила опциональные таймауты (дефолты 10s/5s прежние — поведение suite/E2E не изменилось).
+
+### Регрессия (tests/auth/e2e-shutdown.auth.test.ts, suite 26 → 31)
+
+Детерминированные тесты конечного результата финализации на собственных уникальных базах (prepareTestDatabase, собственные tmp-пути маркера/исхода; общие файлы test-results не затрагиваются): (1) штатная остановка → clean:true с совпадающей identity, база удалена, финализация успешна и потребляет файлы; (2) synthetic leftover connection к своей БД → pg_terminate_backend (доказано отклонением запроса по разорванному соединению) → clean:false → финализация reject /unclean shutdown/ при уже удалённой базе; (3) missing исход при отсутствии базы → reject; (4) исход с чужой базой (identity mismatch) → reject /identity mismatch/; (5) missing исход при существующей своей базе → аварийная зачистка + reject, база удалена. HTTP sign-in не используется (как и в bootstrap-fault — общий IP-keyed rate limiter).
+
+### Фактические прогоны (Node v24.21.0 / npm 11.19.0)
+
+| Проверка | Результат |
+| --- | --- |
+| `npm run typecheck` / `npm run lint` | exit 0 / exit 0, без warnings |
+| `npm test` | exit 0 — 4 UI tests |
+| `npm run test:db` | exit 0 — 47 passed |
+| `npm run test:auth` №1 / №2 (последовательно) | exit 0, **31/31 passed** оба; 0 совпадений `idle client error`/`terminating connection`/`57P01`/`uncaughtException` в обоих логах |
+| `CI=1 E2E_PORT=3211 npm run test:e2e` №1 | exit 0, **56 passed**, 0 lifecycle-паттернов |
+| `CI=1 E2E_PORT=3212 npm run test:e2e` №2 (последовательно) | exit 0, **56 passed**, 0 lifecycle-паттернов |
+| **Forced-воспроизведение** (сценарий review: CI=1, порт 3213, одно дополнительное synthetic pg-соединение из внешнего процесса только к newly-created базе ЭТОГО запуска, по его маркеру) | тесты 56 passed, `[WebServer] [e2e-server] unclean shutdown: forced termination of own DB connections was required` (holder терминирован, 57P01), затем `Error: E2E server reported an unclean shutdown of orbit_test_…: forced termination of own DB connections was required. Forced cleanup does not count as a clean shutdown; the E2E gate fails.` («1 error was not a part of any test») — **итог `npm run test:e2e` exit 1** (до исправления был exit 0) |
+| После forced-прогона | база этого запуска удалена, leftover orbit_test\* — 0, маркер и completion потреблены (test-results/.auth — только gitignored storageState) |
+| `git diff --check` / `git status` | чисто; 3 изменённых + 3 новых файла test-инфраструктуры |
+
+Ограничения этой коррекции: completion-файл — локальный механизм одного прогона (одновременные E2E-запуски в одном worktree по-прежнему вне модели, как и прежде); детерминированная регрессия проверяет финализацию и серверный исход на уровне модулей, полный сценарий forced-cleanup дополнительно воспроизведён вручную на реальном `npm run test:e2e` (см. таблицу); вне-CI reuse-путь не покрыт gates (как и прежде, CI=1 — обязательный gate). Прочие прежние ограничения (rate limiter/proxy/audit/реальные устройства) без изменений.
+
+---
 
 ## Correction R1b/R3b (второй этап NEEDS_FIXES)
 
@@ -219,7 +253,7 @@ better-auth **1.7.7** + @better-auth/drizzle-adapter 1.7.7 (dependencies, без
 ## Git
 
 - Ветка: `task/TASK-004`; worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-004`.
-- Стартовый SHA: `5178578b567b24b0a81487871d904f1a496025fa`; реализация и отчёт исходной реализации зафиксированы координатором (`4ed184b`); коррекция R1/R2/R3 — `5f8648e`; review повторного этапа — `622781a` (старт коррекции R1b/R3b).
+- Стартовый SHA: `5178578b567b24b0a81487871d904f1a496025fa`; реализация и отчёт исходной реализации зафиксированы координатором (`4ed184b`); коррекция R1/R2/R3 — `5f8648e`; review повторного этапа — `622781a`; коррекция R1b/R3b — `e161f51`; review третьего этапа — `b3f28a4` (старт коррекции R3c).
 - Коррекция R1b/R3b выполнена обычными новыми коммитами без amend/rebase/reset/merge/push; main, другие ветки, localhost:3000, `crm-db-1` не затронуты; secrets только в untracked `.env`; latest full SHA — в сообщении передачи после коммита.
 
 ## Итог

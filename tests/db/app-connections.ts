@@ -69,6 +69,13 @@ export async function terminateTargetConnections(target: DbTarget): Promise<void
   });
 }
 
+export type AppPoolCloseOptions = {
+  /** Ожидание нуля соединений после closeDbPool (по умолчанию 10000). */
+  closeWaitMs?: number;
+  /** Ожидание после аварийного обрыва (по умолчанию 5000). */
+  terminateWaitMs?: number;
+};
+
 export type AppPoolCloseResult = {
   /** false: потребовался принудительный обрыв — это не чистый teardown. */
   clean: boolean;
@@ -81,15 +88,18 @@ export type AppPoolCloseResult = {
  */
 export async function closeAppPoolAndConnections(
   target: DbTarget,
+  options: AppPoolCloseOptions = {},
 ): Promise<AppPoolCloseResult> {
+  const closeWaitMs = options.closeWaitMs ?? 10000;
+  const terminateWaitMs = options.terminateWaitMs ?? 5000;
   await closeDbPool();
-  const remaining = await waitForConnectionsClosed(target, 10000);
+  const remaining = await waitForConnectionsClosed(target, closeWaitMs);
   if (remaining === 0) {
     return { clean: true, remaining: 0 };
   }
   // Аварийная зачистка собственной базы: владельцем соединений был наш
   // процесс; clean:false обязывает вызвавший teardown сообщить сбой.
   await terminateTargetConnections(target);
-  const after = await waitForConnectionsClosed(target, 5000);
+  const after = await waitForConnectionsClosed(target, terminateWaitMs);
   return { clean: false, remaining: after };
 }
