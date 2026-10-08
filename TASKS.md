@@ -1,6 +1,6 @@
 # Orbit — очередь MVP
 
-Этап FOUNDATIONS, 2026-10-08. TASK-001–004 приняты и локально интегрированы после независимого review. Реализованы foundation, UI shell/themes, PostgreSQL/Drizzle schema/migrations и Better Auth login/logout/bootstrap/session boundary. CRUD, account preferences и реальные задачи в интерфейсе ещё отсутствуют. TASK-004 DONE, review — reports/TASK-004.md. TASK-005 проверен: NEEDS_FIXES, R1/R2 в reports/TASK-005.md task ветки; код не интегрирован, TASK-006 не выдан.
+Этап FOUNDATIONS, 2026-10-08. TASK-001–004 приняты и локально интегрированы после независимого review. Реализованы foundation, UI shell/themes, PostgreSQL/Drizzle schema/migrations и Better Auth login/logout/bootstrap/session boundary. CRUD, account preferences и реальные задачи в интерфейсе ещё отсутствуют. TASK-004 DONE, review — reports/TASK-004.md. TASK-005 проверен: NEEDS_FIXES, R1/R2 закрыты, R1b StrictMode в reports/TASK-005.md task ветки; код не интегрирован, TASK-006 не выдан.
 Статусы: TODO → IN_PROGRESS → REVIEW → DONE; NEEDS_FIXES / BLOCKED при необходимости.
 Каждый следующий TASK зависит от успешной интеграции предыдущего. Строка очереди не разрешает начать реализацию.
 
