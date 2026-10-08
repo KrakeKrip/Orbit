@@ -1,6 +1,13 @@
 # TASK-003 — независимое review Codex
 
-2026-10-08. **NEEDS_FIXES**. Реализация не принята, merge/push/deployment не выполнены. TASK-004 не выдан.
+2026-10-08. **Review APPROVED — ожидает локальной интеграции и gates main.** R1/R2/R1b закрыты; TASK-004 не выдан, push/deployment не выполнялись.
+
+## Финальное review R1b
+Проверен `c10f34c9c62c93c7c38583726dc9d393dec2fc4c`: изменены только sentinel fixture и executor report. Нет предварительного DROP фиксированной orbit_test; fixture создаётся под уникальным именем, cleanup ограничен своим успешно созданным ресурсом. История сохранена, дерево и diff --check от audit-базы чистые.
+Независимо на Node 24.21.0/npm 11.19.0: npm ci --offline, lint/typecheck, 4 UI tests PASS; полный npm run test:db два последовательных раза — 47 PASS каждый (28 schema + 15 guard + 4 runner). После teardown pg_database не содержит orbit_test_* временных БД. Production build и 47 browser tests PASS на CI=1 E2E_PORT=3181. Ранее в этом review уже подтверждены миграции на пустую DB, повторное применение и no-change generation; SQL/schema с тех пор не менялись.
+Первый технический запуск test:db во время npm ci не нашёл vitest (exit 127); после окончания установки оба штатных запуска успешны. Это ошибка порядка проверок координатора, не дефект реализации.
+Оставшееся неблокирующее ограничение cleanup: createSentinelFixture записывает внешний ownership handle после создания таблицы, поэтому сбой fixture initialization может оставить свою новую DB; аналогично сбой второго prepare в тесте двух запусков может оставить первую свою DB. Удаления существующих ресурсов больше нет. Рекомендация на будущий test tooling cleanup — регистрировать handles сразу после CREATE и оборачивать каждый setup в finally; критерию защиты пользовательских данных это не препятствует.
+Ниже история замечаний; NEEDS_FIXES в исторических разделах больше не является текущим статусом.
 
 ## Повторное review коррекции R1/R2 — текущий результат
 Проверен HEAD `d200fa60342fc7fccea57dccea0809c03f2ca874`, fix commit `3b2240fdbce150ae9d21f9b7975dc1e251815fd8`, старт коррекции `736d460bbf4c42813f62db5e81b275c25ef83a42`. Коррекция ограничена девятью файлами test runner/guard/docs, dependencies/schema/migrations/UI не менялись. Рабочее дерево и diff --check чистые.
