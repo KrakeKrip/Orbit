@@ -2,9 +2,61 @@
 
 ## Статус
 
-READY_FOR_REVIEW (после коррекции R1/R2/R3 по review reports/TASK-004.md от 2026-10-08).
+READY_FOR_REVIEW (после коррекции R1b/R3b по повторному review, раздел «Повторное независимое review исправлений» в reports/TASK-004.md от 2026-10-08). R2 закрыт Codex, изменений ввода не выполнялось.
 
-## Correction R1/R2/R3 (этап NEEDS_FIXES)
+## Correction R1b/R3b (второй этап NEEDS_FIXES)
+
+Старт коррекции: HEAD `622781ae70d8b0aa3c58e7424fa7bea579d9924a` (coord review) поверх `5f8648e`. Изменены: `src/server/auth/bootstrap-core.ts`, `src/server/db/core.ts`, `tests/db/app-connections.ts` (новый), `tests/db/runner.ts` (добавлен export dropRunnerDatabase), `tests/auth/global-setup.ts`, `tests/auth/bootstrap-fault.auth.test.ts` (+3 теста R1b), `scripts/e2e-server.ts`, `tests/e2e/global-teardown.ts`. UI/маршруты/схема/миграции/env-validation не менялись.
+
+### R1b — компенсация после успешного создания account
+
+Корень: прежняя компенсация удаляла кандидата только при ОТСУТСТВИИ credential account, поэтому отказ post-check из-за unexpected session оставлял 1 user/1 account/1 session. Дополнительно: проверка `(error as {status?: number}).status !== 422` была всегда истинной для APIError (у APIError `status` — строка «UNPROCESSABLE_ENTITY», число — `statusCode`; сверено по `@better-auth/core/error` + `better-call`), а pre-check не нормализовал регистр email.
+
+По исходникам установленной 1.7.7 (`node_modules/better-auth/dist/api/routes/sign-up.mjs:155–205`): при `autoSignIn: false` дубликат email НЕ бросает исключение — возвращается synthetic-ответ 200 `{token: null, user}` со свежесгенерированным `generateId()`, которого в БД нет. Поэтому реализовано:
+
+- **Proof-of-creation**: id из ответа считается созданным этим вызовом только если в БД существует строка user с этим id и нормализованным email. Synthetic id в БД не встречается; реальный id возвращает только создание. Synthetic-ответ → отказ `EMAIL_EXISTS` без каких-либо изменений (synthetic id не считается доказательством созданного пользователя).
+- **Компенсация** — только при подтверждённом создании: DELETE user по первичному ключу, каскад FK (`account.user_id`, `session.user_id` — ON DELETE CASCADE в принятой схеме) убирает account/session, включая injected session. Никаких поисков по email+createdAt, чужие rows не удаляются.
+- **Throw-пути без компенсации**: `runWithTransaction` + `transaction: true` выполняют весь signUpEmail в одной транзакции (сверено по `@better-auth/core/context` и drizzle-adapter) — любое исключение откатывает её целиком, собственных строк нет. APIError 422 (гонка: unique violation или USER_ALREADY_EXISTS) маппится в `EMAIL_EXISTS` по числовому `statusCode`; остальные ошибки пробрасываются как есть.
+- **Нормализация email**: pre-check и все сравнения — `input.email.toLowerCase()` (sign-up нормализует так же).
+
+Регрессии в `tests/auth/bootstrap-fault.auth.test.ts` (26 тестов в suite, было 23):
+1. **unexpected session** (AFTER INSERT триггер на account добавляет synthetic session в транзакции signup): отказ `PROVISIONING_FAILED`, затем ровно 0 user/0 account/0 session; повтор того же email после снятия триггера успешен (1/1/0).
+2. **case-normalized duplicate**: существующий `…@orbit.test`, повтор `…@ORBIT.TEST` в верхнем регистре → `EMAIL_EXISTS`; состояние 1/1/0; password hash владельца побайтово не изменился.
+3. **гонка** двух конкурентных provisionLocalUser с одним email: ровно 1 fulfilled / 1 rejected `EMAIL_EXISTS`; в БД 1/1/0.
+4. Прежний BEFORE INSERT fault-тест (атомарность отказа credential INSERT → 0/0/0) сохранён и проходит.
+
+Ограничение: HTTP sign-in намеренно НЕ используется в bootstrap-fault — эмпирически воспроизведён 429 общего in-memory rate limiter'а runtime-инстанса (ключ по IP, 10/60s, все тесты suite идут с 127.0.0.1): первые прогоны с sign-in проверками дали `429` в трёх тестах. Совместимость provision → sign-in по HTTP доказана в auth-flow (пользователи A/B созданы тем же core, входят по HTTP, 15/15). Synthetic-ветка не покрыта детерминированным тестом: последовательный дубликат отсекается pre-check до API, а synthetic-ответ достижим только в окне гонки — ветка защищена DB-проверкой, поведение 1.7.7 сверено по исходникам; гонка в тестах покрыла 422-ветку (в логе прогона виден duplicate key от проигравшего INSERT).
+
+### R3b — закрытие фактического пула до DROP
+
+Корень: `closeDbPool` из исходного модуля закрывал экземпляр пула исходного графа, а compiled-бандл Next держит собственную копию модуля со своим module-scope пулом — его idle-клиенты терминировались DROP WITH FORCE (57P01, «idle client error»).
+
+- `src/server/db/core.ts`: пул и drizzle-инстанс перенесены в реестр на `globalThis` (стандартный для Next global-singleton приём): globalThis у процесса один, копии модуля (исходная и из bundle) сходятся к одному экземпляру. `closeDbPool()` теперь закрывает фактический пул приложения; свойство сбрасывается до `pool.end()` (повторный вызов/повторная инициализация безопасны). Обработчик `pool.on("error")` сохранён (ошибки логируются, не глушатся) — в чистых прогонах ему нечего печатать.
+- `tests/db/app-connections.ts` (новый): `closeAppPoolAndConnections(target)` = closeDbPool → ожидание 0 соединений к СВОЕЙ базе (pg_stat_activity, ≤10s, опрос 250ms) → при остатке: аварийный pg_terminate_backend только своей базы + повторное ожидание (≤5s) и `clean:false`.
+- `tests/auth/global-setup.ts`: teardown = stopServer → closeAppPoolAndConnections → drop своей базы; `clean:false` → throw (нечистое закрытие не считается успешным teardown). Безусловный pg_terminate_backend из прежней версии удалён. Init-catch соблюдает тот же порядок (stopServer → closeAppPoolAndConnections → drop → throw исходной ошибки).
+- `scripts/e2e-server.ts`: shutdown-обработчик — тот же порядок; `clean:false` → лог и `exit(1)` вместо 0. Init-catch аналогичен. Маркер {database, pid} пишется сразу после создания базы (раньше — после provisioning): любой сбой init оставляет teardown'у имя базы для проверки зачистки.
+- `tests/e2e/global-teardown.ts`: результат `waitProcessExit` теперь проверяется — таймаут → throw (базу живого владельца не трогаем). После выхода сервера teardown убеждается удалением базы (опрос pg_database ≤10s); leftover (владелец погиб без зачистки, например SIGKILL во время shutdown) → аварийный drop по имени из маркера + throw. Имя валидируется `isRunnerCreatedDbName` (orbit_test-паттерн); конфиг подключения строится из заново валидированного TEST_DATABASE_URL.
+- `tests/db/runner.ts`: добавлен export `dropRunnerDatabase(target)` (валидация namespace-паттерна + обычный DROP без FORCE). Причина добавления в принятый файл: аварийная зачистка — единственный DDL в этом прогоне, и он остался в runner-файле, а не в teardown-коде (тот же принцип, что у принятого `prepared.teardown`).
+
+Фактические прогоны (Node v24.21.0 / npm 11.19.0, PostgreSQL Orbit 127.0.0.1:55432, .env восстановлен после build):
+
+| Проверка | Результат |
+| --- | --- |
+| `npm run typecheck` / `npm run lint` | exit 0 / exit 0, без warnings |
+| `npm test` | exit 0 — 4 UI tests |
+| `npm run test:db` | exit 0 — 47 passed |
+| `npm run test:auth` №1 / №2 (последовательно) | exit 0, **26/26 passed** оба; в обоих полных логах 0 совпадений по `idle client error`, `terminating connection`, `57P01`, `uncaughtException`; teardown-ошибок нет |
+| `npm run build` без `.env` (env переносился и возвращён) | exit 0; ƒ Dynamic: /api/auth/[...all], /api/v1/me, /inbox, /login, /projects, /settings, /today, /upcoming; ○ Static: /, /_not-found, /icon.svg |
+| `CI=1 E2E_PORT=3205 npm run test:e2e` №1 | exit 0, **56 passed**, 0 lifecycle-паттернов в полном логе |
+| `CI=1 E2E_PORT=3206 npm run test:e2e` №2 (последовательно) | exit 0, **56 passed**, 0 lifecycle-паттернов; [WebServer] в логе — только ожидаемые WARN Better Auth «Invalid password» из сценария ошибки входа |
+| После всех прогонов: pg_database / pg_stat_activity | orbit_test\*-баз: 0; соединений к ним: 0; слушателей на 3205/3206 нет; маркер e2e-db.json удалён teardown'ом (test-results/.auth — только gitignored storageState) |
+| `git diff --check` / `git status` | чисто; изменения только в перечисленных 8 файлах |
+
+Известные ограничения этой коррекции: реестр globalThis предполагает одно приложение/один DATABASE_URL на процесс (в текущих runtime'ах — auth suite и e2e-server — так и есть); аварийный обрыв/зачистка остаются возможны только как `clean:false` с явным сбоем прогона; synthetic-ветка дубликата не покрыта детерминированным тестом (см. выше); R2 (PTY-ввод) не менялся — закрыт Codex.
+
+---
+
+## Correction R1/R2/R3 (первый этап NEEDS_FIXES)
 
 Старт коррекции: HEAD `cb13f75` (coord review) поверх `4ed184b`. Изменены: `src/server/auth/bootstrap-core.ts`, `src/server/auth/env.ts` (hardening), `src/server/db/core.ts` (новый), `src/server/db/client.ts` (оболочка), `src/server/auth/instance.ts` (импорт core), `scripts/bootstrap-user.ts`, `scripts/bootstrap-input.ts` (новый), `scripts/e2e-server.ts`, `tests/auth/{global-setup,cli-input,bootstrap-fault}.test.ts` (новые тесты), cleanup импортов (`playwright.config.ts`, `tests/e2e/global-teardown.ts`). Схема/миграции/маршруты/UI-навигация не менялись.
 
@@ -167,9 +219,8 @@ better-auth **1.7.7** + @better-auth/drizzle-adapter 1.7.7 (dependencies, без
 ## Git
 
 - Ветка: `task/TASK-004`; worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-004`.
-- Стартовый SHA: `5178578b567b24b0a81487871d904f1a496025fa`; реализация и отчёт исходной реализации зафиксированы координатором (`4ed184b`).
-- **Фиксация коррекции R1/R2/R3 заблокирована средой GLM**: Mimosa PreToolUse L3 при `git commit` трижды (включая минимальный однофайловый коммит) возвращала 8 high-находок исключительно в файлах main-чекаута координатора (`/Users/atlhnv/Orbit/tests/db/runner.db.test.ts:112–172`, `global-setup.ts:14` — принятый и влитый в main код TASK-003); блокировка не зависит от содержимого коммита. Hook не отключался, `--no-verify` не использовался. Исправления сохранены в рабочем дереве (весь набор staged) — координатор может зафиксировать их обычным commit из этого worktree.
-- Рабочее дерево: полный набор исправлений staged; diff --check чист; merge/push/amend/rebase/reset не выполнялись; main, localhost:3000, `crm-db-1` не затронуты; secrets только в untracked `.env`.
+- Стартовый SHA: `5178578b567b24b0a81487871d904f1a496025fa`; реализация и отчёт исходной реализации зафиксированы координатором (`4ed184b`); коррекция R1/R2/R3 — `5f8648e`; review повторного этапа — `622781a` (старт коррекции R1b/R3b).
+- Коррекция R1b/R3b выполнена обычными новыми коммитами без amend/rebase/reset/merge/push; main, другие ветки, localhost:3000, `crm-db-1` не затронуты; secrets только в untracked `.env`; latest full SHA — в сообщении передачи после коммита.
 
 ## Итог
 

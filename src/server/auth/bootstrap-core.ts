@@ -1,5 +1,5 @@
-import { and, eq, gte } from "drizzle-orm";
-import { betterAuth } from "better-auth";
+import { and, eq } from "drizzle-orm";
+import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -13,13 +13,20 @@ import { account, session, user, verification } from "../db/schema.auth.ts";
  * Здесь нет своего password hashing и session протокола: аккаунт создаётся
  * поддерживаемым Better Auth API, поэтому формат совместим с runtime signIn.
  *
- * Атомарность: drizzle adapter создаёт user и credential account в одной
- * транзакции (transaction: true) — отказ второго INSERT откатывает первого,
- * orphan user не остаётся. Ошибки после создания (post-check, неожиданная
- * session) обрабатываются строго scoped компенсацией: удаляется только
- * пользователь, созданный ЭТИМ вызовом (email отсутствовал до него,
- * createdAt не раньше начала вызова, без завершённого credential account);
- * уже существующие пользователи/пароли не изменяются.
+ * Атомарность и компенсация (R1/R1b):
+ *  - drizzle adapter (transaction: true) выполняет весь signUpEmail в одной
+ *    транзакции: любое исключение внутри endpoint откатывает её целиком,
+ *    собственных строк не остаётся — компенсация на throw-пути не нужна;
+ *  - при autoSignIn: false дубликат email НЕ бросает исключение: signUpEmail
+ *    возвращает synthetic-ответ 200 { user } со свежесгенерированным id,
+ *    которого в БД нет (поведение установленной 1.7.7 сверено по исходникам).
+ *    Поэтому доказательство создания — не сам id из ответа, а строка user
+ *    с этим id и нормализованным email: реальный id возвращает только вызов,
+ *    создавший строку; synthetic id в БД не встречается;
+ *  - компенсация выполняется только при подтверждённом создании этим
+ *    вызовом: DELETE по первичному ключу, каскад FK убирает account и
+ *    session. Поиск по email/времени и удаление чужих строк не выполняются;
+ *    дубликат/гонка всегда завершаются отказом без изменения чужих rows.
  */
 
 export class ProvisioningError extends Error {
@@ -42,7 +49,6 @@ export async function provisionLocalUser(
   input: { email: string; password: string; name: string },
 ): Promise<ProvisionedUser> {
   const pool = new Pool({ connectionString, max: 1 });
-  const startedAt = new Date();
 
   try {
     const db = drizzle(pool);
@@ -62,12 +68,15 @@ export async function provisionLocalUser(
       },
     });
 
-    // Повторный запуск с существующим email: отказ без изменения
-    // password/account и без нового user/session.
+    // Better Auth нормализует email к нижнему регистру (sign-up: toLowerCase),
+    // поэтому pre-check и все сравнения — по нормализованному значению:
+    // повторный запуск с существующим email в любом регистре отказывает без
+    // изменения password/account и без нового user/session.
+    const normalizedEmail = input.email.toLowerCase();
     const existing = await db
-      .select({ id: user.id, createdAt: user.createdAt })
+      .select({ id: user.id })
       .from(user)
-      .where(eq(user.email, input.email))
+      .where(eq(user.email, normalizedEmail))
       .limit(1);
     if (existing.length > 0) {
       throw new ProvisioningError(
@@ -77,6 +86,7 @@ export async function provisionLocalUser(
     }
 
     let createdUserId: string | null = null;
+    let returnedUserId: string | null = null;
     try {
       const result = await auth.api.signUpEmail({
         body: {
@@ -85,16 +95,32 @@ export async function provisionLocalUser(
           name: input.name,
         },
       });
-      createdUserId = result?.user?.id ?? null;
-      if (!createdUserId) {
+      returnedUserId = result?.user?.id ?? null;
+      if (!returnedUserId) {
         throw new ProvisioningError(
           "PROVISIONING_FAILED",
           "Provisioning did not return a user.",
         );
       }
 
-      // Целостность: credential account существует, активная сессия не
-      // создавалась. Любая аномалия уходит в компенсацию ниже.
+      // Доказательство создания (см. комментарий модуля): synthetic duplicate
+      // ответ несёт id, которого в БД нет, — это отказ EMAIL_EXISTS без
+      // каких-либо изменений; чужие rows не считаются созданными нами.
+      const created = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(and(eq(user.id, returnedUserId), eq(user.email, normalizedEmail)))
+        .limit(1);
+      if (created.length === 0) {
+        throw new ProvisioningError(
+          "EMAIL_EXISTS",
+          "A user with this email already exists: nothing was changed.",
+        );
+      }
+      createdUserId = returnedUserId;
+
+      // Целостность после создания: credential account существует, активная
+      // сессия не создавалась. Любая аномалия уходит в компенсацию ниже.
       const accounts = await db
         .select({ id: account.id })
         .from(account)
@@ -118,39 +144,39 @@ export async function provisionLocalUser(
         );
       }
 
-      return { userId: createdUserId, email: input.email };
+      return { userId: createdUserId, email: normalizedEmail };
     } catch (error) {
-      // Строго scoped компенсация собственных строк этого вызова: pre-check
-      // установил, что email до вызова отсутствовал, поэтому кандидаты —
-      // только строки, созданные после начала вызова. Пользователь с уже
-      // созданным credential account не трогается (это не наш сбой);
-      // отказ "email занят другим actor" (422) компенсации не подлежит.
-      const status = (error as { status?: number }).status;
-      if (status !== 422) {
+      // Компенсация только подтверждённо собственных строк этого вызова:
+      // удаление по первичному ключу возвращённого id (каскад убирает
+      // account/session). Если создание не подтверждено (synthetic duplicate,
+      // отказ API, сбой внутри транзакции) — ничего не удаляется: броски
+      // внутри signUpEmail откатывают транзакцию целиком (transaction: true),
+      // а чужие rows по email/времени не ищутся и не изменяются.
+      if (returnedUserId !== null) {
         try {
-          const candidates = await db
-            .select({ id: user.id })
-            .from(user)
-            .where(and(eq(user.email, input.email), gte(user.createdAt, startedAt)));
-          for (const candidate of candidates) {
-            const accounts = await db
-              .select({ id: account.id })
-              .from(account)
-              .where(
-                and(
-                  eq(account.userId, candidate.id),
-                  eq(account.providerId, "credential"),
-                ),
-              )
-              .limit(1);
-            if (accounts.length === 0) {
-              // Каскад убирает и случайно созданные account/session.
-              await db.delete(user).where(eq(user.id, candidate.id));
-            }
-          }
-        } catch {
-          // best-effort: исходная ошибка важнее сбоя компенсации.
+          await db
+            .delete(user)
+            .where(
+              and(
+                eq(user.id, returnedUserId),
+                eq(user.email, normalizedEmail),
+              ),
+            );
+        } catch (cleanupError) {
+          console.error(
+            "[bootstrap] compensation of the user created by this call failed:",
+            cleanupError instanceof Error ? cleanupError.message : cleanupError,
+          );
         }
+      }
+      // 422 от signUpEmail — email занят (pre-existing или создан конкурентным
+      // вызовом между pre-check и INSERT): транзакция откатилась, отказ как
+      // дубликат. У APIError числовой код — statusCode; status — строка.
+      if (error instanceof APIError && error.statusCode === 422) {
+        throw new ProvisioningError(
+          "EMAIL_EXISTS",
+          "A user with this email already exists: nothing was changed.",
+        );
       }
       throw error;
     }

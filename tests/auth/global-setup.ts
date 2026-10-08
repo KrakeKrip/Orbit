@@ -1,9 +1,8 @@
 import http from "node:http";
 import { randomBytes } from "node:crypto";
-import { Client } from "pg";
 import { loadDotEnv } from "../db/db-target.ts";
 import { prepareTestDatabase } from "../db/runner.ts";
-import { closeDbPool } from "../../src/server/db/core.ts";
+import { closeAppPoolAndConnections } from "../db/app-connections.ts";
 import { provisionLocalUser } from "../../src/server/auth/bootstrap-core.ts";
 
 /**
@@ -18,9 +17,12 @@ import { provisionLocalUser } from "../../src/server/auth/bootstrap-core.ts";
  * Синтетические аккаунты A/B создаются provisioning core; их пароли
  * генерируются на этот запуск и передаются тестам через окружение.
  *
- * Teardown (R3): остановка своего http-сервера → закрытие пула приложения
- * (closeDbPool) → проверка отсутствия соединений → удаление только своей
- * базы. Сбой setup не оставляет своих сервера/пула/базы.
+ * Teardown (R3/R3b): остановка своего http-сервера → закрытие фактического
+ * пула приложения (общий с compiled-бандлом через globalThis-реестр) →
+ * ожидание нуля соединений → удаление только своей базы. Принудительный
+ * обрыв соединений — только аварийная зачистка; в этом случае teardown
+ * завершается ошибкой, а не успешным результатом.
+ * Сбой setup не оставляет своих сервера/пула/базы.
  */
 
 function childDatabaseUrl(target: {
@@ -48,6 +50,7 @@ function getFreePort(): Promise<number> {
   });
 }
 
+/** Ожидание готовности: корректный ответ /login от production-обработчика. */
 function waitForReady(baseURL: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   return new Promise((resolve, reject) => {
@@ -69,50 +72,6 @@ function waitForReady(baseURL: string, timeoutMs: number): Promise<void> {
     };
     void poll();
   });
-}
-
-/** R3-регрессия: после остановки приложения соединений к базе быть не должно. */
-async function countConnections(target: {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  database: string;
-}): Promise<number> {
-  const admin = new Client({
-    host: target.host,
-    port: target.port,
-    user: target.user,
-    password: target.password,
-    database: "postgres",
-  });
-  await admin.connect();
-  try {
-    const { rows } = await admin.query<{ count: number }>(
-      `SELECT count(*)::int AS "count" FROM "pg_stat_activity" WHERE "datname" = $1`,
-      [target.database],
-    );
-    return rows[0].count;
-  } finally {
-    await admin.end();
-  }
-}
-
-/** Ожидает закрытия соединений после closeDbPool; возвращает остаток. */
-async function waitForConnectionsClosed(target: {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  database: string;
-}, timeoutMs: number): Promise<number> {
-  const deadline = Date.now() + timeoutMs;
-  let count = await countConnections(target);
-  while (count !== 0 && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    count = await countConnections(target);
-  }
-  return count;
 }
 
 export default async function setup(): Promise<() => Promise<void>> {
@@ -197,9 +156,15 @@ export default async function setup(): Promise<() => Promise<void>> {
     await waitForReady(baseURL, 60000);
   } catch (error) {
     await stopServer();
-    // Пул приложения закрывается ДО удаления собственной test-базы (R3).
-    await closeDbPool();
+    // Пул приложения закрывается ДО удаления собственной test-базы (R3b);
+    // принудительный обрыв здесь допустим только как аварийная зачистка.
+    const closed = await closeAppPoolAndConnections(target);
     await prepared.teardown();
+    if (!closed.clean) {
+      console.error(
+        `[auth-setup] init cleanup: ${closed.remaining} connection(s) required forced termination`,
+      );
+    }
     throw error;
   }
 
@@ -212,45 +177,17 @@ export default async function setup(): Promise<() => Promise<void>> {
 
   return async () => {
     await stopServer();
-    // Пул приложения закрывается ДО удаления собственной test-базы (R3):
-    // иначе DROP WITH FORCE терминирует idle-клиентов (57P01).
-    await closeDbPool();
-    // Соединения compiled-бандла Next недоступны из этого графа модулей —
-    // завершаем только соединения к СВОЕЙ базе (pg_terminate_backend по pid)
-    // и ждём их закрытия до drop. Ошибки пула логируются обработчиком в core.
-    await terminateOwnConnections(target);
-    const remaining = await waitForConnectionsClosed(target, 5000);
-    if (remaining !== 0) {
+    // Пул приложения закрывается ДО удаления собственной test-базы (R3b):
+    // closeDbPool закрывает фактический пул compiled-бандла (globalThis
+    // реестр), затем дожидаемся нуля соединений к СВОЕЙ базе. Аварийный
+    // принудительный обрыв (clean:false) превращается в явный сбой teardown
+    // — он не считается успешным завершением.
+    const closed = await closeAppPoolAndConnections(target);
+    await prepared.teardown();
+    if (!closed.clean) {
       throw new Error(
-        `R3 regression: ${remaining} app connection(s) remain to the test DB after close.`,
+        `R3b regression: ${closed.remaining} app connection(s) to the test DB required forced termination after closeDbPool; this is not a clean teardown.`,
       );
     }
-    await prepared.teardown();
   };
-}
-
-/** Завершает только соединения к собственной per-run базе этого запуска. */
-async function terminateOwnConnections(target: {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  database: string;
-}): Promise<void> {
-  const admin = new Client({
-    host: target.host,
-    port: target.port,
-    user: target.user,
-    password: target.password,
-    database: "postgres",
-  });
-  await admin.connect();
-  try {
-    await admin.query(
-      `SELECT pg_terminate_backend("pid") FROM "pg_stat_activity" WHERE "datname" = $1 AND "pid" <> "pg_backend_pid"()`,
-      [target.database],
-    );
-  } finally {
-    await admin.end();
-  }
 }
