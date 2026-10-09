@@ -1,5 +1,7 @@
 # TASK-008-R3b — завершить latest-read guard
 
+Статус: ACCEPTED на 54780f1, R3 закрыт; reports/TASK-008-R3b.md. Следующее задание только tasks/TASK-008-R4.md.
+
 ## Одна проблема, два оставшихся файла
 
 R3a Upcoming product fix принят на 18f13bad91248f09f0dcca70c6ac8808f4ac97df, review reports/TASK-008-R3a.md. Исправить тот же latest-read дефект в Today и Inbox одним небольшим заданием, без двух отдельных handoff. Начать с нового coordinator assignment HEAD, проверить root/branch/status. Ветка task/TASK-008; worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
