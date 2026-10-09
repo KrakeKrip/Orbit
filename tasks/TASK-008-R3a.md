@@ -1,5 +1,7 @@
 # TASK-008-R3a — latest read в Upcoming
 
+Статус: product fix ACCEPTED на 18f13ba; reports/TASK-008-R3a.md. Усиление синхронизации тестов включено в следующий общий TASK-008-R3b, R3 целиком ещё открыт.
+
 ## Одна цель и база
 
 Только Upcoming: устаревший read не меняет tasks/context/error/pending нового read. R1/R2 приняты на executor HEAD 15c54871638296a9c1820127edf3308b7fe995e0, review reports/TASK-008-R2b4.md. Начать с нового coordinator assignment HEAD, проверить root/branch/status. Ветка task/TASK-008; worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
