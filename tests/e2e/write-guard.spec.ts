@@ -1056,6 +1056,149 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
     await expect(completedTab).toHaveAttribute("aria-pressed", "true");
     await expect(row).toHaveCount(0);
   });
+
+  test("Today: удержанный POST блокирует режимы; bypass не меняет mode; отказ снимает и переключение работает", async ({
+    page,
+  }) => {
+    const existingTitle = `Guard X ${run}`;
+    const heldTitle = `Guard Y ${run}`;
+
+    await page.goto("/today");
+    await page.getByLabel("Название задачи").fill(existingTitle);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const existingRow = page.locator("li[data-task-id]", {
+      hasText: existingTitle,
+    });
+    await expect(existingRow).toBeVisible();
+
+    const openMode = page.getByRole("button", { name: "Открытые" });
+    const completedMode = page.getByRole("button", { name: "Завершённые" });
+
+    // Удержанный POST quick-add (delivery через expect.poll).
+    let postCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/tasks", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      postCount += 1;
+      await gate;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: '{"error":{"code":"INTERNAL"}}',
+      });
+    });
+    await page.getByLabel("Название задачи").fill(heldTitle);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    await expect.poll(() => postCount).toBe(1);
+
+    // Оба mode controls disabled при pending записи.
+    await expect(openMode).toBeDisabled();
+    await expect(completedMode).toBeDisabled();
+
+    // Программный bypass: режим/aria-pressed/видимый список не меняются.
+    await completedMode.dispatchEvent("click");
+    await expect(openMode).toHaveAttribute("aria-pressed", "true");
+    await expect(completedMode).toHaveAttribute("aria-pressed", "false");
+    await expect(existingRow).toBeVisible();
+
+    // Release 500: draft сохранён, controls доступны, переход работает.
+    const failedPost = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().endsWith("/api/v1/tasks") &&
+        response.status() === 500,
+    );
+    release();
+    await failedPost;
+    // Today create-статус без id (в отличие от Inbox): текст ошибки.
+    await expect(
+      page.getByText("Не удалось добавить задачу. Попробуйте ещё раз."),
+    ).toBeVisible();
+    await expect(page.getByLabel("Название задачи")).toHaveValue(heldTitle);
+    await expect(openMode).toBeEnabled();
+    await expect(completedMode).toBeEnabled();
+    await completedMode.click();
+    await expect(completedMode).toHaveAttribute("aria-pressed", "true");
+    await expect(existingRow).toHaveCount(0);
+  });
+
+  test("Today: dirty schedule editor блокирует режимы; failed Save держит lock; Cancel освобождает", async ({
+    page,
+  }) => {
+    const title = `Guard Z ${run}`;
+    const deadline = shift(await serverToday(page), 5);
+
+    await page.goto("/today");
+    await page.getByLabel("Название задачи").fill(title);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const row = page.locator("li[data-task-id]", { hasText: title });
+    await expect(row).toBeVisible();
+
+    const openMode = page.getByRole("button", { name: "Открытые" });
+    const completedMode = page.getByRole("button", { name: "Завершённые" });
+
+    // Открыть dirty schedule editor (draft дедлайна).
+    await row.getByRole("button", { name: "Планирование" }).click();
+    const deadlineInput = row.getByLabel("Дедлайн");
+    await deadlineInput.fill(deadline);
+
+    // Оба mode controls disabled при открытой форме; bypass не скрывает
+    // editor и не меняет режим.
+    await expect(openMode).toBeDisabled();
+    await expect(completedMode).toBeDisabled();
+    await completedMode.dispatchEvent("click");
+    await expect(openMode).toHaveAttribute("aria-pressed", "true");
+    await expect(deadlineInput).toHaveValue(deadline);
+
+    // Save с 500: editor/error/mode lock сохраняются.
+    let patchCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/tasks/*", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+      patchCount += 1;
+      await gate;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: '{"error":{"code":"INTERNAL"}}',
+      });
+    });
+    await row.getByRole("button", { name: "Сохранить" }).click();
+    await expect.poll(() => patchCount).toBe(1);
+    const failedPatch = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/api/v1/tasks/") &&
+        response.status() === 500,
+    );
+    release();
+    await failedPatch;
+    await expect(row.getByRole("alert")).toBeVisible();
+    await expect(deadlineInput).toHaveValue(deadline);
+    await expect(openMode).toBeDisabled();
+
+    // Cancel освобождает выбор и режимы; обычный переход работает.
+    await page.unroute("**/api/v1/tasks/*");
+    await row.getByRole("button", { name: "Отмена" }).click();
+    await expect(deadlineInput).toHaveCount(0);
+    await expect(openMode).toBeEnabled();
+    await expect(completedMode).toBeEnabled();
+    await completedMode.click();
+    await expect(completedMode).toHaveAttribute("aria-pressed", "true");
+    await expect(row).toHaveCount(0);
+  });
 });
 
 async function serverToday(page: import("@playwright/test").Page): Promise<string> {

@@ -28,7 +28,9 @@ type TodayPayload = {
  * complete/reopen в completed-режиме с нейтральными заголовками, shared
  * rows/actions через useTaskWrites (R1/R2/R3 инварианты), Обновить
  * перечитывает tasks+context (latest request wins), таймеров/клиентских
- * часов нет.
+ * часов нет. R2b4: режим open/completed не меняется при pending записи или
+ * открытой форме — disabled по реактивным флагам и синхронный ref-guard в
+ * switchMode до setStatusMode/refetch; listPending режим не блокирует (R3).
  */
 export function TodayBoard({
   initialTasks,
@@ -126,9 +128,16 @@ export function TodayBoard({
     await refetch(statusMode);
   }
 
-  async function switchMode(mode: StatusMode): Promise<void> {
+  // R2b4: режим не меняется при pending записи или открытой форме — иначе
+  // активная форма скрывается, а старый write callback читает старый mode.
+  // Синхронный ref-guard до setStatusMode/refetch; listPending (чистое
+  // чтение) режим не блокирует — sequencing чтений отдельная коррекция R3.
+  function switchMode(mode: StatusMode): void {
+    if (writes.anyInFlight() || writes.anyFormOpen()) {
+      return;
+    }
     setStatusMode(mode);
-    await refetch(mode);
+    void refetch(mode);
   }
 
   async function handleCreate(): Promise<void> {
@@ -208,8 +217,8 @@ export function TodayBoard({
               variant={statusMode === value ? "default" : "outline"}
               aria-pressed={statusMode === value}
               className="min-h-11 px-4"
-              onClick={() => void switchMode(value)}
-              disabled={writes.anyInFlight()}
+              onClick={() => switchMode(value)}
+              disabled={writes.anyPending || writes.formOpen}
             >
               {value === "open" ? ru.tasks.tabs.open : ru.tasks.tabs.completed}
             </Button>

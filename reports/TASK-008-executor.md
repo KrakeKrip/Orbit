@@ -347,3 +347,40 @@ READY_FOR_REVIEW (только Inbox tabs; R2b2-fix принят, R1/R2a/R2b1/R2
 
 - Today/Upcoming не менялись; R3 (read sequencing), R4 (rename draft reinit), R5–R8, debug/EOF cleanup — не тронуты. Full auth/E2E и повтор unit не требовались для этой UI policy (контракты hook не изменялись).
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
+
+---
+
+# Коррекция TASK-008-R2b4 — безопасные режимы Today
+
+## Статус
+
+READY_FOR_REVIEW (только Today mode controls; R2b3 принят, R1/R2a/R2b1/R2b2/R2b3 сохранены; Inbox/Upcoming/R3–R8 не менялись). Assignment `tasks/TASK-008-R2b4.md`; старт — coordinator commit `b79219f644d780c18ba979e7d183ce215de6d213` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+Mode-кнопки «Открытые»/«Завершённые» в Today вызывали `switchMode` → `setStatusMode/refetch` без синхронного guard: UI учитывал только pending через нерекактивный `disabled={writes.anyInFlight()}`, но не открытую форму — смена режима скрывала активную форму с draft либо позволяла старому write callback читать старый mode. Исправление только в `src/components/orbit/today-board.tsx` (hook/rows/controller не переделывались):
+
+- `switchMode(mode)` теперь синхронный: guard `writes.anyInFlight() || writes.anyFormOpen()` ДО `setStatusMode/refetch`; кнопки `disabled={writes.anyPending || writes.formOpen}` (реактивные флаги hook вместо нерекактивного ref-вызова).
+- `listPending` (чистое чтение) режим не блокирует — R3, не эта коррекция. Failed Save держит mode lock, Cancel/успешный Save освобождают; pending create блокирует режимы, после HTTP отказа create draft сохранён и controls доступны. Frozen snapshot R1, single-form guard, focus/actor/unmount/StrictMode, pre-fetch write guard — без изменений. Refresh/retry не перерабатывались.
+
+## Регрессии (tests/e2e/write-guard.spec.ts, 11 → 13 chromium-тестов)
+
+1. **Today, удержанный POST** (delivery `expect.poll`): оба mode controls disabled; bypass (dispatchEvent «Завершённые») не меняет aria-pressed/режим/видимый список; release 500 → create error виден, draft сохранён, controls enabled → обычный переход на «Завершённые» работает (pressed, open-строки скрыты).
+2. **Today, dirty schedule editor** (draft дедлайна): режимы disabled; bypass не скрывает editor и не меняет режим; Save с удержанным 500 оставляет editor/error/mode lock; Cancel освобождает выбор → обычный переход работает.
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| Состояние test DB | Штатный PG 17.11 (55432) доступен; Colima/CRM/сторонние сервисы не трогались; credentials не выводились |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `CI=1 E2E_PORT=37350 npm run test:e2e -- write-guard.spec.ts planning.spec.ts --project=chromium` (свежий `next build`) | 28 passed + 1 failed: мой новый тест №1 использовал Inbox-селектор `#task-create-status` — на Today у create-статуса нет id; тестовый дефект селектора, не продукта. Исправлено на точный i18n-текст ошибки |
+| `CI=1 E2E_PORT=37351 npx playwright test write-guard --project=chromium` | exit 0 — 16/16 (3 auth-setup + 13) |
+| `CI=1 E2E_PORT=37352 npm run test:e2e -- ... --project=chromium` (финальный, свежий `next build`) | exit 0 — **29/29**: 3 auth-setup + **13 write-guard** (11 прежних + 2 новых R2b4) + 13 planning (R1-регрессии). Повтор unit suite не требовался (контракты hook не менялись) |
+| Leftovers | read-only check после прогонов: **0** orbit_test\*-баз; `git diff --check` чист |
+
+## Ограничения / не входило
+
+- Inbox/Upcoming не менялись; R3 (read sequencing), R4 (rename draft reinit), R5–R8, debug/EOF cleanup — не тронуты. Full auth/E2E и повтор unit не требовались для этой UI policy (контракты hook не изменялись).
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
