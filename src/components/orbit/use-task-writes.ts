@@ -118,12 +118,15 @@ export function useTaskWrites({
 
   const focusAfterSuccess = useCallback(
     (kind: TaskWriteKind, taskId: string, requestedActorId: string): void => {
+      // Строка помечена id task-row-<id> (TaskRow li): если она ещё в DOM
+      // после refetch — фокус на её trigger (id task-<kind>-trigger-<id>),
+      // иначе — на createFocusElementId экрана.
       if (document.getElementById(`task-row-${taskId}`) !== null) {
         if (kind === "delete") {
           requestFocus(createFocusElementId, requestedActorId);
           return;
         }
-        requestFocus(`${kind}-trigger-${taskId}`, requestedActorId);
+        requestFocus(`task-${kind}-trigger-${taskId}`, requestedActorId);
         return;
       }
       requestFocus(createFocusElementId, requestedActorId);
@@ -246,13 +249,11 @@ export function useTaskWrites({
       setScheduleErrorTaskId(null);
       const requestedActorId = actorRef.current;
       try {
-        console.log("PROBE submitSchedule enter:", taskId);
         const response = await fetch(`/api/v1/tasks/${taskId}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(patch),
         });
-        console.log("PROBE submitSchedule response done");
         if (!isCurrent(requestedActorId)) {
           return false;
         }

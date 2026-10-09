@@ -139,13 +139,12 @@ test.describe("Inbox планирование (desktop 1280)", () => {
     const dateInput = row.getByLabel("Дата выполнения");
     await dateInput.fill(shift(await serverToday(page), 2));
     // Ждём фактический PATCH-ответ (500): исключаем гонку клик/ассерт.
-    const failedPatch = page
-      .waitForResponse((response) =>
+    const failedPatch = page.waitForResponse(
+      (response) =>
         response.url().includes("/api/v1/tasks/") &&
         response.request().method() === "PATCH" &&
         response.status() === 500,
-      )
-      .catch(() => null);
+    );
     await row.getByRole("button", { name: "Сохранить" }).click();
     // Отпускаем gate ДО ожидания: PATCH вернёт 500 только после release.
     release();

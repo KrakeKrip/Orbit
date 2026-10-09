@@ -120,6 +120,7 @@ export function TaskRow({
   return (
     <li
       className="rounded-xl border bg-card p-4"
+      id={`task-row-${task.id}`}
       data-task-id={task.id}
       data-completed={completed || undefined}
     >
@@ -165,7 +166,7 @@ export function TaskRow({
               {ru.tasks.rename.cancel}
             </Button>
           </div>
-          {state.renameError !== null ? (
+          {state.renameError ? (
             <p role="alert" className="mt-2 text-sm text-destructive">
               {ru.tasks.rename.error}
             </p>
