@@ -914,6 +914,148 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
     );
     expect(page.url()).not.toBe(urlBefore);
   });
+
+  test("Inbox: удержанный POST блокирует вкладки; bypass не меняет вкладку; отказ снимает и переключение работает", async ({
+    page,
+  }) => {
+    const existingTitle = `Guard U ${run}`;
+    const heldTitle = `Guard V ${run}`;
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(existingTitle);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const existingRow = page.locator("li[data-task-id]", {
+      hasText: existingTitle,
+    });
+    await expect(existingRow).toBeVisible();
+
+    const openTab = page.getByRole("button", { name: "Открытые" });
+    const completedTab = page.getByRole("button", { name: "Завершённые" });
+
+    // Удержанный POST quick-add (delivery через expect.poll).
+    let postCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/tasks", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      postCount += 1;
+      await gate;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: '{"error":{"code":"INTERNAL"}}',
+      });
+    });
+    await page.getByLabel("Название задачи").fill(heldTitle);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    await expect.poll(() => postCount).toBe(1);
+
+    // Оба tab controls disabled при pending записи.
+    await expect(openTab).toBeDisabled();
+    await expect(completedTab).toBeDisabled();
+
+    // Программный bypass: вкладка/aria-pressed/видимый список не меняются.
+    await completedTab.dispatchEvent("click");
+    await expect(openTab).toHaveAttribute("aria-pressed", "true");
+    await expect(completedTab).toHaveAttribute("aria-pressed", "false");
+    await expect(existingRow).toBeVisible();
+
+    // Release 500: draft сохранён, tabs вновь доступны, переход работает.
+    const failedPost = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().endsWith("/api/v1/tasks") &&
+        response.status() === 500,
+    );
+    release();
+    await failedPost;
+    await expect(
+      page.locator("#task-create-status [role=alert]"),
+    ).toBeVisible();
+    await expect(page.getByLabel("Название задачи")).toHaveValue(heldTitle);
+    await expect(openTab).toBeEnabled();
+    await expect(completedTab).toBeEnabled();
+    await completedTab.click();
+    await expect(completedTab).toHaveAttribute("aria-pressed", "true");
+    await expect(existingRow).toHaveCount(0);
+  });
+
+  test("Inbox: dirty schedule editor блокирует вкладки; failed Save держит lock; Cancel освобождает", async ({
+    page,
+  }) => {
+    const title = `Guard W ${run}`;
+    const plannedDay = shift(await serverToday(page), 3);
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(title);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const row = page.locator("li[data-task-id]", { hasText: title });
+    await expect(row).toBeVisible();
+
+    const openTab = page.getByRole("button", { name: "Открытые" });
+    const completedTab = page.getByRole("button", { name: "Завершённые" });
+
+    // Открыть dirty schedule editor.
+    await row.getByRole("button", { name: "Планирование" }).click();
+    const dateInput = row.getByLabel("Дата выполнения");
+    await dateInput.fill(plannedDay);
+
+    // Оба tab controls disabled при открытой форме; bypass не скрывает
+    // editor и не меняет вкладку.
+    await expect(openTab).toBeDisabled();
+    await expect(completedTab).toBeDisabled();
+    await completedTab.dispatchEvent("click");
+    await expect(openTab).toHaveAttribute("aria-pressed", "true");
+    await expect(dateInput).toHaveValue(plannedDay);
+
+    // Save с 500: editor/error/tab lock сохраняются.
+    let patchCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/tasks/*", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+      patchCount += 1;
+      await gate;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: '{"error":{"code":"INTERNAL"}}',
+      });
+    });
+    await row.getByRole("button", { name: "Сохранить" }).click();
+    await expect.poll(() => patchCount).toBe(1);
+    const failedPatch = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/api/v1/tasks/") &&
+        response.status() === 500,
+    );
+    release();
+    await failedPatch;
+    await expect(row.getByRole("alert")).toBeVisible();
+    await expect(dateInput).toHaveValue(plannedDay);
+    await expect(openTab).toBeDisabled();
+
+    // Cancel освобождает выбор и вкладки; обычный переход работает.
+    await page.unroute("**/api/v1/tasks/*");
+    await row.getByRole("button", { name: "Отмена" }).click();
+    await expect(dateInput).toHaveCount(0);
+    await expect(openTab).toBeEnabled();
+    await expect(completedTab).toBeEnabled();
+    await completedTab.click();
+    await expect(completedTab).toHaveAttribute("aria-pressed", "true");
+    await expect(row).toHaveCount(0);
+  });
 });
 
 async function serverToday(page: import("@playwright/test").Page): Promise<string> {

@@ -186,6 +186,17 @@ export function TasksView({
 
   const visibleTasks = tab === "open" ? lists.open : lists.completed;
 
+  // R2b3: вкладки не переключаются при pending записи или открытой форме —
+  // иначе активная форма и её draft скрываются при живом выборе в hook.
+  // Синхронный guard до setTab; listPending (чистое чтение) вкладки не
+  // блокирует — sequencing чтений отдельная коррекция R3.
+  function switchTab(value: TaskTab): void {
+    if (writes.anyInFlight() || writes.anyFormOpen()) {
+      return;
+    }
+    setTab(value);
+  }
+
   return (
     <div>
       <form
@@ -255,7 +266,8 @@ export function TasksView({
             variant={tab === value ? "default" : "outline"}
             aria-pressed={tab === value}
             className="min-h-11 px-4"
-            onClick={() => setTab(value)}
+            onClick={() => switchTab(value)}
+            disabled={writes.anyPending || writes.formOpen}
           >
             {value === "open" ? ru.tasks.tabs.open : ru.tasks.tabs.completed}
           </Button>

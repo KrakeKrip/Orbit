@@ -312,3 +312,38 @@ READY_FOR_REVIEW (единственная минимальная правка �
 
 - Изменён единственный продуктовый файл upcoming-board.tsx + executor report; R5 (calendar bounds), R3, R4, R6–R8, debug/EOF cleanup — не тронуты. Full auth/E2E не требовались (правка порядка двух callbacks).
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
+
+---
+
+# Коррекция TASK-008-R2b3 — безопасные вкладки Inbox
+
+## Статус
+
+READY_FOR_REVIEW (только Inbox tabs; R2b2-fix принят, R1/R2a/R2b1/R2b2 сохранены; Today/Upcoming/R3–R8 не менялись). Assignment `tasks/TASK-008-R2b3.md`; старт — coordinator commit `51e1bd5c0662c3befe0d33f76845cc7cc4a735a2` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+«Открытые»/«Завершённые» в Inbox вызывали `setTab` напрямую без disabled и guard: смена вкладки при pending записи или открытой rename/schedule/delete форме скрывала активную форму и её draft при живом выборе в hook. Исправление только в `src/components/orbit/tasks-view.tsx` (hook/rows/controller не переделывались):
+
+- Новый `switchTab(value: TaskTab)` — синхронный guard `writes.anyInFlight() || writes.anyFormOpen()` ДО `setTab` (ref-проверка до render, как принятый pattern R2b2); tab controls `disabled={writes.anyPending || writes.formOpen}`.
+- `listPending` (чистое чтение) вкладки намеренно не блокирует — это R3, не эта коррекция. Refresh/retry, R1 frozen snapshot, single-form guard, focus/actor/unmount/StrictMode, pre-fetch write guard — без изменений. Failed Save держит tab lock (форма открыта), Cancel/успешный Save освобождают; pending create блокирует вкладки, после отказа create draft сохранён и вкладки доступны.
+
+## Регрессии (tests/e2e/write-guard.spec.ts, 9 → 11 chromium-тестов)
+
+1. **Inbox, удержанный POST** (delivery `expect.poll`): оба tab controls disabled; bypass (dispatchEvent «Завершённые») не меняет aria-pressed/вкладку/видимый список; release 500 → create error, draft сохранён, tabs enabled → обычный переход на «Завершённые» работает (pressed, open-строки скрыты).
+2. **Inbox, dirty schedule editor**: вкладки disabled; bypass не скрывает editor и не меняет вкладку (draft цел); Save с удержанным 500 оставляет editor/error/tab lock; Cancel освобождает выбор и вкладки → обычный переход работает.
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| Состояние test DB | Штатный PG 17.11 (55432) доступен; Colima/CRM/сторонние сервисы не трогались; credentials не выводились |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `CI=1 E2E_PORT=37320 npm run test:e2e -- write-guard.spec.ts inbox.spec.ts --project=chromium` (штатный свежий `next build`, auth-setup штатно) | exit 0 — **26/26** с первого прогона: 3 auth-setup + **11 write-guard** (9 прежних + 2 новых R2b3) + 12 inbox (pending-complete/R3b). Повтор unit suite не требовался (контракты hook не менялись) |
+| Leftovers | read-only check после прогона: **0** orbit_test\*-баз; `git diff --check` чист |
+
+## Ограничения / не входило
+
+- Today/Upcoming не менялись; R3 (read sequencing), R4 (rename draft reinit), R5–R8, debug/EOF cleanup — не тронуты. Full auth/E2E и повтор unit не требовались для этой UI policy (контракты hook не изменялись).
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
