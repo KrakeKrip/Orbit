@@ -13,7 +13,7 @@
 | TASK-005 | DONE | Настройки timezone/theme, проверка сохранения и существующего sign-out, сохранение после refresh; IANA validation и owner isolation |
 | TASK-006 | DONE | Projects create/rename/archive/unarchive, server ownership, исключение архивных данных; tests с двумя пользователями |
 | TASK-007 | DONE | Task CRUD, quick-add/Inbox, one-off complete/reopen/soft delete, стабильный порядок; refresh persistence и IDOR tests |
-| TASK-008 | TODO (выдан) | Today/Upcoming, user-local даты, независимые deadline warnings без дублей; timezone boundary tests |
+| TASK-008 | NEEDS_FIXES | Review executor SHA 6388a08: reports/TASK-008.md; сейчас назначена только небольшая коррекция tasks/TASK-008-R1.md, остальные отдельно |
 | TASK-009 | TODO | Project tasks, parent/subtask один уровень, atomic move/delete, priority/notes, полноценный task details sheet |
 | TASK-010 | TODO | Owner-scoped search по title/notes, loading/error/empty states, shortcuts Q / Esc, rollback ошибок сохранения |
 | TASK-011 | TODO | DAILY/WEEKDAYS/WEEKLY и completion history, transaction/revision/idempotency, конкуренция, overdue/Friday/timezone tests |
@@ -23,8 +23,10 @@
 MVP считается принятым только после проверки критериев PRODUCT.md. Отдельный этап после MVP и разрешения пользователя: VPS audit, TLS/deployment, backup/restore и 14 дней личного использования. MCP, public signup, calendar sync и collaboration — отдельные будущие предложения.
 
 ## Исходный план (сохранённые вехи)
+TASK-009–013 в таблице — прежние крупные пакеты результата, а не готовые задания GLM. Перед выдачей их необходимо разбить на небольшие последовательные TASK с одной целью; пользователь запретил огромные задания 2026-10-09. Итоговое число задач до MVP после дробления будет пересчитано, прежние «6 задач» больше не являются актуальным количеством handoff.
+
 Milestone 0 Foundations: TASK-001–005. Milestone 1 Everyday core: TASK-006–010. Milestone 2 Recurrences and polish: TASK-011–013. Milestone 3 Safe personal deployment и Milestone 4 MCP/расширения пока не выданы.
 Исходная редакция очереди сохранена в docs/source/TASKS.initial.md; README и доступные команды добавляет GLM в TASK-001.
 
 ## Путь до использования на iPhone
-После TASK-007 остаётся 6 задач TASK-008–013 до web/PWA MVP. Первый полезный Inbox CRUD уже реализован; Today/Upcoming — после TASK-008 (ещё 1 задача), полноценная PWA и итоговая проверка — TASK-012/013. Это браузер/PWA, не native iOS app. Доступ с iPhone вне local Mac требует отдельного этапа TLS/deployment/backup и реальной проверки устройства; он пока не назначен. Нативное iOS/macOS приложение отдельная будущая очередь, её размер/технология ещё не утверждены. Число задач не является оценкой сроков и может измениться по результатам review.
+После TASK-007 до web/PWA MVP остаются непринятое планирование TASK-008, task details/project flows, поиск, recurrence, PWA и итоговая интеграция; прежние пакеты TASK-009–013 будут разбиты на меньшие задания, поэтому точное число handoff пересчитывается. Первый полезный Inbox CRUD уже реализован; Today/Upcoming — после TASK-008 (ещё 1 задача), полноценная PWA и итоговая проверка — TASK-012/013. Это браузер/PWA, не native iOS app. Доступ с iPhone вне local Mac требует отдельного этапа TLS/deployment/backup и реальной проверки устройства; он пока не назначен. Нативное iOS/macOS приложение отдельная будущая очередь, её размер/технология ещё не утверждены. Число задач не является оценкой сроков и может измениться по результатам review.

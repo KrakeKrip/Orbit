@@ -1,7 +1,7 @@
 # TASK-008 — Планирование: даты, Today и Upcoming
 
 ## Статус / база / окружение
-TODO — выдан GLM, реализации нет. Review база `394aef441a05d95969596bf088b37fb1f087432e` (принятый TASK-007).
+NEEDS_FIXES — независимый review реализации `6388a088a13d657e236d4120ff094586c8317186`: reports/TASK-008.md. Сейчас выдана только небольшая коррекция tasks/TASK-008-R1.md; другие пункты ждут отдельного handoff. Review база `394aef441a05d95969596bf088b37fb1f087432e` (принятый TASK-007).
 Ветка task/TASK-008, worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-008`. Starting assignment SHA проверить через git rev-parse HEAD и записать в report. Прочитать AGENTS.md/PRODUCT.md/ARCHITECTURE.md/DESIGN.md/DECISIONS.md, этот TASK и финальные reports/TASK-005.md, TASK-006.md, TASK-007.md.
 Приняты auth, timezone/theme settings, Projects и one-off Inbox CRUD/journal. /today и /upcoming placeholders. Regression 44 unit/47 DB/101 auth/83 browser, no-env build. PostgreSQL17 loopback55432, Node24, npm. Работать только на своей ветке; own unique validated test DB, не dev DB/CRM/localhost3000. Schema уже имеет DATE planned_date/deadline_date и TIME planned_time; миграции не требуются.
 
