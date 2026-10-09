@@ -51,12 +51,20 @@ export function TaskItemsList({
     writes.schedule.pending ||
     writes.delete.pending;
 
+  // R2b1: пока открыта любая форма, form-триггеры всех строк disabled
+  // (сам hook синхронно отказывает и программным открытиям).
+  const anyFormOpen =
+    writes.rename.taskId !== null ||
+    writes.schedule.taskId !== null ||
+    writes.delete.taskId !== null;
+
   return (
     <ul className="mt-4 flex flex-col gap-2">
       {tasks.map((task) => {
         const rowCompleted = completedMode || task.completedAt !== null;
         const rowState: TaskRowState = {
           busy: globalBusy,
+          formOpen: anyFormOpen,
           renameOpen: writes.rename.taskId === task.id,
           scheduleOpen: writes.schedule.taskId === task.id,
           deleteConfirmOpen: writes.delete.taskId === task.id,

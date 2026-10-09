@@ -20,6 +20,8 @@ import { ru } from "@/lib/i18n/ru";
 export type TaskRowState = {
   /** Глобальный pending: конфликтующие действия строки заблокированы. */
   busy: boolean;
+  /** R2b1: открыта любая форма — form-триггеры строк заблокированы. */
+  formOpen: boolean;
   renameOpen: boolean;
   scheduleOpen: boolean;
   deleteConfirmOpen: boolean;
@@ -279,7 +281,7 @@ export function TaskRow({
               id={`task-rename-trigger-${task.id}`}
               className="min-h-11 px-4"
               onClick={handlers.onOpenRename}
-              disabled={state.busy}
+              disabled={state.busy || state.formOpen}
             >
               {ru.tasks.rename.action}
             </Button>
@@ -289,7 +291,7 @@ export function TaskRow({
               id={`task-schedule-trigger-${task.id}`}
               className="min-h-11 px-4"
               onClick={handlers.onOpenSchedule}
-              disabled={state.busy}
+              disabled={state.busy || state.formOpen}
             >
               {ru.tasks.schedule.action}
             </Button>
@@ -299,7 +301,7 @@ export function TaskRow({
               id={`task-delete-trigger-${task.id}`}
               className="min-h-11 px-4"
               onClick={handlers.onOpenDelete}
-              disabled={state.busy}
+              disabled={state.busy || state.formOpen}
             >
               {ru.tasks.delete.action}
             </Button>

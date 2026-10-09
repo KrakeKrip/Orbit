@@ -199,3 +199,44 @@ READY_FOR_REVIEW (только остаток R2a [P2] из `reports/TASK-008-R2
 - R2b (единственный активный editor, mode/window), R3–R8, старая отладка в inbox.spec, EOF-уборка (task-row.tsx:311, tasks-planning.auth.test.ts:746 остаются от прежних коммитов) — не тронуты. Full auth/E2E сейчас не требовались (R6 открыт).
 - Frozen snapshot R1, общий guard R2a, transport/service/schema/read context — сохранены без переработки.
 - Временный PG18.6: поднят и остановлен без тестовых прогонов на нём (Colima вернулась); пароль/кластер удалены, порт закрыт. main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
+
+---
+
+# Коррекция TASK-008-R2b1 — одна активная форма задачи
+
+## Статус
+
+READY_FOR_REVIEW (первая малая часть R2b: единственная открытая rename/schedule/delete форма; mode/window политика — будущий R2b2, R3–R8 не начаты). Assignment `tasks/TASK-008-R2b1.md`; R1 и R2a (с R2a-fix) приняты на executor HEAD `437e5a26a07ccec87dd4624354b13e39563a8edd`; старт — coordinator commit `a8b64194ac10f87e47c6dcf82d66fe28b76bff44` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+Hook хранил независимые editor ids: открытие schedule Q при открытом rename P оставляло оба состояния, переключение типа формы одной строки могло скрыть dirty draft прежней. Исправление — локальный механизм синхронного выбора формы:
+
+- `src/components/orbit/use-task-writes.ts`: новый `activeFormRef` ({kind, taskId} | null) — НЕ state: guards синхронны и работают до render. `openRename/openSchedule/openDelete` — отказ при любой активной форме (другой тип/задача) и no-op при повторном открытии той же (ошибка/draft не сбрасываются: ранний return до setRenameError/setScheduleErrorTaskId); старая форма не закрывается, фокус не переносится. `closeRename/closeSchedule/closeDelete` и success-ветка `submitDelete` (confirmation закрывается сам, без closeDelete) освобождают ref синхронно — без залипания; отказ сохранения ref не трогает (форма остаётся активной). Общий сетевой guard R2a, focus policy, actor/unmount/StrictMode suppression не менялись.
+- `src/components/orbit/task-items-list.tsx`: `anyFormOpen` (любой из rename/schedule/delete taskId) → новый `formOpen` в TaskRowState.
+- `src/components/orbit/task-row.tsx`: form-триггеры (Переименовать/Планирование/Удалить) `disabled={state.busy || state.formOpen}`; «Завершить» (write, не форма) — по-прежнему только `busy`. Открытые формы блокируются только write-busy (R2a-fix), открытие формы само по себе их не блокирует.
+
+Quick-add при открытой idle форме допустим (как и прежде); frozen snapshot R1, service/API/schema, read flow — не тронуты.
+
+## Регрессии (tests/e2e/write-guard.spec.ts, 5 → 7 chromium-тестов)
+
+1. **Новый: одна активная форма** — dirty schedule P: form-триггеры строки Q disabled («Завершить» доступен); программные dispatchEvent-открытия rename/schedule/delete на Q отказаны на handler-уровне (формы не открыты, draft P цел); Cancel P → rename Q открывается обычным кликом → Cancel Q → schedule P снова открывается (переключение только через Cancel/Save).
+2. **Новый: failed Save сохраняет активный выбор** — удержанный PATCH 500: P/error/draft сохранены; попытки открыть rename Q отказаны и во время полёта, и после отказа (триггер disabled + handler guard); успешный Save P освобождает выбор — rename Q открывается.
+3. **Рабочий R2a таблица-тест переведён на последовательные фазы** (rename-фаза, закрытие, delete-фаза) с сохранением всех assertions: disabled controls, отсутствие собственных labels («Сохранение…»/«Удаление…»), программные requestSubmit/dispatchEvent bypass без PATCH/DELETE и без закрытия форм, сохранность draft, re-enable после отказа POST, обычная отмена. Это адаптация к новой policy, не ослабление. Gate POST-маршрута перезаряжаемый (две фазы), delivery через `expect.poll`.
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| Состояние test DB | Штатный PG17 доступен всю сессию: `nc 127.0.0.1 55432` open; read-only check: **PostgreSQL 17.11**, leftover orbit_test\* до: 0; Colima/CRM/сторонние сервисы не запускались и не останавливались, credentials не выводились |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `npm test` | exit 0 — **63/63** |
+| `CI=1 E2E_PORT=37240 npm run test:e2e -- write-guard+inbox+planning --project=chromium` (штатный свежий `next build`) | exit 0 — **35/35** с первого прогона: 3 auth-setup + **7 write-guard** (3 R2a held-write + 2 R2a-fix open-form + 2 новых R2b1) + 12 inbox (pending-complete/R3b) + 13 planning (R1-регрессии) |
+| Leftovers | read-only check после прогонов: **0** orbit_test\*-баз; `git diff --check` (unstaged) чист |
+
+## Ограничения / не входило
+
+- Mode/status/window переключения при открытой форме (R2b2), R3 (read sequencing), R4 (rename draft reinit), R5–R8, старая отладка и EOF-уборка (task-row.tsx:317, tasks-planning.auth.test.ts:746) — не тронуты. Full auth/E2E сейчас не требовались.
+- Общий сетевой guard R2a/R2a-fix и frozen snapshot R1 сохранены без переработки; service/API/schema не менялись.
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.

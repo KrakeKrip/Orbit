@@ -398,38 +398,167 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
     expect(patchCount).toBe(1);
   });
 
-  test("открытые rename и delete confirmation при чужом held POST: блокировка, guards, отказ снимает (таблица)", async ({
+  test("одна активная форма: dirty schedule P — открытия Q отказаны, после Cancel P можно открыть Q", async ({
+    page,
+  }) => {
+    const pTitle = `Guard L ${run}`;
+    const qTitle = `Guard M ${run}`;
+    const plannedDay = shift(await serverToday(page), 4);
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(pTitle);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const pRow = page.locator("li[data-task-id]", { hasText: pTitle });
+    await expect(pRow).toBeVisible();
+    await page.getByLabel("Название задачи").fill(qTitle);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const qRow = page.locator("li[data-task-id]", { hasText: qTitle });
+    await expect(qRow).toBeVisible();
+    const qTaskId = await qRow.getAttribute("data-task-id");
+    expect(qTaskId).not.toBeNull();
+
+    // Открытая dirty schedule P.
+    await pRow.getByRole("button", { name: "Планирование" }).click();
+    const pDate = pRow.getByLabel("Дата выполнения");
+    await pDate.fill(plannedDay);
+
+    // Form-триггеры строки Q disabled; write-кнопка остаётся (guard R2a).
+    await expect(qRow.getByRole("button", { name: "Переименовать" })).toBeDisabled();
+    await expect(qRow.getByRole("button", { name: "Планирование" })).toBeDisabled();
+    await expect(qRow.getByRole("button", { name: "Удалить" })).toBeDisabled();
+    await expect(qRow.getByRole("button", { name: "Завершить" })).toBeEnabled();
+
+    // Программный bypass handlers: другие формы не открываются, draft цел.
+    await qRow.getByRole("button", { name: "Переименовать" }).dispatchEvent("click");
+    await qRow.getByRole("button", { name: "Планирование" }).dispatchEvent("click");
+    await qRow.getByRole("button", { name: "Удалить" }).dispatchEvent("click");
+    await expect(qRow.getByLabel("Дата выполнения")).toHaveCount(0);
+    await expect(page.locator(`#task-rename-input-${qTaskId}`)).toHaveCount(0);
+    await expect(page.getByText("Удалить задачу?")).toHaveCount(0);
+    await expect(pDate).toHaveValue(plannedDay);
+
+    // Cancel P освобождает выбор: теперь rename Q открывается, после его
+    // Cancel — снова schedule P (переключение только через Cancel/Save).
+    await pRow.getByRole("button", { name: "Отмена" }).click();
+    await expect(pDate).toHaveCount(0);
+    await qRow.getByRole("button", { name: "Переименовать" }).click();
+    await expect(page.locator(`#task-rename-input-${qTaskId}`)).toBeVisible();
+    await page
+      .locator(`li[data-task-id="${qTaskId}"]`)
+      .getByRole("button", { name: "Отмена" })
+      .click();
+    await expect(page.locator(`#task-rename-input-${qTaskId}`)).toHaveCount(0);
+    await pRow.getByRole("button", { name: "Планирование" }).click();
+    await expect(pRow.getByLabel("Дата выполнения")).toBeVisible();
+    await pRow.getByRole("button", { name: "Отмена" }).click();
+  });
+
+  test("failed Save P сохраняет форму/draft/error и активный выбор; успешный Save освобождает", async ({
+    page,
+  }) => {
+    const pTitle = `Guard N ${run}`;
+    const qTitle = `Guard O ${run}`;
+    const plannedDay = shift(await serverToday(page), 5);
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(pTitle);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const pRow = page.locator("li[data-task-id]", { hasText: pTitle });
+    await expect(pRow).toBeVisible();
+    await page.getByLabel("Название задачи").fill(qTitle);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const qRow = page.locator("li[data-task-id]", { hasText: qTitle });
+    await expect(qRow).toBeVisible();
+    const qTaskId = await qRow.getAttribute("data-task-id");
+    expect(qTaskId).not.toBeNull();
+
+    let patchCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/tasks/*", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+      patchCount += 1;
+      await gate;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: '{"error":{"code":"INTERNAL"}}',
+      });
+    });
+
+    // Dirty schedule P; Save удержан (500).
+    await pRow.getByRole("button", { name: "Планирование" }).click();
+    const pDate = pRow.getByLabel("Дата выполнения");
+    await pDate.fill(plannedDay);
+    await pRow.getByRole("button", { name: "Сохранить" }).click();
+    await expect.poll(() => patchCount).toBe(1);
+
+    // Активная форма P: открытие rename Q отказано и во время полёта.
+    await qRow.getByRole("button", { name: "Переименовать" }).dispatchEvent("click");
+    await expect(page.locator(`#task-rename-input-${qTaskId}`)).toHaveCount(0);
+
+    // Отказ Save: P/draft/error сохранены; P остаётся активной формой —
+    // rename Q отказано и теперь (триггер disabled и handler guard).
+    const failedPatch = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/api/v1/tasks/") &&
+        response.status() === 500,
+    );
+    release();
+    await failedPatch;
+    await expect(pRow.getByRole("alert")).toBeVisible();
+    await expect(pDate).toHaveValue(plannedDay);
+    await expect(qRow.getByRole("button", { name: "Переименовать" })).toBeDisabled();
+    await qRow.getByRole("button", { name: "Переименовать" }).dispatchEvent("click");
+    await expect(page.locator(`#task-rename-input-${qTaskId}`)).toHaveCount(0);
+
+    // Успешный Save P освобождает выбор: rename Q открывается обычным кликом.
+    await page.unroute("**/api/v1/tasks/*");
+    const savedPatch = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/api/v1/tasks/") &&
+        response.status() === 200,
+    );
+    await pRow.getByRole("button", { name: "Сохранить" }).click();
+    await savedPatch;
+    await expect(pRow).toHaveCount(0);
+    await expect(qRow.getByRole("button", { name: "Переименовать" })).toBeEnabled();
+    await qRow.getByRole("button", { name: "Переименовать" }).click();
+    await expect(page.locator(`#task-rename-input-${qTaskId}`)).toBeVisible();
+    await page
+      .locator(`li[data-task-id="${qTaskId}"]`)
+      .getByRole("button", { name: "Отмена" })
+      .click();
+    await expect(page.locator(`#task-rename-input-${qTaskId}`)).toHaveCount(0);
+  });
+
+  test("открытая форма при чужом held POST: rename и delete варианты последовательно — блокировка, guards, отказ снимает", async ({
     page,
   }) => {
     const renameTitle = `Guard I ${run}`;
     const renameDraft = `Guard I переименован ${run}`;
     const deleteTitle = `Guard J ${run}`;
-    const heldTitle = `Guard K ${run}`;
+    const heldRenamePost = `Guard K ${run}`;
+    const heldDeletePost = `Guard R ${run}`;
 
     await page.goto("/inbox");
-    // Две задачи; для rename и delete по открытой форме.
     await page.getByLabel("Название задачи").fill(renameTitle);
     await page.getByRole("button", { name: "Добавить задачу" }).click();
-    await expect(
-      page.locator("li[data-task-id]", { hasText: renameTitle }),
-    ).toBeVisible();
-    await page.getByLabel("Название задачи").fill(deleteTitle);
-    await page.getByRole("button", { name: "Добавить задачу" }).click();
-    const deleteRow = page.locator("li[data-task-id]", { hasText: deleteTitle });
-    await expect(deleteRow).toBeVisible();
-
     const renameRow = page.locator("li[data-task-id]", { hasText: renameTitle });
     await expect(renameRow).toBeVisible();
     const renameTaskId = await renameRow.getAttribute("data-task-id");
     expect(renameTaskId).not.toBeNull();
-    // Открытый rename editor заменяет <p> title формой: текст строки
-    // пропадает, поэтому после открытия ищем по data-task-id/id, не hasText.
-    const renameBox = page.locator(`li[data-task-id="${renameTaskId}"]`);
-    await renameBox.getByRole("button", { name: "Переименовать" }).click();
-    const renameInput = page.locator(`#task-rename-input-${renameTaskId}`);
-    await renameInput.fill(renameDraft);
-    await deleteRow.getByRole("button", { name: "Удалить" }).click();
-    await expect(page.getByText("Удалить задачу?")).toBeVisible();
+    await page.getByLabel("Название задачи").fill(deleteTitle);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const deleteRow = page.locator("li[data-task-id]", { hasText: deleteTitle });
+    await expect(deleteRow).toBeVisible();
 
     // Наблюдатели row-запросов: считают и пропускают.
     let patchCount = 0;
@@ -445,11 +574,15 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
       await route.continue();
     });
 
+    // Удерживающий POST-маршрут; gate перезаряжается для второй фазы.
     let postCount = 0;
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
+    let gate: Promise<void> = new Promise<void>(() => {});
+    let release: () => void = () => {};
+    const armGate = (): void => {
+      gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    };
     await page.route("**/api/v1/tasks", async (route) => {
       if (route.request().method() !== "POST") {
         await route.continue();
@@ -463,11 +596,20 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
         body: '{"error":{"code":"INTERNAL"}}',
       });
     });
-    await page.getByLabel("Название задачи").fill(heldTitle);
+
+    // Фаза rename: открытый rename editor при удержанном POST (R2b1:
+    // единственная активная форма — варианты выполняются последовательно).
+    // Открытый editor заменяет title-параграф: локаторы по id/data-task-id.
+    const renameBox = page.locator(`li[data-task-id="${renameTaskId}"]`);
+    await renameBox.getByRole("button", { name: "Переименовать" }).click();
+    const renameInput = page.locator(`#task-rename-input-${renameTaskId}`);
+    await renameInput.fill(renameDraft);
+
+    armGate();
+    await page.getByLabel("Название задачи").fill(heldRenamePost);
     await page.getByRole("button", { name: "Добавить задачу" }).click();
     await expect.poll(() => postCount).toBe(1);
 
-    // Обе открытые формы заблокированы чужой записью.
     await expect(renameInput).toBeDisabled();
     await expect(
       renameBox.getByRole("button", { name: "Сохранить" }),
@@ -475,18 +617,11 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
     await expect(
       renameBox.getByRole("button", { name: "Отмена" }),
     ).toBeDisabled();
-    await expect(
-      deleteRow.getByRole("button", { name: "Удалить", exact: true }),
-    ).toBeDisabled();
-    await expect(
-      deleteRow.locator('[id^="task-delete-cancel-"]'),
-    ).toBeDisabled();
-    // Собственные операции не изображаются.
+    await expect(page.getByRole("button", { name: "Добавление…" })).toBeDisabled();
+    // Собственная операция не изображается.
     await expect(renameBox.getByRole("button", { name: "Сохранение…" })).toHaveCount(0);
-    await expect(deleteRow.getByRole("button", { name: "Удаление…" })).toHaveCount(0);
 
-    // Программные bypass: submit/cancel обеих форм — без запросов и без
-    // закрытия форм.
+    // Программный bypass: submit/cancel — без запросов, форма не закрыта.
     await page.evaluate((id) => {
       const form = document
         .getElementById(`task-rename-input-${id}`)
@@ -497,6 +632,44 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
     }, renameTaskId);
     await renameBox.getByRole("button", { name: "Отмена" }).dispatchEvent("click");
     await expect(renameInput).toHaveCount(1);
+    expect(patchCount).toBe(0);
+
+    // Отказ чужого POST снимает блокировку; draft прежний.
+    const failedPost1 = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().endsWith("/api/v1/tasks") &&
+        response.status() === 500,
+    );
+    release();
+    await failedPost1;
+    await expect(renameInput).toBeEnabled();
+    await expect(renameInput).toHaveValue(renameDraft);
+    await expect(
+      renameBox.getByRole("button", { name: "Сохранить" }),
+    ).toBeEnabled();
+
+    // Обычная отмена закрывает форму и освобождает выбор.
+    await renameBox.getByRole("button", { name: "Отмена" }).click();
+    await expect(renameInput).toHaveCount(0);
+
+    // Фаза delete: confirmation при удержанном POST.
+    await deleteRow.getByRole("button", { name: "Удалить" }).click();
+    await expect(page.getByText("Удалить задачу?")).toBeVisible();
+
+    armGate();
+    await page.getByLabel("Название задачи").fill(heldDeletePost);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    await expect.poll(() => postCount).toBe(2);
+
+    await expect(
+      deleteRow.getByRole("button", { name: "Удалить", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      deleteRow.locator('[id^="task-delete-cancel-"]'),
+    ).toBeDisabled();
+    await expect(deleteRow.getByRole("button", { name: "Удаление…" })).toHaveCount(0);
+
     await deleteRow
       .getByRole("button", { name: "Удалить", exact: true })
       .dispatchEvent("click");
@@ -506,20 +679,14 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
     expect(patchCount).toBe(0);
     expect(deleteCount).toBe(0);
 
-    // Отказ чужого POST снимает блокировку; формы открыты, draft прежний.
-    const failedPost = page.waitForResponse(
+    const failedPost2 = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
         response.url().endsWith("/api/v1/tasks") &&
         response.status() === 500,
     );
     release();
-    await failedPost;
-    await expect(renameInput).toBeEnabled();
-    await expect(renameInput).toHaveValue(renameDraft);
-    await expect(
-      renameBox.getByRole("button", { name: "Сохранить" }),
-    ).toBeEnabled();
+    await failedPost2;
     await expect(
       deleteRow.getByRole("button", { name: "Удалить", exact: true }),
     ).toBeEnabled();
@@ -527,9 +694,6 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
       deleteRow.locator('[id^="task-delete-cancel-"]'),
     ).toBeEnabled();
 
-    // Обычная отмена теперь работает: обе формы закрываются.
-    await renameBox.getByRole("button", { name: "Отмена" }).click();
-    await expect(renameInput).toHaveCount(0);
     await deleteRow.locator('[id^="task-delete-cancel-"]').click();
     await expect(page.getByText("Удалить задачу?")).toHaveCount(0);
     expect(patchCount).toBe(0);

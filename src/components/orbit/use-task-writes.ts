@@ -68,6 +68,12 @@ export function useTaskWrites({
   const actorRef = useRef(actorId);
   const inFlightRef = useRef<Set<TaskWriteKind>>(new Set());
   const focusNonceRef = useRef(0);
+  // R2b1: активная форма экрана — одна. Ref (не state): open/close guards
+  // синхронны и работают до render; state-поля остаются зеркалом для UI.
+  const activeFormRef = useRef<{
+    kind: "rename" | "schedule" | "delete";
+    taskId: string;
+  } | null>(null);
 
   useEffect(() => {
     actorRef.current = actorId;
@@ -333,6 +339,9 @@ export function useTaskWrites({
           return false;
         }
         if (response.ok) {
+          // Confirmation закрывается сам (без closeDelete) — выбор формы
+          // освобождается синхронно (R2b1, без залипания).
+          activeFormRef.current = null;
           setDeleteTaskId(null);
           const readOk = await onConfirmed();
           // Логичный следующий control после успешного удаления — quick-add.
@@ -360,12 +369,16 @@ export function useTaskWrites({
     [anyInFlight, isCurrent, onConfirmed, createFocusElementId, requestFocus, focusAfterFailure],
   );
 
-  // R2: открытие editor/confirmation запрещено при любом in-flight.
+  // R2b1: пока открыта любая форма, открытие другой (другого типа или
+  // задачи) отказывается целиком — старая не закрывается, фокус не
+  // переносится, draft/error не теряются. Повторное открытие активной
+  // формы — тот же no-op (ошибка/draft не сбрасываются).
   const openRename = useCallback(
     (taskId: string): void => {
-      if (anyInFlight()) {
+      if (anyInFlight() || activeFormRef.current !== null) {
         return;
       }
+      activeFormRef.current = { kind: "rename", taskId };
       setRenameTaskId(taskId);
       setRenameError(false);
     },
@@ -373,9 +386,10 @@ export function useTaskWrites({
   );
   const openSchedule = useCallback(
     (taskId: string): void => {
-      if (anyInFlight()) {
+      if (anyInFlight() || activeFormRef.current !== null) {
         return;
       }
+      activeFormRef.current = { kind: "schedule", taskId };
       setScheduleTaskId(taskId);
       setScheduleErrorTaskId(null);
     },
@@ -383,9 +397,10 @@ export function useTaskWrites({
   );
   const openDelete = useCallback(
     (taskId: string): void => {
-      if (anyInFlight()) {
+      if (anyInFlight() || activeFormRef.current !== null) {
         return;
       }
+      activeFormRef.current = { kind: "delete", taskId };
       setDeleteTaskId(taskId);
       setDeleteErrorTaskId(null);
       // R3: фокус в безопасную «Отмену» confirmation. Confirmation
@@ -399,12 +414,14 @@ export function useTaskWrites({
   // R2a-fix: cancel guards синхронные и общие — любой write в полёте
   // (свой или чужой) запрещает закрытие editor/confirmation даже при
   // программном вызове до нового render; anyInFlight покрывает и
-  // собственный pending (ref снимается в finally).
+  // собственный pending (ref снимается в finally). R2b1: успешное
+  // закрытие освобождает выбор формы (ref синхронно, без залипания).
   const closeRename = useCallback(
     (taskId: string): void => {
       if (anyInFlight()) {
         return;
       }
+      activeFormRef.current = null;
       setRenameTaskId(null);
       requestFocus(`task-rename-trigger-${taskId}`, actorRef.current);
     },
@@ -415,6 +432,7 @@ export function useTaskWrites({
       if (anyInFlight()) {
         return;
       }
+      activeFormRef.current = null;
       setScheduleTaskId(null);
       requestFocus(`task-schedule-trigger-${taskId}`, actorRef.current);
     },
@@ -425,6 +443,7 @@ export function useTaskWrites({
       if (anyInFlight()) {
         return;
       }
+      activeFormRef.current = null;
       setDeleteTaskId(null);
       requestFocus(`task-delete-trigger-${taskId}`, actorRef.current);
     },
