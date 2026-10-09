@@ -21,6 +21,7 @@ export function TaskItemsList({
   today: string;
   completedMode: boolean;
   writes: {
+    create: { pending: boolean };
     rename: { taskId: string | null; pending: boolean; error: boolean; open: (id: string) => void; close: (id: string) => void; submit: (id: string, title: string) => Promise<boolean> };
     toggle: { taskId: string | null; errorTaskId: string | null; submit: (id: string, completed: boolean) => Promise<boolean> };
     schedule: { taskId: string | null; pending: boolean; errorTaskId: string | null; open: (id: string) => void; close: (id: string) => void; submit: (id: string, patch: Record<string, string | null>) => Promise<boolean> };
@@ -41,8 +42,10 @@ export function TaskItemsList({
 
   // Семантика хука: taskId для rename/schedule/delete = «editor/confirmation
   // открыт для этой задачи»; для toggle = «toggle в полёте». pending —
-  // фактический сетевой запрос.
+  // фактический сетевой запрос. R2a: createPending — удержанный POST
+  // quick-add, тоже часть общего write guard.
   const globalBusy =
+    writes.create.pending ||
     writes.rename.pending ||
     writes.toggle.taskId !== null ||
     writes.schedule.pending ||

@@ -427,8 +427,10 @@ test.describe("входящие: quick-add/rename/complete (desktop 1280)", () =
     await expect(page.getByText("Удалить задачу?")).toBeVisible();
     await row.getByRole("button", { name: "Удалить", exact: true }).click();
     await expect(page.locator("li[data-task-id]", { hasText: name })).toHaveCount(0);
-    const activeId = await page.evaluate(() => document.activeElement?.id ?? "");
-    expect(activeId).toBe("task-title-input");
+    // R2a: create input disabled до конца write flow — фокус landится
+    // сразу после снятия pending (кадр-два); ждём его авто-ретраящим
+    // toBeFocused вместо мгновенного чтения activeElement.
+    await expect(page.locator("#task-title-input")).toBeFocused();
   });
 
   test("delayed complete + навигация: stale ответ не меняет UI", async ({

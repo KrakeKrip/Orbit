@@ -110,3 +110,51 @@ READY_FOR_REVIEW (только R1 [P1] из `reports/TASK-008.md`; R2–R8 не 
 - R2–R8 не исправлялись; full auth/E2E прогон не выполнялся (по заданию — перед итоговой приёмкой TASK-008). Известный R6 auth timezone failure остаётся открытым.
 - Debug-остатки в тестовых файлах (inbox.spec PROBE-листенеры, «R3 DEBUG», navigation OVERFLOW) и EOF-пустые строки в task-row.tsx / tasks-planning.auth.test.ts из review — чужие для R1 файлы, не тронуты (отдельная финальная уборка).
 - Trace `'on'` в playwright.config оставлен как был; main/старые worktree/localhost:3000/CRM/coord docs/protective hooks не менялись; merge/push/amend/rebase/reset/stash не выполнялись.
+
+---
+
+# Коррекция TASK-008-R2a — один task write в полёте
+
+## Статус
+
+READY_FOR_REVIEW (только R2a: общий guard create/row writes; R2b editor/mode переходы, R3–R8 не затронуты). Assignment `tasks/TASK-008-R2a.md`; R1 принят на `3b3688ad66845dc80216105bb20d85375293592e`; старт — coordinator commit `73c65492b9405707572a8ec39fb482490d37318e` (root/HEAD/status проверены, дерево чистое, чужих изменений нет).
+
+## Дефект и исправление
+
+Create имел собственный `createInFlight`, невидимый shared writes-hook: удержанный POST quick-add не блокировал row controls — уходил второй (PATCH) write. Исправление — общий guard, без переписывания экранов:
+
+- `src/components/orbit/use-task-writes.ts`: `TaskWriteKind` расширен `create`; новые `beginCreate()` (синхронная проверка общего in-flight set + регистрация ДО fetch, возвращает false при любом pending write) и `endCreate()` (снятие в finally экрана; ref чистится всегда); реактивный `anyPending` (create|rename|toggle|schedule|delete) для disabled; `create.pending/begin/end` в возвращаемом объекте. Попутно точечно устранён известный lint warning: неиспользуемый `focusElement` удалён, в deps `submitDelete` возвращён реально используемый `requestFocus` (поведение фокуса не менялось).
+- `src/components/orbit/task-items-list.tsx`: `globalBusy` включает `writes.create.pending` → row controls disabled во всех строках при удержанном create.
+- `src/components/orbit/tasks-view.tsx` и `today-board.tsx`: `handleCreate` регистрирует create через `writes.create.begin()` синхронно до `fetch` (после parse — невалидный черновик guard не занимает), снимает в `finally` через `end()`; create input/submit `disabled={writes.anyPending}` — заблокированы и при своей, и при чужой pending записи.
+
+Синхронные handler guards row writes уже стояли первыми строками каждого submit*/open* (`anyInFlight()`), теперь они видят create; программный обход disabled невозможен. Контракты сохранены: idle editor держит draft (чужая pending его не стирает), write-response/read-error distinction (confirmed write + failed read = read error/retry), focus policy, actor/unmount/StrictMode suppression, GET-only retry. Upcoming row writes идут через тот же shared hook/list без изменений файла (create UI там нет); status/window переключения не трогались (R2b).
+
+## Browser-регрессии (tests/e2e/write-guard.spec.ts, новый, 3 теста, user C)
+
+1. **Inbox, held POST**: удержанный route'ом POST quick-add → create input/submit и все row controls disabled; force-click «Завершить»/«Планирование» и программный `form.requestSubmit()` не отправляют PATCH/DELETE/второй POST (счётчики route-наблюдателей = 0; editor не открыт). Release 500 → create error виден, черновик сохранён, контролы вновь enabled → retry успешно создаёт задачу.
+2. **Inbox, held schedule PATCH**: валидный create-черновик заранее → удержанный PATCH editor'а → create input/submit disabled; программный `requestSubmit()` (мимо disabled кнопки) и force-click не отправляют POST (postCount=0). Release 500 → schedule error, guard снят, create доступен → повторный «Сохранить» проходит (PATCH 200), editor закрыт, задача ушла из Inbox.
+3. **Today, held POST**: короткий вариант №1 — row controls disabled, force-toggle без PATCH, отказ снимает guard, черновик сохранён, retry работает.
+
+Минимальная адаптация существующего теста `tests/e2e/inbox.spec.ts` (R3b, последняя фаза): мгновенное чтение `document.activeElement` после `toHaveCount(0)` заменено на авто-ретраящий `await expect(page.locator("#task-title-input")).toBeFocused()` — по требованиям R2a create input законно disabled до конца write flow, поэтому фокус landится через кадр после снятия pending (тот же ассерт, та же цель, корректная синхронизация вместо гонки).
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24; окружение: Colima OFF, 55432 недоступен)
+
+| Команда | Результат |
+| --- | --- |
+| Состояние test DB | Colima not running, `nc 127.0.0.1 55432` closed; dev DB не использовалась и не менялась |
+| Временный test PostgreSQL | **PostgreSQL 18.6 (Homebrew)**, отдельный кластер `/private/tmp/orbit-pg-r2a-*`, `initdb -U orbit_tmp -A scram-sha-256`, эфемерный пароль (0600-файл), listen 127.0.0.1 на свободном порту 37100; TEST_DATABASE_URL только через env (перекрывает .env), namespace `orbit_test` |
+| `npm run lint` | exit 0, **0 warnings** (известный warning hook'а устранён точечно в рамках R2a) |
+| `npm run typecheck` | exit 0 |
+| `npm test` | exit 0 — 63/63 |
+| `CI=1 E2E_PORT=3521 npm run test:e2e -- write-guard+inbox+planning --project=chromium` (штатный `next build`) | 30 passed + 1 failed: R3b inbox — гонка мгновенного чтения фокуса (см. адаптацию выше); product-дефект не подтверждён (фокус landится, кадром позже) |
+| `CI=1 E2E_PORT=3522 npx playwright test` (тот же билд, после адаптации теста) | exit 0 — **31/31**: 3 auth-setup + **3 write-guard** + **12 inbox** (включая pending-complete/R3b) + **13 planning** (включая 3 R1-регрессии) |
+| Leftovers после прогонов | read-only check на временном инстансе: **0** orbit_test\*-баз; `git diff --check` чист |
+| Очистка окружения | `pg_ctl stop` — server stopped; кластер, парольный и env-файлы удалены; порт закрыт; сторонние сервисы не поднимались, dev DB не тронута |
+
+## Ограничения / не входило
+
+- R2b (единственный активный editor, mode/window переключения при pending), R3–R8 — не тронуты; full auth/E2E не гонялись (R6 открыт отдельно). Frozen snapshot R1, service/API/schema/auth/read context не менялись.
+- Проверка на целевом PostgreSQL 17 (55432/Colima) в этом запуске невозможна — сервис выключен не мной; целевой E2E выполнен на временном PG 18.6 (как и независимый review R1).
+- Debug-остатки в inbox.spec (PROBE-листенеры, «R3 DEBUG») и EOF-пустые строки task-row.tsx/tasks-planning.auth.test.ts — не R2a, не тронуты.
+- main/другие worktree/localhost:3000/CRM/coord docs/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись. R2/TASK-008 целиком НЕ приняты — только эта коррекция на review.
+

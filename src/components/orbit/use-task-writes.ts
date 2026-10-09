@@ -11,9 +11,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * focus policy: success → trigger строки, если она ещё в view, иначе —
  * createFocusElementId; failure → логичный control действия (editor input,
  * delete «Отмена», toggle кнопка). Физические записи не отменяются.
+ * R2a: экранная create-мутация входит в этот же guard — create.begin
+ * синхронно (до fetch) регистрирует POST в общем in-flight set, end
+ * снимает в finally экрана; один write в полёте блокирует и create, и
+ * все row writes. anyPending — реактивный aggregate для disabled.
  */
 
-export type TaskWriteKind = "rename" | "toggle" | "schedule" | "delete";
+export type TaskWriteKind =
+  | "create"
+  | "rename"
+  | "toggle"
+  | "schedule"
+  | "delete";
 
 export type TaskWriteOptions = {
   actorId: string;
@@ -23,7 +32,13 @@ export type TaskWriteOptions = {
   onConfirmed: () => Promise<boolean>;
 };
 
-const KINDS: TaskWriteKind[] = ["rename", "toggle", "schedule", "delete"];
+const KINDS: TaskWriteKind[] = [
+  "create",
+  "rename",
+  "toggle",
+  "schedule",
+  "delete",
+];
 
 export function useTaskWrites({
   actorId,
@@ -44,6 +59,10 @@ export function useTaskWrites({
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const [deleteErrorTaskId, setDeleteErrorTaskId] = useState<string | null>(null);
+
+  // R2a: экранная create-мутация (у экрана свой fetch/draft-стейт, guard
+  // общий). Реактивный createPending для disabled контролов.
+  const [createPending, setCreatePending] = useState(false);
 
   const mountedRef = useRef(true);
   const actorRef = useRef(actorId);
@@ -70,8 +89,24 @@ export function useTaskWrites({
     [],
   );
 
-  const focusElement = useCallback((elementId: string): void => {
-    document.getElementById(elementId)?.focus();
+  // R2a: регистрация create в общем guard. Синхронно до fetch: false =
+  // любой write (row или create) уже в полёте — POST не отправляется.
+  const beginCreate = useCallback((): boolean => {
+    if (anyInFlight()) {
+      return false;
+    }
+    inFlightRef.current.add("create");
+    setCreatePending(true);
+    return true;
+  }, [anyInFlight]);
+
+  // Снятие регистрации в finally экрана; ref чистится всегда, чтобы
+  // guard не залип после unmount/смены actor.
+  const endCreate = useCallback((): void => {
+    inFlightRef.current.delete("create");
+    if (mountedRef.current) {
+      setCreatePending(false);
+    }
   }, []);
 
   // Программный фокус с коротким циклом попыток: под нагрузкой коммит
@@ -322,7 +357,7 @@ export function useTaskWrites({
         }
       }
     },
-    [anyInFlight, isCurrent, onConfirmed, createFocusElementId, focusElement, focusAfterFailure],
+    [anyInFlight, isCurrent, onConfirmed, createFocusElementId, requestFocus, focusAfterFailure],
   );
 
   // R2: открытие editor/confirmation запрещено при любом in-flight.
@@ -396,7 +431,22 @@ export function useTaskWrites({
     [deletePending],
   );
 
+  // R2a: реактивный aggregate «какая-либо запись в полёте» — create
+  // input/submit и row controls отключаются по нему (guards при этом
+  // остаются ref-овыми и срабатывают до fetch).
+  const anyPending =
+    createPending ||
+    renamePending ||
+    toggleTaskId !== null ||
+    schedulePending ||
+    deletePending;
+
   return {
+    create: {
+      pending: createPending,
+      begin: beginCreate,
+      end: endCreate,
+    },
     rename: {
       taskId: renameTaskId,
       pending: renamePending,
@@ -426,6 +476,7 @@ export function useTaskWrites({
       close: closeDelete,
       submit: submitDelete,
     },
+    anyPending,
     anyInFlight,
   };
 }

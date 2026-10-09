@@ -134,13 +134,19 @@ export function TasksView({
   });
 
   const handleCreate = useCallback(async (): Promise<void> => {
-    if (createInFlight.current || writes.anyInFlight()) {
+    if (createInFlight.current) {
       return;
     }
     const parsed = parseTaskTitle(createDraft);
     if (!parsed.ok) {
       setCreateInvalid(true);
       setCreateError(false);
+      return;
+    }
+    // R2a: единый write guard — create регистрируется в shared hook
+    // синхронно до fetch; любой pending write (row или create) запрещает
+    // POST, а row writes видят create и блокируются взаимно.
+    if (!writes.create.begin()) {
       return;
     }
     setCreateInvalid(false);
@@ -171,6 +177,7 @@ export function TasksView({
       }
     } finally {
       createInFlight.current = false;
+      writes.create.end();
       if (mountedRef.current && actorRef.current === requestedActorId) {
         setCreatePending(false);
       }
@@ -207,9 +214,9 @@ export function TasksView({
             }}
             aria-invalid={createInvalid || undefined}
             aria-describedby="task-create-status"
-            disabled={createPending}
+            disabled={writes.anyPending}
           />
-          <Button type="submit" className="min-h-11 px-4" disabled={createPending}>
+          <Button type="submit" className="min-h-11 px-4" disabled={writes.anyPending}>
             {createPending ? ru.tasks.create.submitting : ru.tasks.create.submit}
           </Button>
           <Button
