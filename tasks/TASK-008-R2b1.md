@@ -1,5 +1,7 @@
 # TASK-008-R2b1 — одна активная форма задачи
 
+Статус: ACCEPTED на c68d3a8; reports/TASK-008-R2b1.md. Следующее задание только tasks/TASK-008-R2b2.md.
+
 ## Единственная цель
 
 Первая маленькая часть оставшегося R2b: одновременно открыта только одна rename/schedule/delete форма на экране. R1 и R2a приняты на executor HEAD `437e5a26a07ccec87dd4624354b13e39563a8edd`, review reports/TASK-008-R2a-fix.md. Начать с нового coordinator assignment HEAD; проверить root/branch/status. Ветка task/TASK-008, worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
