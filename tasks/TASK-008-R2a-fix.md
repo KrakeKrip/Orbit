@@ -1,5 +1,7 @@
 # TASK-008-R2a-fix — блокировка уже открытой формы
 
+Актуальный статус: R2a принят на 437e5a2, reports/TASK-008-R2a-fix.md. Ниже сохранено предыдущее задание/review.
+
 ## Единственная цель
 
 Закрыть остаток R2a из reports/TASK-008-R2a.md на executor HEAD `9932004481c48dcd9429a102c7b5854987029f08`. Начать с нового coordinator assignment HEAD, проверить root/ветку/status. Ветка task/TASK-008, worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008. Не переходить к R2b–R8.

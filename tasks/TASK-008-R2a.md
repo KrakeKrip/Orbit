@@ -1,5 +1,7 @@
 # TASK-008-R2a — один task write в полёте
 
+Актуальный статус: R2a принят на 437e5a2, reports/TASK-008-R2a-fix.md. Ниже сохранено предыдущее задание/review.
+
 Статус review 9932004: NEEDS_FIXES — reports/TASK-008-R2a.md; назначен только узкий остаток tasks/TASK-008-R2a-fix.md.
 
 ## Назначение

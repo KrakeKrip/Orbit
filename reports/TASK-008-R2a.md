@@ -1,5 +1,7 @@
 # TASK-008-R2a — независимое review
 
+Актуальный статус: R2a принят на 437e5a2, reports/TASK-008-R2a-fix.md. Ниже сохранено предыдущее задание/review.
+
 **NEEDS_FIXES (только остаток R2a)**, 2026-10-09. Executor HEAD `9932004481c48dcd9429a102c7b5854987029f08`; correction base `73c65492b9405707572a8ec39fb482490d37318e`. Перед review ветка task/TASK-008 и дерево чистые. Проверены оба новых коммита, 7 файлов; correction diff --check чист. Main чистая на `9a81313bb498fd1e584b14a0bc2b87b506102c6b`, не изменялась.
 
 Общий синхронный guard create/row writes работает: регистрация create до fetch, shared row handlers видят её, finally освобождает регистрацию. Create controls и кнопки обычных строк получают общий busy. Адаптация R3b focus assertion к auto-retrying toBeFocused сохраняет проверяемое поведение. Warning исправлен. Второй запрос в проверенных bypass-сценариях не отправляется.
