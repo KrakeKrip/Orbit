@@ -1,5 +1,7 @@
 # TASK-008-R2b4 — безопасные режимы Today
 
+Статус: ACCEPTED на 15c5487, R2 закрыт; reports/TASK-008-R2b4.md. Следующее задание только tasks/TASK-008-R3a.md.
+
 ## Единственная цель
 
 Только «Сегодня»: open/completed/all не переключаются при pending task write либо открытой rename/schedule/delete форме. Сейчас switchMode в today-board.tsx вызывает setStatusMode/refetch без синхронного guard; UI учитывает pending ref, но не открытый editor. Смена режима скрывает форму либо позволяет старому write callback читать старый mode. R1/R2a/R2b1/R2b2/R2b3 приняты; executor HEAD 027421537215017e72a456b0cbb9afc085ac4519. Начать с нового coordinator assignment HEAD, проверить root/branch/status. Ветка task/TASK-008, worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.

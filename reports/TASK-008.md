@@ -28,7 +28,7 @@ No-env build, npm ci и live dev probe в этом review не повторял�
 
 ## Замечания
 
-Обновление 2026-10-09: R1 закрыт на executor SHA `3b3688ad66845dc80216105bb20d85375293592e`, независимый review reports/TASK-008-R1.md. Ниже сохранены исходные findings. Общий статус TASK-008 — NEEDS_FIXES; R2a принят на 437e5a2, reports/TASK-008-R2a-fix.md. R2b1 принят на c68d3a8, reports/TASK-008-R2b1.md. R2b2 принят на 9d9566e, reports/TASK-008-R2b2-fix.md. R2b3 принят на 0274215, reports/TASK-008-R2b3.md. Следующая выдача **только** tasks/TASK-008-R2b4.md: Today mode.
+Обновление 2026-10-09: R1 закрыт на executor SHA `3b3688ad66845dc80216105bb20d85375293592e`, независимый review reports/TASK-008-R1.md. Ниже сохранены исходные findings. Общий статус TASK-008 — NEEDS_FIXES; R2a принят на 437e5a2, reports/TASK-008-R2a-fix.md. R2b1 принят на c68d3a8, reports/TASK-008-R2b1.md. R2b2 принят на 9d9566e, reports/TASK-008-R2b2-fix.md. R2b3 принят на 0274215, reports/TASK-008-R2b3.md. R2b4 принят на 15c5487, reports/TASK-008-R2b4.md; R2 закрыт целиком. Следующая выдача **только** tasks/TASK-008-R3a.md: Upcoming latest-read outcomes.
 
 ### R1 [P1] — dirty editor стирает независимый дедлайн после refresh
 
@@ -96,6 +96,6 @@ Browser timezone-тест PATCH-ит Asia/Tokyo без Origin, проверяе�
 
 ## Порядок коррекций и следующий handoff
 
-Пользователь запретил огромные задания для GLM Flash. Этот report содержит полный результат review, **не разрешение исправлять всё одним запуском**. R1 snapshot/dirty-field data loss принят, reports/TASK-008-R1.md. Сейчас назначен только `TASK-008-R2b4`: Today mode, один файл. Другие экраны при необходимости проверяются отдельным малым шагом. После их review будут по очереди выданы R3, R4, R5, R6, R7, R8 с ограниченными файлами и проверками; связанные пункты можно объединить только если scope остаётся малым. Полные auth/E2E gates требуются перед финальной приёмкой всего TASK-008, а не после каждой отдельной правки.
+Пользователь запретил огромные задания для GLM Flash. Этот report содержит полный результат review, **не разрешение исправлять всё одним запуском**. R1 snapshot/dirty-field data loss принят, reports/TASK-008-R1.md. R2 закрыт. Сейчас назначен только `TASK-008-R3a`: Upcoming latest-read outcomes, один файл. Today/Inbox R3 будут отдельными малыми шагами. После их review будут по очереди выданы R4, R5, R6, R7, R8 с ограниченными файлами и проверками; связанные пункты можно объединить только если scope остаётся малым. Полные auth/E2E gates требуются перед финальной приёмкой всего TASK-008, а не после каждой отдельной правки.
 
 Текущие R2–R8 сохраняются открытыми. Обновить executor evidence после исправлений: lint warnings, cumulative diff check, реально проверенная timezone, debug traces. Ни TASK-008 DONE, ни TASK-009 не разрешены. Merge/push/deploy отсутствуют.
