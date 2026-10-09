@@ -450,6 +450,16 @@ export function useTaskWrites({
     [anyInFlight, requestFocus],
   );
 
+  // R2b2: реактивный признак открытой формы (disabled контролов экрана)
+  // и синхронный ref-чек для handler guards (до render/state).
+  const formOpen =
+    renameTaskId !== null || scheduleTaskId !== null || deleteTaskId !== null;
+
+  const anyFormOpen = useCallback(
+    (): boolean => activeFormRef.current !== null,
+    [],
+  );
+
   // R2a: реактивный aggregate «какая-либо запись в полёте» — create
   // input/submit и row controls отключаются по нему (guards при этом
   // остаются ref-овыми и срабатывают до fetch).
@@ -496,6 +506,8 @@ export function useTaskWrites({
       submit: submitDelete,
     },
     anyPending,
+    formOpen,
+    anyFormOpen,
     anyInFlight,
   };
 }

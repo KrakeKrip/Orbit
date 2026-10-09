@@ -28,7 +28,12 @@ type UpcomingPayload = {
  * (history.replaceState — reload сохраняет диапазон через SSR), complete/
  * reopen в completed-режиме с нейтральными датами, shared rows/actions
  * через useTaskWrites. Quick-add отсутствует по scope; latest request
- * wins (requestSeq), stale suppression по mounted/actor.
+ * wins (requestSeq), stale suppression по mounted/actor. R2b2: status и
+ * диапазон не меняются при pending записи или открытой форме — disabled по
+ * реактивным флагам и синхронный ref-guard в switchMode/navigate до
+ * setState/refetch/replaceState; failed Save держит mode lock (форма
+ * открыта), Cancel/успешный Save освобождают. listPending политика
+ * prev/next/current сохранена; sequencing чтений — R3.
  */
 export function UpcomingBoard({
   initialTasks,
@@ -124,13 +129,28 @@ export function UpcomingBoard({
   });
 
   function navigate(newStart: string): void {
-    if (listPending || writes.anyInFlight()) {
+    // R2b2: статус/диапазон не меняются при write в полёте или открытой
+    // форме — синхронный ref-guard до replaceState/setState/refetch и до
+    // вычисления нового диапазона; заблокированная попытка не стартует GET.
+    if (listPending || writes.anyInFlight() || writes.anyFormOpen()) {
       return;
     }
     // Диапазон в URL: reload через SSR вернёт тот же диапазон.
     window.history.replaceState(null, "", `/upcoming?start=${newStart}`);
     setStartDate(newStart);
     void refetch(statusMode, newStart);
+  }
+
+  // R2b2: смена status-режима запрещена при write в полёте или открытой
+  // форме — иначе активная форма скрывается, а старый write callback читает
+  // старый режим. Список listPending (чистое чтение) не блокирует switch —
+  // sequencing чтений отдельная коррекция R3.
+  function switchMode(mode: StatusMode): void {
+    if (writes.anyInFlight() || writes.anyFormOpen()) {
+      return;
+    }
+    setStatusMode(mode);
+    void refetch(mode, startDate);
   }
 
   const endDate = addCivilDays(startDate, 6);
@@ -151,10 +171,8 @@ export function UpcomingBoard({
               variant={statusMode === value ? "default" : "outline"}
               aria-pressed={statusMode === value}
               className="min-h-11 px-4"
-              onClick={() => {
-                setStatusMode(value);
-                void refetch(value, startDate);
-              }}
+              onClick={() => switchMode(value)}
+              disabled={writes.anyPending || writes.formOpen}
             >
               {value === "open"
                 ? ru.tasks.tabs.open
@@ -238,7 +256,7 @@ export function UpcomingBoard({
           variant="outline"
           className="min-h-11 px-4"
           onClick={() => navigate(addCivilDays(startDate, -7))}
-          disabled={listPending || writes.anyInFlight()}
+          disabled={listPending || writes.anyPending || writes.formOpen}
         >
           {ru.tasks.upcoming.prev}
         </Button>
@@ -247,7 +265,7 @@ export function UpcomingBoard({
           variant="outline"
           className="min-h-11 px-4"
           onClick={() => navigate(addCivilDays(startDate, 7))}
-          disabled={listPending || writes.anyInFlight()}
+          disabled={listPending || writes.anyPending || writes.formOpen}
         >
           {ru.tasks.upcoming.next}
         </Button>
@@ -256,7 +274,7 @@ export function UpcomingBoard({
           variant="outline"
           className="min-h-11 px-4"
           onClick={() => navigate(context.today)}
-          disabled={listPending || writes.anyInFlight()}
+          disabled={listPending || writes.anyPending || writes.formOpen}
         >
           {ru.tasks.upcoming.current}
         </Button>

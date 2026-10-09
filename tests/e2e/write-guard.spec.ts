@@ -699,6 +699,221 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
     expect(patchCount).toBe(0);
     expect(deleteCount).toBe(0);
   });
+
+  test("Upcoming: удержанный completion PATCH блокирует status и диапазон; bypass не меняет mode/URL/GET; release возвращает controls", async ({
+    page,
+  }) => {
+    const title = `Guard S ${run}`;
+    const today = await serverToday(page);
+    const plannedDay = shift(today, 2);
+
+    // Своя scheduled задача в Upcoming-диапазоне.
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(title);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const inboxRow = page.locator("li[data-task-id]", { hasText: title });
+    await expect(inboxRow).toBeVisible();
+    await inboxRow.getByRole("button", { name: "Планирование" }).click();
+    await inboxRow.getByLabel("Дата выполнения").fill(plannedDay);
+    await inboxRow.getByRole("button", { name: "Сохранить" }).click();
+    await expect(inboxRow).toHaveCount(0);
+
+    await page.goto(`/upcoming?start=${today}`);
+    const row = page.locator("li[data-task-id]", { hasText: title });
+    await expect(row).toBeVisible();
+    const urlBefore = page.url();
+
+    // GET-наблюдатель коллекции (считает и пропускает); PATCH удерживается
+    // отдельным item-маршрутом ("**/api/v1/tasks*" не матчит "/tasks/<uuid>").
+    let getCount = 0;
+    await page.route("**/api/v1/tasks*", async (route) => {
+      const request = route.request();
+      if (
+        request.method() === "GET" &&
+        request.url().includes("/api/v1/tasks?")
+      ) {
+        getCount += 1;
+      }
+      await route.continue();
+    });
+    let patchCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/tasks/*", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+      patchCount += 1;
+      await gate;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "{}",
+      });
+    });
+
+    // Настоящий completion PATCH — удержан (delivery через expect.poll).
+    await row.getByRole("button", { name: "Завершить" }).click();
+    await expect.poll(() => patchCount).toBe(1);
+
+    // Status и диапазон disabled при pending записи.
+    await expect(page.getByRole("button", { name: "Открытые" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Завершённые" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Все" })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Следующие 7 дней" }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Предыдущие 7 дней" }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Ближайшие 7 дней" }),
+    ).toBeDisabled();
+
+    // Программный bypass: mode/URL не меняются, GET нового mode/range нет.
+    await page.getByRole("button", { name: "Все" }).dispatchEvent("click");
+    await page
+      .getByRole("button", { name: "Следующие 7 дней" })
+      .dispatchEvent("click");
+    await expect(page.getByRole("button", { name: "Открытые" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(page.url()).toBe(urlBefore);
+    expect(getCount).toBe(0);
+
+    // Release: штатный read текущего mode, controls вновь доступны,
+    // обычная смена status работает.
+    const savedToggle = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/api/v1/tasks/") &&
+        response.status() === 200,
+    );
+    release();
+    await savedToggle;
+    // Штатный read текущего (open) режима прошёл. PATCH fulfill'нут
+    // синтетически — сервер его не получал, задача остаётся в open-виде.
+    await expect.poll(() => getCount).toBeGreaterThan(0);
+    await expect(page.getByRole("button", { name: "Все" })).toBeEnabled();
+    await page.getByRole("button", { name: "Все" }).click();
+    await expect(page.getByRole("button", { name: "Все" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(row).toHaveCount(1);
+    expect(page.url()).toBe(urlBefore);
+  });
+
+  test("Upcoming: dirty schedule editor блокирует status/диапазон; failed Save держит lock; Cancel освобождает", async ({
+    page,
+  }) => {
+    const title = `Guard T ${run}`;
+    const today = await serverToday(page);
+    const plannedDay = shift(today, 2);
+    const deadline = shift(today, 5);
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(title);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const inboxRow = page.locator("li[data-task-id]", { hasText: title });
+    await expect(inboxRow).toBeVisible();
+    await inboxRow.getByRole("button", { name: "Планирование" }).click();
+    await inboxRow.getByLabel("Дата выполнения").fill(plannedDay);
+    await inboxRow.getByRole("button", { name: "Сохранить" }).click();
+    await expect(inboxRow).toHaveCount(0);
+
+    await page.goto(`/upcoming?start=${today}`);
+    const row = page.locator("li[data-task-id]", { hasText: title });
+    await expect(row).toBeVisible();
+    const rangeBefore = await page.getByTestId("upcoming-range").textContent();
+    const urlBefore = page.url();
+
+    // Открыть dirty schedule editor.
+    await row.getByRole("button", { name: "Планирование" }).click();
+    const deadlineInput = row.getByLabel("Дедлайн");
+    await deadlineInput.fill(deadline);
+
+    // Status и диапазон disabled при открытой форме.
+    await expect(page.getByRole("button", { name: "Открытые" })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Следующие 7 дней" }),
+    ).toBeDisabled();
+
+    // GET-наблюдатель; bypass: форма не закрыта, draft цел, URL/GET не меняются.
+    let getCount = 0;
+    await page.route("**/api/v1/tasks*", async (route) => {
+      const request = route.request();
+      if (
+        request.method() === "GET" &&
+        request.url().includes("/api/v1/tasks?")
+      ) {
+        getCount += 1;
+      }
+      await route.continue();
+    });
+    await page.getByRole("button", { name: "Все" }).dispatchEvent("click");
+    await page
+      .getByRole("button", { name: "Следующие 7 дней" })
+      .dispatchEvent("click");
+    await expect(deadlineInput).toHaveValue(deadline);
+    expect(page.url()).toBe(urlBefore);
+    expect(getCount).toBe(0);
+
+    // Save с 500: editor/error/mode lock сохраняются.
+    let patchCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/tasks/*", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+      patchCount += 1;
+      await gate;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: '{"error":{"code":"INTERNAL"}}',
+      });
+    });
+    await row.getByRole("button", { name: "Сохранить" }).click();
+    await expect.poll(() => patchCount).toBe(1);
+    const failedPatch = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/api/v1/tasks/") &&
+        response.status() === 500,
+    );
+    release();
+    await failedPatch;
+    await expect(row.getByRole("alert")).toBeVisible();
+    await expect(deadlineInput).toHaveValue(deadline);
+    // Mode lock держится (форма открыта).
+    await expect(page.getByRole("button", { name: "Открытые" })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Следующие 7 дней" }),
+    ).toBeDisabled();
+
+    // Cancel освобождает выбор и controls; обычная следующая неделя работает.
+    await page.unroute("**/api/v1/tasks/*");
+    await row.getByRole("button", { name: "Отмена" }).click();
+    await expect(deadlineInput).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Открытые" })).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "Следующие 7 дней" }),
+    ).toBeEnabled();
+    await page.getByRole("button", { name: "Следующие 7 дней" }).click();
+    await expect(page.getByTestId("upcoming-range")).not.toHaveText(
+      rangeBefore ?? "",
+    );
+    expect(page.url()).not.toBe(urlBefore);
+  });
 });
 
 async function serverToday(page: import("@playwright/test").Page): Promise<string> {

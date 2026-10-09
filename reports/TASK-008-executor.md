@@ -240,3 +240,44 @@ Quick-add при открытой idle форме допустим (как и п
 - Mode/status/window переключения при открытой форме (R2b2), R3 (read sequencing), R4 (rename draft reinit), R5–R8, старая отладка и EOF-уборка (task-row.tsx:317, tasks-planning.auth.test.ts:746) — не тронуты. Full auth/E2E сейчас не требовались.
 - Общий сетевой guard R2a/R2a-fix и frozen snapshot R1 сохранены без переработки; service/API/schema не менялись.
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
+
+---
+
+# Коррекция TASK-008-R2b2 — безопасная смена режима в Upcoming
+
+## Статус
+
+READY_FOR_REVIEW (только Upcoming: status/диапазон не меняются при pending записи или открытой форме; Inbox/Today не менялись, R3–R8 не начаты). Assignment `tasks/TASK-008-R2b2.md`; R1/R2a/R2b1 приняты на executor HEAD `c68d3a88a884ea6f3d3eda90a03a86cfc1d31429` (review `reports/TASK-008-R2b1.md`); старт — coordinator commit `4d81b7a651018d938ca3115c152bb63c94f27204` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+Кнопки status open/completed/all в Upcoming не имели ни disabled, ни handler guard: смена режима при pending write оставляла старый write callback читающим старый режим, а при открытой форме скрывала её с сохранённым выбором. prev/next/current имели только `listPending || anyInFlight()`. Исправление:
+
+- `src/components/orbit/use-task-writes.ts` (минимально): наружу выставлены реактивный `formOpen` (любой rename/schedule/delete taskId — для disabled) и синхронный `anyFormOpen()` (чтение `activeFormRef` — для handler guard до render/state). Существующие guard'ы/policy не менялись.
+- `src/components/orbit/upcoming-board.tsx`: новый `switchMode(mode)` — синхронный guard `writes.anyInFlight() || writes.anyFormOpen()` ДО `setStatusMode/refetch`; кнопки status `disabled={writes.anyPending || writes.formOpen}`. `navigate()` — в guard добавлен `anyFormOpen()` (ref) поверх прежнего `listPending || anyInFlight()`; prev/next/current `disabled={listPending || writes.anyPending || writes.formOpen}` (прежняя listPending-политика сохранена). Заблокированная попытка не меняет URL/start/status и не стартует GET; форма не закрывается, draft/error целы. Refresh/retry не перерабатывались; sequencing чтений (R3) и calendar bounds (R5) не тронуты — guard стоит до вычисления нового диапазона.
+
+Pending guard держится весь mutation+read flow (anyInFlight/finally — как принят в R2a); failed Save оставляет форму и mode lock, Cancel/успешный Save освобождают; toggle без формы освобождается обычным finally.
+
+## Регрессии (tests/e2e/write-guard.spec.ts, 7 → 9 chromium-тестов)
+
+1. **Upcoming, удержанный completion PATCH** (delivery `expect.poll`): status open/completed/all и prev/next/current disabled; программные dispatchEvent «Все»/«Следующие 7 дней» не меняют mode (aria-pressed), URL и не стартуют GET (счётчик GET=0); release 200 → штатный read текущего open-режима (GET>0), controls вновь enabled, обычная смена на «Все» работает (pressed, задача видна). Примечание: PATCH fulfill'ится синтетически — сервер его не получает, поэтому ассерт «задача ушла из open» некорректен и не делается (в отчёте ниже — первый failed run).
+2. **Upcoming, dirty schedule editor**: status/диапазон disabled при открытой форме; bypass не закрывает editor, draft цел, URL/GET не меняются; Save с удержанным 500 оставляет editor/error/mode lock; Cancel освобождает выбор и controls, «Следующие 7 дней» затем работает (range/URL изменились). Обычные даты, calendar bounds не затрагивались.
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| Состояние test DB | `nc 127.0.0.1 55432` open; read-only: **PostgreSQL 17.11**, leftover orbit_test\* до: 0; Colima/CRM/сторонние сервисы не запускались и не останавливались; credentials не выводились |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `npm test` | exit 0 — **63/63** |
+| `CI=1 E2E_PORT=37270 npm run test:e2e -- write-guard+inbox+planning --project=chromium` (свежий `next build`) | 36 passed + 1 failed: мой новый тест №1 — дефект шаблона маршрута `**/api/v1/tasks*` (не матчит item-URL `/tasks/<uuid>` из-за слэша за `*`), PATCH уходил мимо hold прямо на сервер, `expect.poll(patchCount)` не дождался. Тестовый дефект, не продукта; исправлено разделением на GET-наблюдателя `**/api/v1/tasks*` + hold `**/api/v1/tasks/*` |
+| `CI=1 E2E_PORT=37292 npx playwright test write-guard --project=chromium` | 11 passed + 1 failed: после фикса маршрута — мой неверный ассерт `toHaveCount(0)` после release (задача остаётся в open-виде, т.к. fulfill синтетический); ассерт удалён с пояснением |
+| `CI=1 E2E_PORT=37293 npm run test:e2e -- ... --project=chromium` (свежий `next build`, финальный) | exit 0 — **37/37**: 3 auth-setup + **9 write-guard** (7 прежних + 2 новых R2b2) + 12 inbox (pending-complete/R3b) + 13 planning (R1-регрессии) |
+| Leftovers | read-only check после прогонов: **0** orbit_test\*-баз; `git diff --check` (unstaged) чист |
+
+## Ограничения / не входило
+
+- Inbox/Today не менялись; аналогичная mode-защита для них — отдельный малый шаг, если потребуется review. R3 (read sequencing), R4, R5–R8, старая отладка и EOF-уборка (task-row.tsx:317, tasks-planning.auth.test.ts:746) — не тронуты. Full auth/E2E сейчас не требовались.
+- Pre-fetch write guard (R2a), single-editor policy (R2b1), frozen snapshot (R1), service/API/schema — сохранены без переработки.
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
