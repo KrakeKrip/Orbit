@@ -1,5 +1,7 @@
 # TASK-008-R2b2 — безопасная смена режима в Upcoming
 
+Актуальный статус: R2b2 принят на 9d9566e; reports/TASK-008-R2b2-fix.md. Ниже историческое задание/review.
+
 Статус review 556c9f7: NEEDS_FIXES только порядок guard/расчёт; reports/TASK-008-R2b2.md, назначена tasks/TASK-008-R2b2-fix.md.
 
 ## Единственная цель и база

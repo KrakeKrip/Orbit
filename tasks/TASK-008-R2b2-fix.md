@@ -1,5 +1,7 @@
 # TASK-008-R2b2-fix — guard до расчёта даты
 
+Актуальный статус: R2b2 принят на 9d9566e; reports/TASK-008-R2b2-fix.md. Ниже историческое задание/review.
+
 ## Одна минимальная коррекция
 
 Review reports/TASK-008-R2b2.md, executor HEAD 556c9f77c6357dc0eff02310d048c98031709592. Общая R2b2-блокировка работает, все 37 целевых browser checks независимо прошли. Остаток только в порядке вызова: `navigate(addCivilDays(...))` вычисляет аргумент ДО guard в navigate, вопреки заданию. Исправить только upcoming-board.tsx и executor report. Начать с нового coordinator assignment HEAD, проверить root/branch/status. Ветка task/TASK-008, worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
