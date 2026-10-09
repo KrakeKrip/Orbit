@@ -73,3 +73,41 @@ READY_FOR_REVIEW.
 ## Итог
 
 TASK-008 реализован по phases A/B/C (civil calendar, atomic planning merge + context API, shared editor/rows + Today/Upcoming). Все gates зелёные на Node 24. Остановка до независимого review Codex; TASK-009 не начинался.
+
+---
+
+# Коррекция TASK-008-R1 — snapshot планировочного редактора
+
+## Статус
+
+READY_FOR_REVIEW (только R1 [P1] из `reports/TASK-008.md`; R2–R8 не затронуты). Assignment `tasks/TASK-008-R1.md`; старт correction — coordinator review commit `f56cecc0bf42441b6b2c39c4bd0f6b91df21c36b` (HEAD проверен перед изменениями, дерево чистое).
+
+## Дефект и исправление
+
+`TaskScheduleEditor` сравнивал draft с «живым» prop snapshot (обновляемым refetch'ем при открытом редакторе): после чужого PATCH + «Обновить» Save отправлял `deadlineDate:null` и стирал чужую запись. Исправление (`src/components/orbit/task-schedule-editor.tsx`): snapshot фиксируется в `useState` на момент конкретного открытия (редактор монтируется только пока открыт); dirty-вычисление и PATCH-ключи считаются **только** от этого frozen snapshot. Сохранены контракты: очистка даты чистит time (draft+PATCH), no-op Save disabled, failed save сохраняет draft, Cancel/reopen берёт свежий snapshot из актуального task, публичные API не менялись. `task-row.tsx` правки не потребовал.
+
+## Browser-регрессии (tests/e2e/planning.spec.ts, новый describe «Planning editor snapshot (R1)»)
+
+1. **refresh+Save**: задача plan/time/deadline NULL → editor, меняется только plannedDate → второй клиент (тот же аккаунт C, независимый APIRequestContext, правильный Origin) пишет deadline=D → «Обновить» с ожиданием фактического GET; editor открыт, draft жив, поле дедлайна показывает snapshot открытия → Save: тело настоящего PATCH (200) содержит ровно `["plannedDate"]` → GET item: plannedDate=future, plannedTime=null, **deadline=D сохранён**; editor закрыт, задача ушла из Inbox.
+2. **Cancel/reopen**: тот же сценарий до Save → «Отмена» → новое «Планирование»: deadline подставлен из актуального task, отменённый draft даты не воскресает, Save disabled (no-op PATCH невозможен).
+3. **Симметричный time**: правка только deadline в Upcoming, второй клиент ставит plannedTime=10:00 → refresh → Save: PATCH ровно `["deadlineDate"]`, GET item: время 10:00 сохранено, дедлайн записан.
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| `npm run lint` | exit 0, **1 warning** — оставшийся известный `use-task-writes.ts:325` (файл вне R1 scope, не правил); warning `planning.spec.ts:169` (unused today) устранён в рамках правки этого файла |
+| `npm run typecheck` | exit 0 |
+| `npm test` | exit 0 — 63/63 |
+| `CI=1 E2E_PORT=3421 npm run test:e2e -- tests/e2e/planning.spec.ts --project=chromium` (штатный `next build` + server) | exit 0 — **16/16** (13 прежних планировочных + 3 новых R1; auth-setup project включён) |
+| Leftovers | orbit_test\*-баз: 0, соединений: 0 (read-only проверка) |
+| `git diff --check` (unstaged R1-изменения) | чисто |
+
+Процедурная находка: первый прогон R1-тестов падал на **устаревшем** production-билде (`npx playwright test` без `next build` отдал предыдущий `.next`); оба падения в точности воспроизводили старое поведение и после штатного `npm run test:e2e` (build включён) не воспроизводятся. В отчёт включено как свидетельство, что регрессия ловит дефект.
+
+## Ограничения / не входило
+
+- R2–R8 не исправлялись; full auth/E2E прогон не выполнялся (по заданию — перед итоговой приёмкой TASK-008). Известный R6 auth timezone failure остаётся открытым.
+- Debug-остатки в тестовых файлах (inbox.spec PROBE-листенеры, «R3 DEBUG», navigation OVERFLOW) и EOF-пустые строки в task-row.tsx / tasks-planning.auth.test.ts из review — чужие для R1 файлы, не тронуты (отдельная финальная уборка).
+- Trace `'on'` в playwright.config оставлен как был; main/старые worktree/localhost:3000/CRM/coord docs/protective hooks не менялись; merge/push/amend/rebase/reset/stash не выполнялись.
+

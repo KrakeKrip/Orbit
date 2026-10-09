@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, request as apiRequest } from "@playwright/test";
+import { e2ePort } from "./credentials";
 
 // Владелец planning fixtures — пользователь C: его сессию никто не
 // ревокирует, а задачи C не пересекаются с inbox-фикстурами A.
@@ -161,12 +162,190 @@ test.describe("Inbox планирование (desktop 1280)", () => {
   });
 });
 
+test.describe("Planning editor snapshot (R1, desktop 1280)", () => {
+  test.use({ viewport: { width: 1280, height: 800 }, storageState: USER_C_STATE });
+
+  test("refresh при открытом dirty editor: Save отправляет только plannedDate, чужой deadline сохранён", async ({
+    page,
+  }) => {
+    const title = `R1 дедлайн ${run}`;
+    const today = await serverToday(page);
+    const future = shift(today, 3);
+    const foreignDeadline = shift(today, 7);
+
+    // 1. Своя synthetic задача: plan/time/deadline NULL.
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(title);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const row = page.locator("li[data-task-id]", { hasText: title });
+    await expect(row).toBeVisible();
+    const taskId = await row.getAttribute("data-task-id");
+    expect(taskId).not.toBeNull();
+
+    // 2. Editor: меняем только plannedDate.
+    await row.getByRole("button", { name: "Планирование" }).click();
+    const dateInput = row.getByLabel("Дата выполнения");
+    await dateInput.fill(future);
+
+    // 3. Второй клиент (тот же аккаунт, authenticated API, Origin) пишет deadline.
+    await secondPatch(taskId as string, { deadlineDate: foreignDeadline });
+
+    // 4. «Обновить»: editor остаётся открыт с draft (snapshot открытия).
+    const refreshRead = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/tasks?") &&
+        response.request().method() === "GET" &&
+        response.status() === 200,
+    );
+    await page.getByRole("button", { name: "Обновить" }).click();
+    await refreshRead;
+    await expect(dateInput).toHaveValue(future);
+    // Поле дедлайна показывает snapshot открытия (NULL), не чужое значение.
+    await expect(row.getByLabel("Дедлайн")).toHaveValue("");
+
+    // 5. Save: тело настоящего PATCH, ушедшего в сеть (200).
+    const savedPatch = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/api/v1/tasks/${taskId}`) &&
+        response.request().method() === "PATCH" &&
+        response.status() === 200,
+    );
+    await row.getByRole("button", { name: "Сохранить" }).click();
+    const patchResponse = await savedPatch;
+    const sent = JSON.parse(
+      patchResponse.request().postData() ?? "null",
+    ) as Record<string, unknown> | null;
+    expect(sent).not.toBeNull();
+    expect(Object.keys(sent as Record<string, unknown>).sort()).toEqual([
+      "plannedDate",
+    ]);
+
+    // 6. Чужой deadline не стёрт: GET item после записи.
+    const item = await secondGetTask(taskId as string);
+    expect(item.plannedDate).toBe(future);
+    expect(item.plannedTime).toBeNull();
+    expect(item.deadlineDate).toBe(foreignDeadline);
+
+    // Editor закрыт, задача ушла из Inbox (planned = future).
+    await expect(
+      page.locator("li[data-task-id]", { hasText: title }),
+    ).toHaveCount(0);
+  });
+
+  test("Cancel и повторное открытие: snapshot из актуального task, отменённый draft не воскресает", async ({
+    page,
+  }) => {
+    const title = `R1 cancel ${run}`;
+    const today = await serverToday(page);
+    const future = shift(today, 3);
+    const foreignDeadline = shift(today, 5);
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(title);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const row = page.locator("li[data-task-id]", { hasText: title });
+    await expect(row).toBeVisible();
+    const taskId = await row.getAttribute("data-task-id");
+    expect(taskId).not.toBeNull();
+
+    await row.getByRole("button", { name: "Планирование" }).click();
+    await row.getByLabel("Дата выполнения").fill(future);
+
+    await secondPatch(taskId as string, { deadlineDate: foreignDeadline });
+
+    const refreshRead = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/tasks?") &&
+        response.request().method() === "GET" &&
+        response.status() === 200,
+    );
+    await page.getByRole("button", { name: "Обновить" }).click();
+    await refreshRead;
+    await row.getByRole("button", { name: "Отмена" }).click();
+    await row.getByRole("button", { name: "Планирование" }).click();
+
+    // Новый snapshot из актуального task: deadline подставлен, отменённый
+    // draft даты не воскресает.
+    await expect(row.getByLabel("Дедлайн")).toHaveValue(foreignDeadline);
+    await expect(row.getByLabel("Дата выполнения")).toHaveValue("");
+    // No-op: Save disabled — PATCH невозможен.
+    await expect(
+      row.getByRole("button", { name: "Сохранить" }),
+    ).toBeDisabled();
+  });
+
+  test("правка только deadline: независимое чужое время не попадает в PATCH и сохраняется", async ({
+    page,
+  }) => {
+    const title = `R1 время ${run}`;
+    const today = await serverToday(page);
+    const plannedDay = shift(today, 2);
+    const foreignDeadline = shift(today, 6);
+
+    // Создаём и планируем на future день (уходит из Inbox в Upcoming).
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(title);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const row = page.locator("li[data-task-id]", { hasText: title });
+    await expect(row).toBeVisible();
+    const taskId = await row.getAttribute("data-task-id");
+    expect(taskId).not.toBeNull();
+    await row.getByRole("button", { name: "Планирование" }).click();
+    await row.getByLabel("Дата выполнения").fill(plannedDay);
+    await row.getByRole("button", { name: "Сохранить" }).click();
+    await expect(page.locator("li[data-task-id]", { hasText: title })).toHaveCount(0);
+
+    await page.goto(`/upcoming?start=${today}`);
+    const upcomingRow = page.locator("li[data-task-id]", { hasText: title });
+    await expect(upcomingRow).toBeVisible();
+
+    // Editor: меняем только deadline.
+    await upcomingRow.getByRole("button", { name: "Планирование" }).click();
+    await upcomingRow.getByLabel("Дедлайн").fill(foreignDeadline);
+
+    // Второй клиент ставит время (независимое поле) через API.
+    await secondPatch(taskId as string, { plannedTime: "10:00" });
+
+    const refreshRead = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/tasks?") &&
+        response.request().method() === "GET" &&
+        response.status() === 200,
+    );
+    await page.getByRole("button", { name: "Обновить" }).click();
+    await refreshRead;
+    await expect(upcomingRow.getByLabel("Дедлайн")).toHaveValue(foreignDeadline);
+    // Время показывает snapshot открытия (пусто), не чужое значение.
+    await expect(upcomingRow.getByLabel("Время выполнения")).toHaveValue("");
+
+    const savedPatch = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/api/v1/tasks/${taskId}`) &&
+        response.request().method() === "PATCH" &&
+        response.status() === 200,
+    );
+    await upcomingRow.getByRole("button", { name: "Сохранить" }).click();
+    const patchResponse = await savedPatch;
+    const sent = JSON.parse(
+      patchResponse.request().postData() ?? "null",
+    ) as Record<string, unknown> | null;
+    expect(sent).not.toBeNull();
+    expect(Object.keys(sent as Record<string, unknown>).sort()).toEqual([
+      "deadlineDate",
+    ]);
+
+    const item = await secondGetTask(taskId as string);
+    expect(item.plannedDate).toBe(plannedDay);
+    expect(item.plannedTime).toBe("10:00");
+    expect(item.deadlineDate).toBe(foreignDeadline);
+  });
+});
+
 test.describe("Today/Upcoming (desktop 1280)", () => {
   test.use({ viewport: { width: 1280, height: 800 }, storageState: USER_C_STATE });
 
   test("Today quick-add ставит plannedDate = server today", async ({ page }) => {
     const title = `Today qa ${run}`;
-    const today = await serverToday(page);
     await page.goto("/today");
     await page.getByLabel("Название задачи").fill(title);
     await page.getByRole("button", { name: "Добавить задачу" }).click();
@@ -304,6 +483,54 @@ async function serverToday(page: import("@playwright/test").Page): Promise<strin
     context: { today: string };
   };
   return payload.context.today;
+}
+
+type TaskItemPayload = {
+  task: {
+    plannedDate: string | null;
+    plannedTime: string | null;
+    deadlineDate: string | null;
+  };
+};
+
+/**
+ * Второй клиент (R1): тот же аккаунт C, независимый APIRequestContext
+ * с правильным Origin — пишет в ту же задачу мимо UI первого экрана.
+ */
+async function secondPatch(
+  taskId: string,
+  patch: Record<string, string | null>,
+): Promise<void> {
+  const origin = `http://127.0.0.1:${e2ePort}`;
+  const context = await apiRequest.newContext({
+    baseURL: origin,
+    storageState: USER_C_STATE,
+  });
+  try {
+    const response = await context.patch(`/api/v1/tasks/${taskId}`, {
+      data: patch,
+      headers: { "content-type": "application/json", origin },
+    });
+    expect(response.status()).toBe(200);
+  } finally {
+    await context.dispose();
+  }
+}
+
+async function secondGetTask(taskId: string): Promise<TaskItemPayload["task"]> {
+  const origin = `http://127.0.0.1:${e2ePort}`;
+  const context = await apiRequest.newContext({
+    baseURL: origin,
+    storageState: USER_C_STATE,
+  });
+  try {
+    const response = await context.get(`/api/v1/tasks/${taskId}`);
+    expect(response.status()).toBe(200);
+    const payload = (await response.json()) as TaskItemPayload;
+    return payload.task;
+  } finally {
+    await context.dispose();
+  }
 }
 
 function shift(date: string, days: number): string {

@@ -15,7 +15,11 @@ export type TaskScheduleDraftPatch = Partial<TaskPlanningValues>;
 /**
  * Небольшой планировочный редактор (TASK-008): дата выполнения, время,
  * дедлайн. Save отправляет только реально изменённые поля относительно
- * snapshot задачи (dirty-подмножество), no-op — Save disabled. Очистка
+ * snapshot задачи (dirty-подмножество), no-op — Save disabled. Snapshot
+ * фиксируется на момент конкретного открытия (R1): refetch при открытом
+ * редакторе обновляет prop, но не превращает чужие изменения в
+ * пользовательские — dirty/PATCH считаются от исходного snapshot; Cancel
+ * и новое открытие берут snapshot заново из актуального task. Очистка
  * даты очищает draft time и блокирует его. Ошибка сохранения сохраняет
  * draft; pending блокирует ввод/отмену/сохранение. Focus: при открытии —
  * первое поле (autofocus по id из parent), при ошибке поле остаётся.
@@ -36,10 +40,15 @@ export function TaskScheduleEditor({
   onSave: (patch: TaskScheduleDraftPatch) => void;
   onCancel: () => void;
 }) {
-  const [dateDraft, setDateDraft] = useState<string>(snapshot.plannedDate ?? "");
-  const [timeDraft, setTimeDraft] = useState<string>(snapshot.plannedTime ?? "");
-  const [deadlineDraft, setDeadlineDraft] = useState<string>(
-    snapshot.deadlineDate ?? "",
+  // R1: snapshot неизменен до закрытия. Редактор монтируется только пока
+  // открыт, поэтому useState фиксирует значения открытия; последующие
+  // refetch'и меняют prop, но не базу dirty-сравнения — чужие поля не
+  // попадают в PATCH, draft не теряется. Cancel/reopen — новый snapshot.
+  const [openingSnapshot] = useState<TaskScheduleSnapshot>(snapshot);
+  const [dateDraft, setDateDraft] = useState(openingSnapshot.plannedDate ?? "");
+  const [timeDraft, setTimeDraft] = useState(openingSnapshot.plannedTime ?? "");
+  const [deadlineDraft, setDeadlineDraft] = useState(
+    openingSnapshot.deadlineDate ?? "",
   );
   const [invalid, setInvalid] = useState(false);
 
@@ -53,9 +62,9 @@ export function TaskScheduleEditor({
   );
 
   const dirty =
-    normalized.plannedDate !== snapshot.plannedDate ||
-    normalized.plannedTime !== snapshot.plannedTime ||
-    normalized.deadlineDate !== snapshot.deadlineDate;
+    normalized.plannedDate !== openingSnapshot.plannedDate ||
+    normalized.plannedTime !== openingSnapshot.plannedTime ||
+    normalized.deadlineDate !== openingSnapshot.deadlineDate;
 
   // Валидность: заполненные поля — корректные civil значения; time требует date.
   const valid =
@@ -73,15 +82,15 @@ export function TaskScheduleEditor({
       return;
     }
     setInvalid(false);
-    // Только dirty-поля относительно snapshot.
+    // Только dirty-поля относительно snapshot открытия.
     const patch: TaskScheduleDraftPatch = {};
-    if (normalized.plannedDate !== snapshot.plannedDate) {
+    if (normalized.plannedDate !== openingSnapshot.plannedDate) {
       patch.plannedDate = normalized.plannedDate;
     }
-    if (normalized.plannedTime !== snapshot.plannedTime) {
+    if (normalized.plannedTime !== openingSnapshot.plannedTime) {
       patch.plannedTime = normalized.plannedTime;
     }
-    if (normalized.deadlineDate !== snapshot.deadlineDate) {
+    if (normalized.deadlineDate !== openingSnapshot.deadlineDate) {
       patch.deadlineDate = normalized.deadlineDate;
     }
     onSave(patch);
