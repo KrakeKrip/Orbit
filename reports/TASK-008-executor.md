@@ -157,3 +157,45 @@ Create имел собственный `createInFlight`, невидимый shar
 - Проверка на целевом PostgreSQL 17 (55432/Colima) в этом запуске невозможна — сервис выключен не мной; целевой E2E выполнен на временном PG 18.6 (как и независимый review R1).
 - Debug-остатки в inbox.spec (PROBE-листенеры, «R3 DEBUG») и EOF-пустые строки task-row.tsx/tasks-planning.auth.test.ts — не R2a, не тронуты.
 - main/другие worktree/localhost:3000/CRM/coord docs/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись. R2/TASK-008 целиком НЕ приняты — только эта коррекция на review.
+
+---
+
+# Коррекция TASK-008-R2a-fix — блокировка уже открытой формы
+
+## Статус
+
+READY_FOR_REVIEW (только остаток R2a [P2] из `reports/TASK-008-R2a.md`; R2b–R8 не начаты). Assignment `tasks/TASK-008-R2a-fix.md`; R2a executor HEAD `9932004481c48dcd9429a102c7b5854987029f08`; старт — coordinator commit `b20c761f398a01ea4c89df7c9d8b2138d2ab70dd` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+Открытые формы блокировались только собственной pending: TaskScheduleEditor получал `pending=schedulePending` (при чужом create — false), rename и delete confirmation использовали own-pending в disabled/Escape, а close handlers проверяли только свой pending. Исправление:
+
+- `src/components/orbit/task-row.tsx`: rename form (input/Save/Cancel/Escape) и delete confirmation (confirm/«Отмена»/Escape) переведены на `state.busy` (общий busy экрана; собственный pending входит в него), собственные pending labels («Сохранение…», «Удаление…») сохранены без изменений; schedule editor получает новый `blocked={state.busy}`.
+- `src/components/orbit/task-schedule-editor.tsx`: минимальный `blocked` prop — `locked = pending || blocked` для controls/Save/Cancel/Escape и синхронного handler-блока в `handleSubmit`; `aria-busy` и label «Сохранение…» остаются только на собственной `pending` (чужая write не изображает свою операцию). Draft, error и frozen snapshot R1 не тронуты.
+- `src/components/orbit/use-task-writes.ts`: `closeRename/closeSchedule/closeDelete` — синхронный общий guard `anyInFlight()` вместо проверки только своего pending (ref покрывает и собственный полёт; снимается в finally). Программный вызов cancel при чужой записи не закрывает форму даже до нового render; существующие pre-fetch submit guards сохранены. Заодно ушли eslint-disable от старых deps.
+
+Выбор единственного editor, mode/window переключения, read flow, transport/service/schema — не менялись.
+
+## Регрессии (tests/e2e/write-guard.spec.ts, +2 теста)
+
+1. **Открытый dirty schedule editor при чужом held POST** (delivery через `expect.poll`): дата/Save/Cancel/create disabled; «Сохранение…» отсутствует; программный `requestSubmit()` формы и `dispatchEvent('click')` по «Отмене» не отправляют PATCH и не закрывают editor; release 500 → блокировка снята, editor открыт, draft прежний → настоящее Save успешно (PATCH 200, задача ушла из Inbox).
+2. **Таблица rename + delete confirmation при чужом held POST**: обе формы заблокированы (input/Save/Отмена, confirm/«Отмена» disabled, собственные labels отсутствуют); программные submit/cancel (evaluate requestSubmit + dispatchEvent) — 0 PATCH/DELETE, формы не закрыты; release 500 → controls enabled, rename draft сохранён; обычная отмена после отказа работает.
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| Состояние test DB | В начале запуска Colima была выключена (55432 closed) — по заданию поднят временный PostgreSQL **18.6** (Homebrew, /private/tmp, ephemeral password); при проверке обнаружено, что Colima вернулась в running, 55432 доступен: временный инстанс остановлен до тестов и удалён, тесты выполнены на штатном guarded target — **PostgreSQL 17.11**, leftover orbit_test\* до прогона: 0 |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `npm test` | exit 0 — **63/63** |
+| `CI=1 E2E_PORT=37200 npm run test:e2e -- write-guard+inbox+planning --project=chromium` (штатный `next build`) | 32 passed + 1 failed: мой новый таблица-тест — тестовый дефект локатора (открытый rename editor заменяет title-параграф формой, `hasText`-локатор строки перестаёт матчиться); product-дефекта нет. Исправлено на id/`data-task-id`-локаторы |
+| `CI=1 E2E_PORT=37221 npx playwright test write-guard --project=chromium` | exit 0 — 8/8 (3 auth-setup + 5) |
+| `CI=1 E2E_PORT=37222 npx playwright test write-guard+inbox+planning --project=chromium` (тот же свежий билд) | exit 0 — **33/33**: 3 auth-setup + **5 write-guard** (3 прежних + 2 новых) + 12 inbox (pending-complete/R3b) + 13 planning (R1-регрессии) |
+| Leftovers | read-only check на 55432 после прогонов: **0** orbit_test\*-баз; `git diff --check` (unstaged) чист |
+
+## Ограничения / не входило
+
+- R2b (единственный активный editor, mode/window), R3–R8, старая отладка в inbox.spec, EOF-уборка (task-row.tsx:311, tasks-planning.auth.test.ts:746 остаются от прежних коммитов) — не тронуты. Full auth/E2E сейчас не требовались (R6 открыт).
+- Frozen snapshot R1, общий guard R2a, transport/service/schema/read context — сохранены без переработки.
+- Временный PG18.6: поднят и остановлен без тестовых прогонов на нём (Colima вернулась); пароль/кластер удалены, порт закрыт. main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.

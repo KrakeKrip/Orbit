@@ -132,7 +132,9 @@ export function TaskRow({
             handlers.onSubmitRename(renameDraft);
           }}
           onKeyDown={(event) => {
-            if (event.key === "Escape" && !state.renamePending) {
+            // R2a-fix: Escape заблокирован при любой write в полёте
+            // (busy = своя или чужая pending; свои labels не меняются).
+            if (event.key === "Escape" && !state.busy) {
               event.preventDefault();
               handlers.onRenameCancel();
             }
@@ -151,9 +153,9 @@ export function TaskRow({
               className="min-h-11 max-w-72"
               value={renameDraft}
               onChange={(event) => setRenameDraft(event.target.value)}
-              disabled={state.renamePending}
+              disabled={state.busy}
             />
-            <Button type="submit" className="min-h-11 px-4" disabled={state.renamePending}>
+            <Button type="submit" className="min-h-11 px-4" disabled={state.busy}>
               {state.renamePending ? ru.tasks.rename.saving : ru.tasks.rename.save}
             </Button>
             <Button
@@ -161,7 +163,7 @@ export function TaskRow({
               variant="outline"
               className="min-h-11 px-4"
               onClick={handlers.onRenameCancel}
-              disabled={state.renamePending}
+              disabled={state.busy}
             >
               {ru.tasks.rename.cancel}
             </Button>
@@ -182,6 +184,9 @@ export function TaskRow({
               deadlineDate: task.deadlineDate,
             }}
             pending={state.schedulePending}
+            // R2a-fix: чужая write pending блокирует controls/Escape;
+            // собственная операция по-прежнему видна через pending.
+            blocked={state.busy}
             error={state.scheduleError}
             dateInputId={`task-schedule-date-input-${task.id}`}
             onSave={handlers.onSubmitSchedule}
@@ -193,7 +198,8 @@ export function TaskRow({
           role="alert"
           aria-live="assertive"
           onKeyDown={(event) => {
-            if (event.key === "Escape" && !state.deletePending) {
+            // R2a-fix: Escape заблокирован при любой write в полёте.
+            if (event.key === "Escape" && !state.busy) {
               event.preventDefault();
               handlers.onDeleteCancel();
             }
@@ -209,7 +215,7 @@ export function TaskRow({
               variant="destructive"
               className="min-h-11 px-4"
               onClick={handlers.onConfirmDelete}
-              disabled={state.deletePending}
+              disabled={state.busy}
             >
               {state.deletePending ? ru.tasks.delete.pending : ru.tasks.delete.confirm}
             </Button>
@@ -220,7 +226,7 @@ export function TaskRow({
               id={`task-delete-cancel-${task.id}`}
               autoFocus
               onClick={handlers.onDeleteCancel}
-              disabled={state.deletePending}
+              disabled={state.busy}
             >
               {ru.tasks.delete.cancel}
             </Button>

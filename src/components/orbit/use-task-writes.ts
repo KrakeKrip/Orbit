@@ -396,39 +396,39 @@ export function useTaskWrites({
     },
     [anyInFlight, requestFocus],
   );
+  // R2a-fix: cancel guards синхронные и общие — любой write в полёте
+  // (свой или чужой) запрещает закрытие editor/confirmation даже при
+  // программном вызове до нового render; anyInFlight покрывает и
+  // собственный pending (ref снимается в finally).
   const closeRename = useCallback(
     (taskId: string): void => {
-      if (renamePending) {
-        // Pending policy: закрытие во время сохранения не нарушает state.
+      if (anyInFlight()) {
         return;
       }
       setRenameTaskId(null);
       requestFocus(`task-rename-trigger-${taskId}`, actorRef.current);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [renamePending],
+    [anyInFlight, requestFocus],
   );
   const closeSchedule = useCallback(
     (taskId: string): void => {
-      if (schedulePending) {
+      if (anyInFlight()) {
         return;
       }
       setScheduleTaskId(null);
       requestFocus(`task-schedule-trigger-${taskId}`, actorRef.current);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [schedulePending],
+    [anyInFlight, requestFocus],
   );
   const closeDelete = useCallback(
     (taskId: string): void => {
-      if (deletePending) {
+      if (anyInFlight()) {
         return;
       }
       setDeleteTaskId(null);
       requestFocus(`task-delete-trigger-${taskId}`, actorRef.current);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [deletePending],
+    [anyInFlight, requestFocus],
   );
 
   // R2a: реактивный aggregate «какая-либо запись в полёте» — create

@@ -27,6 +27,7 @@ export type TaskScheduleDraftPatch = Partial<TaskPlanningValues>;
 export function TaskScheduleEditor({
   snapshot,
   pending,
+  blocked,
   error,
   dateInputId,
   onSave,
@@ -34,6 +35,12 @@ export function TaskScheduleEditor({
 }: {
   snapshot: TaskScheduleSnapshot;
   pending: boolean;
+  /**
+   * R2a-fix: блокировка из-за ЧУЖОЙ write в полёте (общий busy экрана).
+   * Отключает controls/Escape/Save/Cancel, но не меняет собственные
+   * pending labels — «Сохранение…» только при своей операции.
+   */
+  blocked: boolean;
   error: string | null;
   /** id первого поля (для focus из parent). */
   dateInputId: string;
@@ -51,6 +58,10 @@ export function TaskScheduleEditor({
     openingSnapshot.deadlineDate ?? "",
   );
   const [invalid, setInvalid] = useState(false);
+
+  // locked = своя операция или чужая write в полёте (R2a-fix): controls,
+  // Save/Cancel и Escape блокируются, draft и frozen snapshot сохраняются.
+  const locked = pending || blocked;
 
   const normalized = useMemo(
     () => ({
@@ -74,7 +85,7 @@ export function TaskScheduleEditor({
     (normalized.plannedTime === null || normalized.plannedDate !== null);
 
   function handleSubmit(): void {
-    if (pending) {
+    if (locked) {
       return;
     }
     if (!valid || !dirty) {
@@ -105,7 +116,7 @@ export function TaskScheduleEditor({
         handleSubmit();
       }}
       onKeyDown={(event) => {
-        if (event.key === "Escape" && !pending) {
+        if (event.key === "Escape" && !locked) {
           event.preventDefault();
           onCancel();
         }
@@ -132,7 +143,7 @@ export function TaskScheduleEditor({
                 setInvalid(false);
               }
             }}
-            disabled={pending}
+            disabled={locked}
           />
         </div>
         <div>
@@ -146,7 +157,7 @@ export function TaskScheduleEditor({
             className="mt-1 min-h-11"
             value={timeDraft}
             onChange={(event) => setTimeDraft(event.target.value)}
-            disabled={pending || dateDraft === ""}
+            disabled={locked || dateDraft === ""}
             title={
               dateDraft === "" ? ru.tasks.schedule.timeNeedsDate : undefined
             }
@@ -170,7 +181,7 @@ export function TaskScheduleEditor({
                 setInvalid(false);
               }
             }}
-            disabled={pending}
+            disabled={locked}
           />
         </div>
       </div>
@@ -178,7 +189,7 @@ export function TaskScheduleEditor({
         {ru.tasks.schedule.clearHint}
       </p>
       <div className="mt-2 flex gap-2">
-        <Button type="submit" className="min-h-11 px-4" disabled={pending || !dirty || !valid}>
+        <Button type="submit" className="min-h-11 px-4" disabled={locked || !dirty || !valid}>
           {pending ? ru.tasks.schedule.saving : ru.tasks.schedule.save}
         </Button>
         <Button
@@ -186,7 +197,7 @@ export function TaskScheduleEditor({
           variant="outline"
           className="min-h-11 px-4"
           onClick={onCancel}
-          disabled={pending}
+          disabled={locked}
         >
           {ru.tasks.schedule.cancel}
         </Button>
