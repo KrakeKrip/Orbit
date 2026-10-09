@@ -71,19 +71,6 @@ export function TaskRow({
   state: TaskRowState;
   handlers: TaskRowHandlers;
 }) {
-  // Draft живёт пока editor смонтирован; key родителя гарантирует remount
-  // на каждое открытие, поэтому useState-инициализация из task.title
-  // выполняется заново при каждом открытии (prefilled).
-  const [renameDraft, setRenameDraft] = useState(task.title);
-  const renameInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (state.renameOpen) {
-      // Только фокус: draft инициализирован useState (без setState в effect).
-      renameInputRef.current?.focus();
-    }
-  }, [state.renameOpen]);
-
   const deadlineBadge = (() => {
     if (task.deadlineDate === null) {
       return null;
@@ -127,55 +114,7 @@ export function TaskRow({
       data-completed={completed || undefined}
     >
       {state.renameOpen ? (
-        <form
-          aria-busy={state.renamePending}
-          onSubmit={(event) => {
-            event.preventDefault();
-            handlers.onSubmitRename(renameDraft);
-          }}
-          onKeyDown={(event) => {
-            // R2a-fix: Escape заблокирован при любой write в полёте
-            // (busy = своя или чужая pending; свои labels не меняются).
-            if (event.key === "Escape" && !state.busy) {
-              event.preventDefault();
-              handlers.onRenameCancel();
-            }
-          }}
-        >
-          <Label htmlFor={`task-rename-input-${task.id}`}>
-            {ru.tasks.rename.action}
-          </Label>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              id={`task-rename-input-${task.id}`}
-              ref={renameInputRef}
-              autoFocus
-              type="text"
-              autoComplete="off"
-              className="min-h-11 max-w-72"
-              value={renameDraft}
-              onChange={(event) => setRenameDraft(event.target.value)}
-              disabled={state.busy}
-            />
-            <Button type="submit" className="min-h-11 px-4" disabled={state.busy}>
-              {state.renamePending ? ru.tasks.rename.saving : ru.tasks.rename.save}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-11 px-4"
-              onClick={handlers.onRenameCancel}
-              disabled={state.busy}
-            >
-              {ru.tasks.rename.cancel}
-            </Button>
-          </div>
-          {state.renameError ? (
-            <p role="alert" className="mt-2 text-sm text-destructive">
-              {ru.tasks.rename.error}
-            </p>
-          ) : null}
-        </form>
+        <TaskRenameEditor task={task} state={state} handlers={handlers} />
       ) : state.scheduleOpen ? (
         <>
           <p className="break-words text-sm font-medium leading-6">{task.title}</p>
@@ -314,6 +253,85 @@ export function TaskRow({
         </>
       )}
     </li>
+  );
+}
+
+/**
+ * R4: локальный rename editor — монтируется только пока форма открыта,
+ * поэтому useState-инициализация берёт актуальный task.title на КАЖДОЕ
+ * открытие: отменённый draft не воскресает, внешнее изменение + refresh
+ * дают свежий server title. Во время текущего открытия draft не
+ * сбрасывается из live prop — failed save сохраняет draft/error для
+ * retry. Общий busy блокирует input/Save/Cancel/Escape (R2a-fix);
+ * собственная операция показывает свои pending labels.
+ */
+function TaskRenameEditor({
+  task,
+  state,
+  handlers,
+}: {
+  task: TaskDTO;
+  state: TaskRowState;
+  handlers: Pick<TaskRowHandlers, "onSubmitRename" | "onRenameCancel">;
+}) {
+  const [renameDraft, setRenameDraft] = useState(task.title);
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    // Только фокус при открытии: draft инициализирован useState.
+    renameInputRef.current?.focus();
+  }, []);
+
+  return (
+    <form
+      aria-busy={state.renamePending}
+      onSubmit={(event) => {
+        event.preventDefault();
+        handlers.onSubmitRename(renameDraft);
+      }}
+      onKeyDown={(event) => {
+        // R2a-fix: Escape заблокирован при любой write в полёте
+        // (busy = своя или чужая pending; свои labels не меняются).
+        if (event.key === "Escape" && !state.busy) {
+          event.preventDefault();
+          handlers.onRenameCancel();
+        }
+      }}
+    >
+      <Label htmlFor={`task-rename-input-${task.id}`}>
+        {ru.tasks.rename.action}
+      </Label>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input
+          id={`task-rename-input-${task.id}`}
+          ref={renameInputRef}
+          autoFocus
+          type="text"
+          autoComplete="off"
+          className="min-h-11 max-w-72"
+          value={renameDraft}
+          onChange={(event) => setRenameDraft(event.target.value)}
+          disabled={state.busy}
+        />
+        <Button type="submit" className="min-h-11 px-4" disabled={state.busy}>
+          {state.renamePending ? ru.tasks.rename.saving : ru.tasks.rename.save}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 px-4"
+          onClick={handlers.onRenameCancel}
+          disabled={state.busy}
+        >
+          {ru.tasks.rename.cancel}
+        </Button>
+      </div>
+      {state.renameError ? (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {ru.tasks.rename.error}
+        </p>
+      ) : null}
+    </form>
   );
 }
 

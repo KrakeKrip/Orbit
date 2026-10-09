@@ -1,4 +1,9 @@
-import { expect, test } from "@playwright/test";
+import {
+  expect,
+  test,
+  request as apiRequest,
+} from "@playwright/test";
+import { e2ePort } from "./credentials";
 
 // Владелец fixtures — пользователь C: сессию никто не ревокирует, задачи C
 // не пересекаются с fixtures A (inbox.spec) и planning-задачами C.
@@ -1198,6 +1203,143 @@ test.describe("Write guard (R2a, desktop 1280)", () => {
     await completedMode.click();
     await expect(completedMode).toHaveAttribute("aria-pressed", "true");
     await expect(row).toHaveCount(0);
+  });
+
+  test("R4: Cancel→reopen показывает актуальный title; failed Save сохраняет draft/error для retry", async ({
+    page,
+  }) => {
+    const titleA = `R4 A ${run}`;
+    const draftB = `R4 B ${run}`;
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(titleA);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const createdRow = page.locator("li[data-task-id]", { hasText: titleA });
+    await expect(createdRow).toBeVisible();
+    const taskId = await createdRow.getAttribute("data-task-id");
+    expect(taskId).not.toBeNull();
+    // Открытый rename editor заменяет title-параграф: локатор по id.
+    const row = page.locator(`li[data-task-id="${taskId}"]`);
+    const openRename = () => row.getByRole("button", { name: "Переименовать" }).click();
+    const renameInput = row.getByLabel("Переименовать");
+
+    // Первое открытие: draft из актуального title, фокус в поле.
+    await openRename();
+    await expect(renameInput).toHaveValue(titleA);
+    await expect(renameInput).toBeFocused();
+
+    // Cancel: отменённый draft не воскресает при повторном открытии.
+    await renameInput.fill(draftB);
+    await row.getByRole("button", { name: "Отмена" }).click();
+    await expect(renameInput).toHaveCount(0);
+    await openRename();
+    await expect(renameInput).toHaveValue(titleA);
+    await expect(renameInput).toBeFocused();
+
+    // Failed Save: draft/error сохраняются; own pending блокирует controls.
+    let patchCount = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/v1/tasks/*", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+      patchCount += 1;
+      await gate;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: '{"error":{"code":"INTERNAL"}}',
+      });
+    });
+    await renameInput.fill(draftB);
+    await row.getByRole("button", { name: "Сохранить" }).click();
+    await expect.poll(() => patchCount).toBe(1);
+    await expect(renameInput).toBeDisabled();
+    // Собственная операция: label «Сохранение…» + disabled.
+    await expect(row.getByRole("button", { name: "Сохранение…" })).toBeDisabled();
+    await expect(row.getByRole("button", { name: "Отмена" })).toBeDisabled();
+
+    const failedPatch = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/api/v1/tasks/") &&
+        response.status() === 500,
+    );
+    release();
+    await failedPatch;
+    // Error + draft для retry; фокус возвращён в поле.
+    await expect(row.getByRole("alert")).toBeVisible();
+    await expect(renameInput).toHaveValue(draftB);
+    await expect(renameInput).toBeEnabled();
+    await expect(renameInput).toBeFocused();
+
+    // Retry через реальный API успешен; подтверждённый title виден.
+    await page.unroute("**/api/v1/tasks/*");
+    const savedPatch = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/api/v1/tasks/") &&
+        response.status() === 200,
+    );
+    await row.getByRole("button", { name: "Сохранить" }).click();
+    await savedPatch;
+    await expect(renameInput).toHaveCount(0);
+    await expect(row).toContainText(draftB);
+
+    // Новое открытие после успешного Save видит подтверждённый title.
+    await openRename();
+    await expect(renameInput).toHaveValue(draftB);
+    await row.getByRole("button", { name: "Отмена" }).click();
+  });
+
+  test("R4: внешний rename через API + Refresh — новое открытие показывает server title", async ({
+    page,
+  }) => {
+    const titleA = `R4 C ${run}`;
+    const titleC = `R4 D ${run}`;
+
+    await page.goto("/inbox");
+    await page.getByLabel("Название задачи").fill(titleA);
+    await page.getByRole("button", { name: "Добавить задачу" }).click();
+    const createdRow = page.locator("li[data-task-id]", { hasText: titleA });
+    await expect(createdRow).toBeVisible();
+    const taskId = await createdRow.getAttribute("data-task-id");
+    expect(taskId).not.toBeNull();
+
+    // Второй клиент (тот же аккаунт, authenticated API, Origin): реальный
+    // PATCH title=C; ответ 200 и persist подтверждены чтением item.
+    const origin = `http://127.0.0.1:${e2ePort}`;
+    const second = await apiRequest.newContext({
+      baseURL: origin,
+      storageState: USER_C_STATE,
+    });
+    try {
+      const patch = await second.patch(`/api/v1/tasks/${taskId}`, {
+        data: { title: titleC },
+        headers: { "content-type": "application/json", origin },
+      });
+      expect(patch.status()).toBe(200);
+      const patched = (await patch.json()) as { task: { title: string } };
+      expect(patched.task.title).toBe(titleC);
+      const item = await second.get(`/api/v1/tasks/${taskId}`);
+      expect(item.status()).toBe(200);
+      const payload = (await item.json()) as { task: { title: string } };
+      expect(payload.task.title).toBe(titleC);
+    } finally {
+      await second.dispose();
+    }
+
+    // UI Refresh: форма закрыта, новое открытие берёт server title C.
+    await page.getByRole("button", { name: "Обновить" }).click();
+    const row = page.locator(`li[data-task-id="${taskId}"]`);
+    await expect(row).toContainText(titleC);
+    await row.getByRole("button", { name: "Переименовать" }).click();
+    await expect(row.getByLabel("Переименовать")).toHaveValue(titleC);
+    await row.getByRole("button", { name: "Отмена" }).click();
   });
 });
 

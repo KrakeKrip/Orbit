@@ -463,3 +463,40 @@ READY_FOR_REVIEW (один общий небольшой TASK: тот же lates
 - Upcoming product fix (R3a) не переписывался; общий read controller не вводился; параллельные чистые reads разрешены; listPending disable-policy не перерабатывалась. Confirmed write + failed read остаётся read error/retry (не false failed mutation) — покрыто Inbox-тестом.
 - R4–R8, debug/EOF cleanup — не тронуты; TASK-008 DONE не объявляется.
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились.
+
+---
+
+# Коррекция TASK-008-R4 — rename draft на новое открытие
+
+## Статус
+
+READY_FOR_REVIEW (только rename editor lifecycle; R1/R2/R3 приняты на executor HEAD `54780f15bbecc04668e71f3a0529905833d2cd87` (review `reports/TASK-008-R3b.md`); R5–R8 не начаты). Assignment `tasks/TASK-008-R4.md`; старт — coordinator commit `f098910a75c976ddff7a0d9c860f5f16c607111a` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+`renameDraft` жил в TaskRow (стабильный key по task.id): после Cancel черновик B возвращался при повторном открытии, а внешнее изменение title + refresh не попадало в новое открытие. Комментарий о «remount по key родителя» был неверен. Исправление только в `src/components/orbit/task-row.tsx`:
+
+- Новый локальный child `TaskRenameEditor` (в том же файле) — монтируется ТОЛЬКО пока форма открыта, `useState(task.title)` инициализирует draft из актуального title на каждом открытии; Cancel → reopen даёт подтверждённый server title, отменённый draft не воскресает. Во время ТЕКУЩЕГО открытия draft не сбрасывается из live prop — failed save сохраняет draft/error для retry.
+- Key всей строки НЕ менялся; hook/screens/API/service/schema не тронуты. Frozen schedule snapshot R1 не затронут. Общий busy блокирует input/Save/Cancel/Escape (R2a-fix), own pending labels («Сохранение…»), focus on open/cancel/success/error, single-form policy, actor/unmount/StrictMode — сохранены. Неверный комментарий о remount удалён/заменён точным.
+
+## Регрессии (tests/e2e/write-guard.spec.ts, 13 → 15 chromium-тестов, R4-label)
+
+1. **R4: Cancel→reopen + failed Save retry** — первое открытие: draft=titleA, фокус в поле; fill B → Cancel → reopen = A (draft не воскресает, фокус снова в поле); fill B → удержанный PATCH 500 (delivery `expect.poll`): input/Save(«Сохранение…»)/Отмена disabled; release → error + draft B сохранены, input enabled и в фокусе; unrouted retry → PATCH 200, editor закрыт, строка показывает B; reopen видит B.
+2. **R4: внешний rename + Refresh** — форма закрыта; независимый authenticated API client (тот же аккаунт, точный Origin) делает реальный PATCH title=C: response 200 + `task.title===C` + повторный GET item подтверждает persist; UI «Обновить» → строка содержит C → rename показывает C.
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| Состояние test DB | Штатный PG 17.11 (55432) доступен; Colima/CRM/сторонние сервисы не трогались; credentials не выводились |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `CI=1 E2E_PORT=37460 npm run test:e2e -- write-guard.spec.ts inbox.spec.ts --project=chromium --grep "R4:\|rename\|quick-add по Enter"` (свежий `next build`) | 16 passed + 1 failed: мой ассерт искал кнопку «Сохранить» в момент собственной pending, когда label уже «Сохранение…» — тестовый дефект локатора, не продукта; исправлен на точный pending-label |
+| `CI=1 E2E_PORT=37461 npx playwright test write-guard -g "R4:"` | exit 0 — 5/5 (3 auth-setup + 2 R4) |
+| `CI=1 E2E_PORT=37462 npm run test:e2e -- write-guard.spec.ts inbox.spec.ts --project=chromium --grep "R4:\|rename\|quick-add по Enter"` (финальный, свежий `next build`) | exit 0 — **17/17**: 3 auth-setup + 2 R4 + все Inbox rename/guard flows (quick-add по Enter, failed create, R1/R2/R3/R3b, rename pending guard) |
+| Leftovers | read-only check после прогонов: **0** orbit_test\*-баз; `git diff --check` чист. Full suites/unit/DB/auth не повторялись (контракты не менялись) |
+
+## Ограничения / не входило
+
+- Key строки, hook/screens/API/service/schema, frozen snapshot R1 — не менялись. R5–R8, debug/EOF cleanup (в т.ч. видный в логах «R3 DEBUG» из inbox.spec) — не тронуты; TASK-008 DONE не объявляется.
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились.
