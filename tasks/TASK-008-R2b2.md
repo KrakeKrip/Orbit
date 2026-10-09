@@ -1,5 +1,7 @@
 # TASK-008-R2b2 — безопасная смена режима в Upcoming
 
+Статус review 556c9f7: NEEDS_FIXES только порядок guard/расчёт; reports/TASK-008-R2b2.md, назначена tasks/TASK-008-R2b2-fix.md.
+
 ## Единственная цель и база
 
 Только экран Upcoming: не менять status или 7-дневный диапазон во время task write либо при открытой rename/schedule/delete форме. Иначе старый write callback читает старый режим, либо активная форма скрывается с сохранённым выбором. R1/R2a/R2b1 приняты; executor HEAD c68d3a88a884ea6f3d3eda90a03a86cfc1d31429, review reports/TASK-008-R2b1.md. Начать с нового coordinator assignment HEAD, проверить root/branch/status. Ветка task/TASK-008; worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
