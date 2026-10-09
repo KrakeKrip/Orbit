@@ -110,4 +110,3 @@ READY_FOR_REVIEW (только R1 [P1] из `reports/TASK-008.md`; R2–R8 не 
 - R2–R8 не исправлялись; full auth/E2E прогон не выполнялся (по заданию — перед итоговой приёмкой TASK-008). Известный R6 auth timezone failure остаётся открытым.
 - Debug-остатки в тестовых файлах (inbox.spec PROBE-листенеры, «R3 DEBUG», navigation OVERFLOW) и EOF-пустые строки в task-row.tsx / tasks-planning.auth.test.ts из review — чужие для R1 файлы, не тронуты (отдельная финальная уборка).
 - Trace `'on'` в playwright.config оставлен как был; main/старые worktree/localhost:3000/CRM/coord docs/protective hooks не менялись; merge/push/amend/rebase/reset/stash не выполнялись.
-
