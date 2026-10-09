@@ -128,10 +128,10 @@ export function UpcomingBoard({
     ),
   });
 
-  function navigate(newStart: string): void {
+  function navigateTo(newStart: string): void {
     // R2b2: статус/диапазон не меняются при write в полёте или открытой
-    // форме — синхронный ref-guard до replaceState/setState/refetch и до
-    // вычисления нового диапазона; заблокированная попытка не стартует GET.
+    // форме — синхронный ref-guard до replaceState/setState/refetch;
+    // заблокированная попытка не стартует GET.
     if (listPending || writes.anyInFlight() || writes.anyFormOpen()) {
       return;
     }
@@ -139,6 +139,16 @@ export function UpcomingBoard({
     window.history.replaceState(null, "", `/upcoming?start=${newStart}`);
     setStartDate(newStart);
     void refetch(statusMode, newStart);
+  }
+
+  // R2b2-fix: guard выполняется ДО addCivilDays — для заблокированной
+  // попытки расчёт даты не выполняется вовсе (сами границы 1900/2199 —
+  // отдельная коррекция R5).
+  function navigateByDays(deltaDays: number): void {
+    if (listPending || writes.anyInFlight() || writes.anyFormOpen()) {
+      return;
+    }
+    navigateTo(addCivilDays(startDate, deltaDays));
   }
 
   // R2b2: смена status-режима запрещена при write в полёте или открытой
@@ -255,7 +265,7 @@ export function UpcomingBoard({
           type="button"
           variant="outline"
           className="min-h-11 px-4"
-          onClick={() => navigate(addCivilDays(startDate, -7))}
+          onClick={() => navigateByDays(-7)}
           disabled={listPending || writes.anyPending || writes.formOpen}
         >
           {ru.tasks.upcoming.prev}
@@ -264,7 +274,7 @@ export function UpcomingBoard({
           type="button"
           variant="outline"
           className="min-h-11 px-4"
-          onClick={() => navigate(addCivilDays(startDate, 7))}
+          onClick={() => navigateByDays(7)}
           disabled={listPending || writes.anyPending || writes.formOpen}
         >
           {ru.tasks.upcoming.next}
@@ -273,7 +283,7 @@ export function UpcomingBoard({
           type="button"
           variant="outline"
           className="min-h-11 px-4"
-          onClick={() => navigate(context.today)}
+          onClick={() => navigateTo(context.today)}
           disabled={listPending || writes.anyPending || writes.formOpen}
         >
           {ru.tasks.upcoming.current}

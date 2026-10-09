@@ -281,3 +281,34 @@ Pending guard держится весь mutation+read flow (anyInFlight/finally 
 - Inbox/Today не менялись; аналогичная mode-защита для них — отдельный малый шаг, если потребуется review. R3 (read sequencing), R4, R5–R8, старая отладка и EOF-уборка (task-row.tsx:317, tasks-planning.auth.test.ts:746) — не тронуты. Full auth/E2E сейчас не требовались.
 - Pre-fetch write guard (R2a), single-editor policy (R2b1), frozen snapshot (R1), service/API/schema — сохранены без переработки.
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
+
+---
+
+# Коррекция TASK-008-R2b2-fix — guard до расчёта даты
+
+## Статус
+
+READY_FOR_REVIEW (единственная минимальная правка порядка вызовов [P3] из `reports/TASK-008-R2b2.md`; остальная R2b2 policy, R1/R2a/R2b1 сохранены; R5 и остальные задания не начаты). Assignment `tasks/TASK-008-R2b2-fix.md`; старт — coordinator commit `033e2103180d28a99a7d91be467a10bca80003d4` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+`onClick={() => navigate(addCivilDays(startDate, ±7))}` вычислял аргумент `addCivilDays` ДО входа в navigate с guard — при заблокированной попытке расчёт даты выполнялся (и мог бросить исключение, которое guard не перехватывает), вопреки заданию R2b2. Исправление только в `src/components/orbit/upcoming-board.tsx`:
+
+- `navigateTo(newStart: string)` — прежний guard (listPending/anyInFlight/anyFormOpen) + replaceState/setState/refetch; для кнопки «Ближайшие 7 дней» (`navigateTo(context.today)` — абсолютная дата, расчёта нет).
+- Новый `navigateByDays(deltaDays: number)` — guard **до** `addCivilDays(startDate, deltaDays)`, затем `navigateTo(...)`; кнопки prev/next вызывают `navigateByDays(-7)` / `navigateByDays(7)` — ленивый расчёт внутри guarded handler.
+
+Заблокированный callback не рассчитывает дату и не делает effects. Status handling, reactive flags, single-form/write guards/frozen snapshot не менялись; calendar bounds (R5) не чинились. Новые тесты не добавлялись (по заданию существующие две Upcoming guard-регрессии уже покрывают UI policy; порядок вычислений подтверждается source review).
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `CI=1 E2E_PORT=37300 npm run test:e2e -- tests/e2e/write-guard.spec.ts --project=chromium --grep "Upcoming:"` (штатный свежий `next build`, auth-setup dependencies штатно) | exit 0 — **5/5** (3 auth-setup + 2 Upcoming guard-регрессии R2b2) |
+| Leftovers | read-only check после прогона: **0** orbit_test\*-баз (штатный PG 17.11, 55432); `git diff --check` чист |
+
+## Ограничения / не входило
+
+- Изменён единственный продуктовый файл upcoming-board.tsx + executor report; R5 (calendar bounds), R3, R4, R6–R8, debug/EOF cleanup — не тронуты. Full auth/E2E не требовались (правка порядка двух callbacks).
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
