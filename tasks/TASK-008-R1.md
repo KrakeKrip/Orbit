@@ -2,6 +2,8 @@
 
 ## Назначение
 
+Статус: **ACCEPTED (только R1)** после независимого review executor SHA `3b3688ad66845dc80216105bb20d85375293592e`; reports/TASK-008-R1.md. Это задание завершено; следующая выдача tasks/TASK-008-R2a.md.
+
 Одна небольшая коррекция по независимому review `reports/TASK-008.md`, **только R1 [P1]**. Другие пункты review в этом запуске не исправлять.
 
 Worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-008`, ветка `task/TASK-008`. Проверенная реализация `6388a088a13d657e236d4120ff094586c8317186`; старт correction — текущий coordinator review commit, проверить `git rev-parse HEAD`. Прочитать AGENTS.md, исходный tasks/TASK-008.md и R1 в review. Не начинать TASK-009.
