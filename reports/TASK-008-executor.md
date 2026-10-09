@@ -157,4 +157,3 @@ Create имел собственный `createInFlight`, невидимый shar
 - Проверка на целевом PostgreSQL 17 (55432/Colima) в этом запуске невозможна — сервис выключен не мной; целевой E2E выполнен на временном PG 18.6 (как и независимый review R1).
 - Debug-остатки в inbox.spec (PROBE-листенеры, «R3 DEBUG») и EOF-пустые строки task-row.tsx/tasks-planning.auth.test.ts — не R2a, не тронуты.
 - main/другие worktree/localhost:3000/CRM/coord docs/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись. R2/TASK-008 целиком НЕ приняты — только эта коррекция на review.
-
