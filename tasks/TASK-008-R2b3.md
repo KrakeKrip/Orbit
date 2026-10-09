@@ -1,5 +1,7 @@
 # TASK-008-R2b3 — безопасные вкладки Inbox
 
+Статус: ACCEPTED на 0274215; reports/TASK-008-R2b3.md. Следующее задание только tasks/TASK-008-R2b4.md.
+
 ## Единственная цель
 
 Только Inbox: «Открытые»/«Завершённые» не переключаются при pending task write либо открытой rename/schedule/delete форме. Сейчас tasks-view.tsx напрямую вызывает setTab; смена вкладки может скрыть активную форму и её draft, пока shared hook сохраняет выбор. R1/R2a/R2b1/R2b2 приняты; executor HEAD 9d9566e5a2434f7272840e9b3db21f0aa5248310. Начать с нового coordinator assignment HEAD, проверить root/branch/status. Ветка task/TASK-008; worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
