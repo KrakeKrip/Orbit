@@ -384,3 +384,43 @@ Mode-кнопки «Открытые»/«Завершённые» в Today вы�
 
 - Inbox/Upcoming не менялись; R3 (read sequencing), R4 (rename draft reinit), R5–R8, debug/EOF cleanup — не тронуты. Full auth/E2E и повтор unit не требовались для этой UI policy (контракты hook не изменялись).
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R2/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
+
+---
+
+# Коррекция TASK-008-R3a — latest read в Upcoming
+
+## Статус
+
+READY_FOR_REVIEW (только Upcoming read lifecycle; R1/R2 приняты на executor HEAD `15c54871638296a9c1820127edf3308b7fe995e0`; Today/Inbox read sequencing и R4–R8 не начаты). Assignment `tasks/TASK-008-R3a.md`; старт — coordinator commit `a325fb408affae115b9e88514820e759de70e17a` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+В `refetch` (upcoming-board.tsx) requestSeq проверялся только после fetch; после `await response.json()` guard отсутствовал, а catch/finally проверяли лишь actor/mounted: старый abort после успешного нового read показывал ложную list error, старый finally снимал pending нового read, старый JSON перезаписывал tasks/context. Исправление — один продукт-файл, без общего read controller:
+
+- `src/components/orbit/upcoming-board.tsx`: локальный `stillLatest()` (mounted + actor + latest seq) проверяется после КАЖДОГО await — после fetch (как раньше), после `response.json()` (новый), в catch (добавлен seq) и в finally (добавлен seq). Stale исход (success/body/HTTP error/network reject) ничего не записывает и не снимает pending нового запроса; latest success/error/finally применяются как раньше, GET-only retry работает. Параллельные чистые reads не запрещены (mode switch во время GET доступен по R2 policy); mutation → refetch outcomes, guards write/form/mode, URL navigation, API/service/schema, dates/timezone не менялись.
+
+## Регрессии (tests/e2e/read-lifecycle.spec.ts, новый, 3 теста, user C, чистые mode reads)
+
+1. **Abort старого после успеха нового**: GET completed удержан (delivery `expect.poll`), GET all применён → старый прерван route.abort() → без list error/retry, mode/список latest; затем короткая фаза последнего failed read (следующий GET aborted) → error/«Повторить» видны → GET-only retry восстанавливает open-список.
+2. **Abort старого при ещё удержанном новом**: оба GET удержаны, «Обновление…» видно; abort старого НЕ снимает pending нового и не даёт ошибки; release нового → штатный success применён, pending снят («Обновить» вернулся).
+3. **Задержанный response.json()**: test-only wrapper `window.fetch` (восстанавливается `restore()`, без product endpoints/env/hooks) возвращает для GET completed Response с управляемым `json()` — старый read проходит initial seq guard и висит на JSON await; новый all применён; release старого JSON → tasks/context остаются latest (обе отличимые строки видны), без ошибки; `pageerror`/unhandled rejection — ноль.
+
+Первый прогон spec упал на дефекте самих fixtures: titles трёх тестов были одинаковыми (общий `run`) и строки накапливались в аккаунте C → strict mode violation; исправлено уникальными per-test labels — product-дефекта не было.
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| Состояние test DB | Штатный PG 17.11 (55432) доступен; Colima/CRM/сторонние сервисы не трогались; credentials не выводились |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `CI=1 E2E_PORT=37380 npm run test:e2e -- read-lifecycle.spec.ts --project=chromium` (свежий `next build`) | 5 passed + 1 failed — fixtures-дефект выше, исправлен |
+| `CI=1 E2E_PORT=37381 npx playwright test read-lifecycle --project=chromium` | exit 0 — 6/6 (3 auth-setup + 3 R3a) |
+| `CI=1 E2E_PORT=37382 npm run test:e2e -- read-lifecycle.spec.ts write-guard.spec.ts --project=chromium --grep "R3a:\|Upcoming:"` (финальный, свежий `next build`) | exit 0 — **8/8**: 3 auth-setup + 3 R3a + 2 Upcoming write/form guard (R2b2). Повтор unit не требовался (контракты hook не менялись) |
+| Leftovers | read-only check после прогонов: **0** orbit_test\*-баз; `git diff --check` чист |
+
+## Ограничения / не входило
+
+- Today/Inbox read lifecycle не менялись (их seq-обработка — отдельные малые шаги, если потребуются); R4–R8, debug/EOF cleanup — не тронуты. Full auth/E2E/unit повтор не требовались (контракты hook не изменялись).
+- Общий read controller не вводился; параллельные чистые reads остались разрешены; Abort старого запроса как оптимизацию не добавлял (защита всех исходов сделана guards, как требовало задание).
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R3/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.

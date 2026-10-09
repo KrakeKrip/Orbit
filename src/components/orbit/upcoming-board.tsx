@@ -80,15 +80,19 @@ export function UpcomingBoard({
       const requestedActorId = actorRef.current;
       setListPending(true);
       const requestSeq = ++requestSeqRef.current;
+      // R3a: исход read применяется только если запрос всё ещё latest —
+      // mounted + actor + latest seq, проверяемые после КАЖДОГО await
+      // (fetch, JSON parsing), в catch и finally; stale исход ничего не
+      // записывает и не снимает pending нового запроса.
+      const stillLatest = (): boolean =>
+        mountedRef.current &&
+        actorRef.current === requestedActorId &&
+        requestSeq === requestSeqRef.current;
       try {
         const response = await fetch(
           `/api/v1/tasks?view=upcoming&status=${mode}&start=${rangeStart}`,
         );
-        if (
-          !mountedRef.current ||
-          actorRef.current !== requestedActorId ||
-          requestSeq !== requestSeqRef.current
-        ) {
+        if (!stillLatest()) {
           return false;
         }
         if (!response.ok) {
@@ -96,6 +100,11 @@ export function UpcomingBoard({
           return false;
         }
         const payload = (await response.json()) as UpcomingPayload;
+        // R3a: stale response.json() не перезаписывает tasks/context
+        // уже применённого нового read.
+        if (!stillLatest()) {
+          return false;
+        }
         setTasks(payload.tasks);
         setContext({
           timezone: payload.context.timezone,
@@ -105,12 +114,14 @@ export function UpcomingBoard({
         setListError(false);
         return true;
       } catch {
-        if (mountedRef.current && actorRef.current === requestedActorId) {
+        // Stale network/JSON reject не показывает ложную ошибку нового read.
+        if (stillLatest()) {
           setListError(true);
         }
         return false;
       } finally {
-        if (mountedRef.current && actorRef.current === requestedActorId) {
+        // Stale finally не снимает pending выполняющегося нового read.
+        if (stillLatest()) {
           setListPending(false);
         }
       }
