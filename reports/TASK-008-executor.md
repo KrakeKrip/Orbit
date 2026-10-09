@@ -424,3 +424,42 @@ READY_FOR_REVIEW (только Upcoming read lifecycle; R1/R2 приняты н�
 - Today/Inbox read lifecycle не менялись (их seq-обработка — отдельные малые шаги, если потребуются); R4–R8, debug/EOF cleanup — не тронуты. Full auth/E2E/unit повтор не требовались (контракты hook не изменялись).
 - Общий read controller не вводился; параллельные чистые reads остались разрешены; Abort старого запроса как оптимизацию не добавлял (защита всех исходов сделана guards, как требовало задание).
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились. R3/TASK-008 целиком не объявляются принятыми — только эта коррекция на review.
+
+---
+
+# Коррекция TASK-008-R3b — завершение latest-read guard (Today + Inbox)
+
+## Статус
+
+READY_FOR_REVIEW (один общий небольшой TASK: тот же latest-read guard для Today/Inbox + детерминированная синхронизация read-lifecycle; R3a Upcoming product fix принят и не переписывался; R1/R2 сохранены; R4–R8 не начаты). Assignment `tasks/TASK-008-R3b.md`; R3a принят на `18f13bad91248f09f0dcca70c6ac8808f4ac97df` (review `reports/TASK-008-R3a.md`); старт — coordinator commit `a8fefb92f10e49de36d0397bb260dc6aac5537ba` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+- `src/components/orbit/today-board.tsx`: `refetch` — принятый pattern `stillLatest()` (mounted + actor + latest seq) после КАЖДОГО await (fetch, JSON parsing), в catch и finally; stale исходы ничего не пишут и не снимают pending нового read.
+- `src/components/orbit/tasks-view.tsx`: `onConfirmed` — success (после Promise.all, включая JSON) уже был защищён; добавлен `stillLatest()` и seq в catch/finally — stale отказ не создаёт ложную list error / false failed create, stale finally не снимает pending нового read. Confirmed write + failed refresh остаётся read error/retry.
+- Чистые `fetchInboxList` (без state) архитектурно не менялись; общий controller/helper не вводился; параллельные чистые reads не запрещены; listPending disable-policy не тронута; R1 frozen snapshot, write/form/mode guards (R2a–R2b4), actor/unmount/StrictMode, API/service/schema — сохранены.
+
+## Test-синхронизация (tests/e2e/read-lifecycle.spec.ts, 3 → 7 chromium-тестов)
+
+- Детерминированные примитивы: one-shot `StatusGate` (удержание первой доставки статуса, счётчик delivery, `abortedDelivered` сигнал фактической отправки abort); page-side read tracker (`addInitScript`, восстанавливается `restore()`): settle-счётчики fetch resolve/reject по статусу и управляемая задержка `json()` с сигналами `jsonEntered`/`jsonSettled`; `flush()` — один macrotask (не sleep) для обработки catch/finally после settle-сигнала. Правка Playwright-семантики: второй маршрут t1 пробрасывает через `route.fallback()` (не `continue`, который ушёл бы в сеть минуя гейт-маршрут).
+- Upcoming (R3a, усилены): jsonEntered поллится ДО запуска нового read; после release старого — jsonSettled/abortedDelivered + flush до negative/pending assertions; все гейты освобождаются в finally, wrapper восстанавливается.
+- **Today (новые, open/completed без All)**: old abort после latest success; old abort при удержанном новом (pending нового не снимается, затем release → success); delayed json() по той же схеме с jsonEntered. Собственные отличимые open/completed задачи на Today (quick-add planned=today + реальный toggle), без форм/writes.
+- **Inbox (новый)**: старый manual Refresh (пара GET open/completed) удержан раздельными гейтами; реальный quick-add POST → новый onConfirmed read применён (строка видна, черновик очищен); старая пара abort после успеха нового → без list error, без ложного failed create, pending снят только новым. Доставки считаются раздельно по статусу; оба гейта очищаются.
+
+## Проверки (Node v24.21.0 — /tmp/orbit-node24)
+
+| Команда | Результат |
+| --- | --- |
+| Состояние test DB | Штатный PG 17.11 (55432) доступен всю сессию; Colima/CRM/сторонние сервисы не трогались; credentials не выводились |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| Промежуточные прогоны read-lifecycle | 1-й: 5 failed — мои дефекты теста (tracker установлен после goto; в t1 второй маршрут с `continue` обходил гейт-маршрут; в t4b потерян вызов installReadTracker); 2-й: 4 failed; 3-й: 3 failed; после исправлений — см. финал. Product-дефектов не было: guards отрабатывали во всех гонках |
+| `CI=1 E2E_PORT=37446 npx playwright test read-lifecycle --project=chromium` | exit 0 — **10/10** (3 auth-setup + 7) |
+| `CI=1 E2E_PORT=37447 npm run test:e2e -- read-lifecycle.spec.ts write-guard.spec.ts --project=chromium --grep "R3a:\|R3b\|Upcoming:\|Вкладки\|режимы"` (финальный, свежий `next build`) | exit 0 — **16/16**: 3 auth-setup + 3 R3a Upcoming + 3 R3b Today + 1 R3b Inbox + 2 Upcoming mode guard (R2b2) + 2 Inbox tabs (R2b3) + 2 Today modes (R2b4) |
+| Leftovers | read-only check после прогонов: **0** orbit_test\*-баз; `git diff --check` чист. Повтор unit/DB/auth/full E2E не выполнялся (по заданию; полные gates — перед итоговой приёмкой TASK-008) |
+
+## Ограничения / не входило
+
+- Upcoming product fix (R3a) не переписывался; общий read controller не вводился; параллельные чистые reads разрешены; listPending disable-policy не перерабатывалась. Confirmed write + failed read остаётся read error/retry (не false failed mutation) — покрыто Inbox-тестом.
+- R4–R8, debug/EOF cleanup — не тронуты; TASK-008 DONE не объявляется.
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились.

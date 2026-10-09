@@ -93,16 +93,21 @@ export function TasksView({
     const requestedActorId = actorRef.current;
     setListPending(true);
     const requestSeq = ++requestSeqRef.current;
+    // R3b: исход refresh применяется только если запрос всё ещё latest —
+    // mounted + actor + latest seq. Success (включая JSON через
+    // Promise.all) уже защищён guard'ом ниже; catch/finally тоже
+    // учитывают seq — stale отказ/finally не создают ложную ошибку и не
+    // снимают pending нового read.
+    const stillLatest = (): boolean =>
+      mountedRef.current &&
+      actorRef.current === requestedActorId &&
+      requestSeq === requestSeqRef.current;
     try {
       const [open, completed] = await Promise.all([
         fetchInboxList("open"),
         fetchInboxList("completed"),
       ]);
-      if (
-        !mountedRef.current ||
-        actorRef.current !== requestedActorId ||
-        requestSeq !== requestSeqRef.current
-      ) {
+      if (!stillLatest()) {
         return false;
       }
       if (open === null || completed === null) {
@@ -116,12 +121,12 @@ export function TasksView({
       setListError(false);
       return true;
     } catch {
-      if (mountedRef.current && actorRef.current === requestedActorId) {
+      if (stillLatest()) {
         setListError(true);
       }
       return false;
     } finally {
-      if (mountedRef.current && actorRef.current === requestedActorId) {
+      if (stillLatest()) {
         setListPending(false);
       }
     }

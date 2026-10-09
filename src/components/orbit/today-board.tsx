@@ -80,15 +80,18 @@ export function TodayBoard({
       const requestedActorId = actorRef.current;
       setListPending(true);
       const requestSeq = ++requestSeqRef.current;
+      // R3b: исход read применяется только если запрос всё ещё latest —
+      // mounted + actor + latest seq после КАЖДОГО await (fetch, JSON
+      // parsing), в catch и finally (тот же pattern, что R3a Upcoming).
+      const stillLatest = (): boolean =>
+        mountedRef.current &&
+        actorRef.current === requestedActorId &&
+        requestSeq === requestSeqRef.current;
       try {
         const response = await fetch(
           `/api/v1/tasks?view=today&status=${mode}`,
         );
-        if (
-          !mountedRef.current ||
-          actorRef.current !== requestedActorId ||
-          requestSeq !== requestSeqRef.current
-        ) {
+        if (!stillLatest()) {
           return false;
         }
         if (!response.ok) {
@@ -96,6 +99,9 @@ export function TodayBoard({
           return false;
         }
         const payload = (await response.json()) as TodayPayload;
+        if (!stillLatest()) {
+          return false;
+        }
         setTasks(payload.tasks);
         setContext({
           timezone: payload.context.timezone,
@@ -105,12 +111,12 @@ export function TodayBoard({
         setListError(false);
         return true;
       } catch {
-        if (mountedRef.current && actorRef.current === requestedActorId) {
+        if (stillLatest()) {
           setListError(true);
         }
         return false;
       } finally {
-        if (mountedRef.current && actorRef.current === requestedActorId) {
+        if (stillLatest()) {
           setListPending(false);
         }
       }
