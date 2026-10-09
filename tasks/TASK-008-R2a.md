@@ -1,5 +1,7 @@
 # TASK-008-R2a — один task write в полёте
 
+Статус review 9932004: NEEDS_FIXES — reports/TASK-008-R2a.md; назначен только узкий остаток tasks/TASK-008-R2a-fix.md.
+
 ## Назначение
 
 Только первая часть R2 из `reports/TASK-008.md`: **create и row mutations используют общий write guard**. R1 принят на `3b3688ad66845dc80216105bb20d85375293592e`, review `reports/TASK-008-R1.md`. Старт — текущий coordinator assignment commit; проверить root/HEAD/status. Ветка `task/TASK-008`, worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-008`.
