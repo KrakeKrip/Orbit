@@ -1,5 +1,7 @@
 # TASK-008-FINAL — финальная уборка и gates
 
+**CLEANUP ACCEPTED**, 2026-10-12: 34998aea9cef6970e52c73d434d1e816db764360; full auth gate NEEDS_FIXES из-за SQL timezone fixture, reports/TASK-008-FINAL.md. Следующее задание tasks/TASK-008-FINAL-EXPIRY.md.
+
 ## Старт и одна цель
 
 Продуктовые R1–R8 приняты, последняя реализация 01ac0cea9dd44de1bd33b5f69daf737ce30c83ca; reports/TASK-008-R8.md оставляет только test cleanup. Начать с нового coordinator assignment HEAD; записать SHA, проверить root/branch/status. task/TASK-008, /Users/atlhnv/Codex/orbit-worktrees/TASK-008. Цель — небольшая уборка и один полный проверочный проход; новые функции не реализовывать.
