@@ -69,6 +69,21 @@ for (const width of [360, 390, 768, 1280]) {
         const clientWidth = await page.evaluate(
           () => document.documentElement.clientWidth,
         );
+        if (scrollWidth > clientWidth) {
+          const offscreen = await page.evaluate((max) => {
+            const out: string[] = [];
+            document.querySelectorAll("*").forEach((el) => {
+              const rect = el.getBoundingClientRect();
+              if (rect.right > max + 1) {
+                out.push(
+                  `${el.tagName} id=${el.id} right=${Math.round(rect.right)} text=${(el.textContent ?? "").slice(0, 30)}`,
+                );
+              }
+            });
+            return out.slice(0, 8);
+          }, clientWidth);
+          console.log(`OVERFLOW ${route.path}:`, JSON.stringify(offscreen));
+        }
         expect(scrollWidth, `route ${route.path}`).toBeLessThanOrEqual(
           clientWidth,
         );

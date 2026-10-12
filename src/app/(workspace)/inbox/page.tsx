@@ -2,16 +2,18 @@ import { TasksView } from "@/components/orbit/tasks-view";
 import { PageHeader } from "@/components/orbit/page-header";
 import { ru } from "@/lib/i18n/ru";
 import { requireUserOrRedirect } from "@/server/auth/session";
-import { listInboxTasks } from "@/server/tasks/service";
+import { listTasksView } from "@/server/tasks/service";
+import { getTasksReadContext } from "@/server/tasks/context";
 import { toTaskDTO } from "@/lib/tasks";
 
 export default async function InboxPage() {
-  // Actor и начальные списки только из проверенной сессии; открытые и
-  // завершённые Inbox-задачи загружаются независимо.
+  // Actor, начальные списки и read context (timezone/today) только из
+  // проверенной сессии; открытые и завершённые Inbox-задачи независимо.
   const user = await requireUserOrRedirect();
+  const context = await getTasksReadContext(user.id);
   const [open, completed] = await Promise.all([
-    listInboxTasks(user.id, "open"),
-    listInboxTasks(user.id, "completed"),
+    listTasksView(user.id, "inbox", "open", context.today),
+    listTasksView(user.id, "inbox", "completed", context.today),
   ]);
 
   return (
@@ -24,6 +26,8 @@ export default async function InboxPage() {
         initialOpen={open.map(toTaskDTO)}
         initialCompleted={completed.map(toTaskDTO)}
         actorId={user.id}
+        today={context.today}
+        timezone={context.timezone}
       />
     </div>
   );

@@ -81,12 +81,12 @@ test.describe("входящие: quick-add/rename/complete (desktop 1280)", () =
 
     await row.getByRole("button", { name: "Удалить" }).click();
     await expect(page.getByText("Удалить задачу?")).toBeVisible();
-    await page.getByRole("button", { name: "Отмена", exact: true }).click();
+    await row.getByRole("button", { name: "Отмена", exact: true }).click();
     await expect(row).toBeVisible();
 
     await row.getByRole("button", { name: "Удалить" }).click();
     await expect(page.getByText("Удалить задачу?")).toBeVisible();
-    await page
+    await row
       .getByRole("button", { name: "Удалить", exact: true })
       .last()
       .click();
@@ -292,22 +292,26 @@ test.describe("входящие: quick-add/rename/complete (desktop 1280)", () =
     await row.getByRole("button", { name: "Удалить" }).focus();
     await page.keyboard.press("Enter");
     await expect(page.getByText("Удалить задачу?")).toBeVisible();
-    let activeId = await page.evaluate(() => document.activeElement?.id ?? "");
-    expect(activeId).toBe(`task-delete-cancel-${taskId}`);
+    // Под нагрузкой коммиты запаздывают: авто-ретраящий локатор-ассерт.
+    await expect(
+      page.locator(`#task-delete-cancel-${taskId}`),
+    ).toBeFocused({ timeout: 5000 });
 
     // Escape до DELETE: отмена + фокус на trigger, мутирующего запроса нет.
     await page.keyboard.press("Escape");
     await expect(page.getByText("Удалить задачу?")).toHaveCount(0);
-    activeId = await page.evaluate(() => document.activeElement?.id ?? "");
-    expect(activeId).toBe(`task-delete-trigger-${taskId}`);
+    await expect(
+      page.locator(`#task-delete-trigger-${taskId}`),
+    ).toBeFocused({ timeout: 5000 });
     expect(deleteCount).toBe(0);
 
     // Явная Отмена: фокус на trigger, без DELETE.
     await row.getByRole("button", { name: "Удалить" }).click();
     await expect(page.getByText("Удалить задачу?")).toBeVisible();
-    await page.getByRole("button", { name: "Отмена", exact: true }).click();
-    activeId = await page.evaluate(() => document.activeElement?.id ?? "");
-    expect(activeId).toBe(`task-delete-trigger-${taskId}`);
+    await row.getByRole("button", { name: "Отмена", exact: true }).click();
+    await expect(
+      page.locator(`#task-delete-trigger-${taskId}`),
+    ).toBeFocused({ timeout: 5000 });
     expect(deleteCount).toBe(0);
 
     // Keyboard confirm: ровно один DELETE; после удаления фокус на quick-add.
@@ -319,8 +323,9 @@ test.describe("входящие: quick-add/rename/complete (desktop 1280)", () =
       page.locator("li[data-task-id]", { hasText: name }),
     ).toHaveCount(0);
     expect(deleteCount).toBe(1);
-    activeId = await page.evaluate(() => document.activeElement?.id ?? "");
-    expect(activeId).toBe("task-title-input");
+    await expect(page.locator("#task-title-input")).toBeFocused({
+      timeout: 5000,
+    });
     await page.unroute("**/api/v1/tasks/**");
   });
 
@@ -405,8 +410,10 @@ test.describe("входящие: quick-add/rename/complete (desktop 1280)", () =
     await expect(page.getByText("Удалить задачу?")).toBeVisible();
     await row.getByRole("button", { name: "Удалить", exact: true }).click();
     await expect(page.locator("li[data-task-id]", { hasText: name })).toHaveCount(0);
-    const activeId = await page.evaluate(() => document.activeElement?.id ?? "");
-    expect(activeId).toBe("task-title-input");
+    // R2a: create input disabled до конца write flow — фокус landится
+    // сразу после снятия pending (кадр-два); ждём его авто-ретраящим
+    // toBeFocused вместо мгновенного чтения activeElement.
+    await expect(page.locator("#task-title-input")).toBeFocused();
   });
 
   test("delayed complete + навигация: stale ответ не меняет UI", async ({

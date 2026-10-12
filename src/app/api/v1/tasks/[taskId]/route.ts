@@ -13,7 +13,12 @@ import {
   softDeleteTask,
   type TaskMutationOutcome,
 } from "@/server/tasks/service";
-import { isValidTaskId, parseTaskPatch, toTaskDTO } from "@/lib/tasks";
+import {
+  TASKS_MAX_JSON_BODY_BYTES,
+  isValidTaskId,
+  parseTaskPatch,
+  toTaskDTO,
+} from "@/lib/tasks";
 
 /**
  * Versioned task item endpoint (TASK-007): GET/PATCH/DELETE собственной
@@ -55,6 +60,9 @@ function mutationErrorResponse(outcome: TaskMutationOutcome): Response | null {
   if (outcome.kind === "unsupported") {
     return errorResponse(409, "UNSUPPORTED_TASK");
   }
+  if (outcome.kind === "validation") {
+    return errorResponse(400, "VALIDATION_ERROR", outcome.field);
+  }
   return errorResponse(409, "PROJECT_ARCHIVED");
 }
 
@@ -92,7 +100,7 @@ export async function PATCH(
   if (!hasJsonContentType(request)) {
     return errorResponse(415, "UNSUPPORTED_MEDIA_TYPE");
   }
-  const body = await readJsonBodyWithLimit(request);
+  const body = await readJsonBodyWithLimit(request, TASKS_MAX_JSON_BODY_BYTES);
   if (!body.ok) {
     return errorResponse(
       body.malformed ? 400 : 413,

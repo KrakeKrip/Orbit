@@ -223,12 +223,41 @@ describe("два пользователя и истечение сессии", (
   });
 
   test("просроченный expiresAt в БД: me 401 (cookie cache отключён)", async () => {
-    await withAuthDbClient(async (client) => {
-      await client.query(
-        `UPDATE "session" SET "expires_at" = now() - interval '1 second' WHERE "user_id" = $1`,
-        [userBId],
-      );
-    });
+    // FINAL-EXPIRY: колонка expires_at — timestamp WITHOUT time zone (UTC
+    // wall-clock representation). `now() - interval '1 second'` через
+    // implicit cast пишет wall-clock SQL-сессии: при TimeZone
+    // Europe/Moscow значение читается как future UTC и сессия остаётся
+    // «действительной». Пишем expiry явно — параметризованный UTC ISO из
+    // JS, в прошлом с разумным запасом (не хрупкая 1 секунда) — и
+    // проверяем фактически записанные строки, интерпретированные как UTC.
+    const expireUserBSessions = async (): Promise<void> => {
+      const expiredAt = new Date(Date.now() - 60_000);
+      await withAuthDbClient(async (client) => {
+        const update = await client.query(
+          `UPDATE "session" SET "expires_at" = $1 WHERE "user_id" = $2`,
+          [expiredAt.toISOString(), userBId],
+        );
+        expect(update.rowCount ?? 0).toBeGreaterThan(0);
+        const check = await client.query<{
+          expires_at: string;
+        }>(
+          `SELECT "expires_at"::text AS "expires_at" FROM "session" WHERE "user_id" = $1`,
+          [userBId],
+        );
+        expect(check.rowCount ?? 0).toBeGreaterThan(0);
+        for (const row of check.rows) {
+          // timestamp WITHOUT time zone ::text — UTC wall-clock
+          // representation; интерпретируем как UTC и требуем прошлое
+          // на момент проверки в Node.
+          const expiresAtUtc = new Date(
+            `${row.expires_at.replace(" ", "T")}Z`,
+          );
+          expect(expiresAtUtc.getTime()).toBeLessThan(Date.now());
+        }
+      });
+    };
+
+    await expireUserBSessions();
     const login = await signIn(
       requireEnv("AUTH_TEST_USER_B_EMAIL"),
       requireEnv("AUTH_TEST_USER_B_PASSWORD"),
@@ -237,12 +266,7 @@ describe("два пользователя и истечение сессии", (
     const cookieB = collectCookie(login.setCookie);
     expect((await currentUser(cookieB)).status).toBe(200);
 
-    await withAuthDbClient(async (client) => {
-      await client.query(
-        `UPDATE "session" SET "expires_at" = now() - interval '1 second' WHERE "user_id" = $1`,
-        [userBId],
-      );
-    });
+    await expireUserBSessions();
     const result = await currentUser(cookieB);
     expect(result.status).toBe(401);
   });

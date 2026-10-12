@@ -3,9 +3,10 @@
 Персональный менеджер задач (в разработке). Сейчас реализованы каркас
 веб-интерфейса с входом по email/password (регистрация на сервере отключена),
 инфраструктура базы данных: локальный PostgreSQL 17, Drizzle схема с
-ownership-связями и проверяемые миграции. Данных задач ещё нет — экраны
-показывают поясняющие заглушки. Продуктовая функциональность добавляется
-следующими задачами (см. `TASKS.md` в корне репозитория).
+ownership-связями и проверяемые миграции. Реальны one-off задачи: Inbox
+(quick-add/rename/complete/reopen/удаление), планирование дата/время/дедлайн
+с зоной аккаунта, экраны Today/Upcoming. Продуктовая функциональность
+добавляется следующими задачами (см. `TASKS.md` в корне репозитория).
 
 ## Требования
 
@@ -114,17 +115,17 @@ composite FK (в том числе на UPDATE), SQL checks, round trip DATE/TIM
 | ------------- | ----------- | -------------------------- |
 | `/`           | —           | перенаправление на `/today` |
 | `/login`      | анонимно    | Вход (email/password)      |
-| `/today`      | сессия      | Сегодня                    |
+| `/today`      | сессия      | Сегодня (планы и дедлайны) |
 | `/inbox`      | сессия      | Входящие (quick-add задач) |
-| `/upcoming`   | сессия      | Предстоящее                |
+| `/upcoming`   | сессия      | Предстоящее (7 дней по датам) |
 | `/projects`   | сессия      | Проекты (создание/архив)   |
 | `/settings`   | сессия      | Настройки (timezone, тема, выход) |
 | `/api/v1/me`  | сессия      | GET identity endpoint      |
 | `/api/v1/settings` | сессия | GET/PATCH timezone/theme аккаунта |
 | `/api/v1/projects` | сессия | GET list (status=active/archived/all), POST create |
 | `/api/v1/projects/[projectId]` | сессия | GET item, PATCH rename/archive (DELETE нет) |
-| `/api/v1/tasks` | сессия | GET Inbox list (status=open/completed/all), POST create |
-| `/api/v1/tasks/[taskId]` | сессия | GET item, PATCH rename/complete, DELETE soft delete |
+| `/api/v1/tasks` | сессия | GET views inbox/today/upcoming + status + start, POST create |
+| `/api/v1/tasks/[taskId]` | сессия | GET item, PATCH title/complete/planning, DELETE soft delete |
 
 Все workspace-маршруты защищены на сервере: анонимный браузер перенаправляется
 на `/login`, API отвечает `401 {"error":{"code":"UNAUTHENTICATED"}}`.
@@ -250,6 +251,36 @@ soft delete (deleted_at, revision+1) с каскадным скрытием со
 пока не реализован. Ошибки: 400/401/403/404/409/413/415/500, все ответы
 `private, no-store`.
 
+## Планирование: даты, Сегодня и Предстоящее
+
+Задачи получают плановую дату (`ГГГГ-ММ-ДД`, Gregorian 1900–2199),
+опциональное время (`ЧЧ:мм`, только вместе с датой; очистка даты очищает
+время) и независимый дедлайн (раньше плана — разрешено, не сдвигается
+автоматически). Дата «сегодня» вычисляется сервером из одного снимка
+`current_timestamp` PostgreSQL в часовом поясе аккаунта (по умолчанию UTC;
+смена пояса не переписывает сохранённые даты — меняется только
+классификация при следующем чтении). Время — настенное label в поясе
+аккаунта, без будильников/DST-резолюции; просрочка определяется датой.
+
+Экраны: **Сегодня** — четыре взаимоисключающие секции (просрочен план /
+на сегодня / дедлайн просрочен / дедлайн сегодня), каждая задача один раз;
+quick-add планирует на серверное «сегодня». **Предстоящее** — группы по
+плановой дате за 7 дней включительно, навигация вперёд/назад/текущая,
+диапазон в URL (`/upcoming?start=…`, сохраняется при reload; невалидный
+start — явная ошибка). **Входящие** — задачи без плановой даты; дедлайн сам
+по себе не убирает задачу из Входящих. Кнопка «Планирование» открывает
+редактор: сохраняются только изменённые поля, при ошибке черновик
+сохраняется для повторной попытки.
+
+API (cookie-auth, owner-scoped): `GET /api/v1/tasks?view=inbox|today|upcoming&status=open|completed|all&start=YYYY-MM-DD`
+(ответ `{tasks, context:{timezone, today, asOf, view, startDate?, endDate?}}`;
+client timezone/today не принимаются), `POST {title, plannedDate?, plannedTime?, deadlineDate?}`,
+`PATCH` непустой subset `{title?, completed?, plannedDate?, plannedTime?, deadlineDate?}`
+(null — только schedule-поля; валидация merge: время без даты → 400, очистка
+плана без явного времени очищает время, явное время при очистке плана → 400).
+Лимит тела задач — 4 KiB (эмодзи-заголовок 500 code points + расписание);
+Settings/Projects/DELETE остаются 2 KiB. Ошибки и no-store — как раньше.
+
 ## Production-сборка и запуск
 
 ```sh
@@ -308,10 +339,10 @@ UI-строки интерфейса централизованы в `src/lib/i1
 
 ## Что ещё НЕ реализовано
 
-Данных задач и серверной бизнес-логики пока нет. Пока отсутствуют и не
-притворяются работающими:
+Серверная бизнес-логика one-off задач и планирование реализованы. Пока
+отсутствуют и не притворяются работающими:
 
-- Задачи: даты/дедлайны, notes/priority editing, project assignment/move, subtask UI, recurrence, completion history UI, search; project deletion/reordering/colors/sharing; API besides identity/settings/projects/tasks endpoints;
+- Задачи: notes/priority editing, project assignment/move, subtask UI, recurrence, completion history UI, search; project deletion/reordering/colors/sharing; API besides identity/settings/projects/tasks endpoints;
 - смена email/пароля, восстановление пароля, сессии «на других устройствах»;
 - применение timezone к расписанию: Сегодня/Предстоящее/повторения пока не
   используют настройки (см. раздел «Настройки аккаунта»);

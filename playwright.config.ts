@@ -7,11 +7,15 @@ const storageDir = "test-results/.auth";
 
 export default defineConfig({
   testDir: "tests/e2e",
-  fullyParallel: true,
+  // Tasks-спеки используют общие mutable fixtures (задачи пользователя A/C);
+  // последовательное выполнение устраняет кросс-спек интерференцию.
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: !!process.env.CI,
   reporter: "list",
   globalTeardown: "./tests/e2e/global-teardown.ts",
   use: {
+    trace: 'retain-on-failure',
     baseURL,
     ...devices["Desktop Chrome"],
   },
@@ -28,11 +32,12 @@ export default defineConfig({
     {
       name: "auth-setup",
       testMatch: /auth\.setup\.ts/,
-      use: { ...devices["Desktop Chrome"] },
+      use: { trace: 'retain-on-failure', ...devices["Desktop Chrome"] },
     },
     {
       name: "chromium",
       use: {
+        trace: 'retain-on-failure',
         ...devices["Desktop Chrome"],
         storageState: `${storageDir}/user-a.json`,
       },

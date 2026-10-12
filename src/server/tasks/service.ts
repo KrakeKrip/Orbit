@@ -1,10 +1,17 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { addCivilDays, normalizeCivilTime } from "@/lib/calendar";
+import { compareTodayOrder } from "@/lib/task-view";
 import { and, asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
 import { projects, taskCompletions, tasks } from "@/server/db/schema";
-import type { TaskListStatus, TaskPatch } from "@/lib/tasks";
+import type {
+  TaskListStatus,
+  TaskPatch,
+  TaskPlanningValues,
+  TaskViewName,
+} from "@/lib/tasks";
 
 /**
  * Task service (TASK-007, Inbox one-off subset): owner-scoped list/read/
@@ -52,60 +59,121 @@ export type TaskRecord = {
   title: string;
   projectId: string | null;
   parentId: string | null;
+  plannedDate: string | null;
+  plannedTime: string | null;
+  deadlineDate: string | null;
   completedAt: Date | null;
   revision: number;
   createdAt: Date;
   updatedAt: Date;
 };
 
+/** Нормализованный результат mutation для route mapping. */
 export type TaskMutationOutcome =
   | { kind: "task"; task: TaskRecord }
   | { kind: "not-found" }
   | { kind: "unsupported" }
-  | { kind: "project-archived" };
+  | { kind: "project-archived" }
+  | { kind: "validation"; field: "plannedTime" };
 
 const taskColumns = {
   id: tasks.id,
   title: tasks.title,
   projectId: tasks.projectId,
   parentId: tasks.parentId,
+  plannedDate: tasks.plannedDate,
+  plannedTime: tasks.plannedTime,
+  deadlineDate: tasks.deadlineDate,
   completedAt: tasks.completedAt,
   revision: tasks.revision,
   createdAt: tasks.createdAt,
   updatedAt: tasks.updatedAt,
 };
 
-export async function listInboxTasks(
+/** Фильтр «рабочих» view: root one-off non-deleted, project NULL или свой активный. */
+function workingTaskFilters(actorId: string) {
+  return [
+    eq(tasks.ownerId, actorId),
+    isNull(tasks.deletedAt),
+    isNull(tasks.parentId),
+    isNull(tasks.recurrenceRule),
+    sql`(${tasks.projectId} IS NULL OR EXISTS (
+      SELECT 1 FROM ${projects}
+      WHERE ${projects.id} = ${tasks.projectId}
+        AND ${projects.ownerId} = ${actorId}
+        AND ${projects.archivedAt} IS NULL
+    ))`,
+  ];
+}
+
+function completedFilter(status: TaskListStatus) {
+  if (status === "open") {
+    return isNull(tasks.completedAt);
+  }
+  if (status === "completed") {
+    return isNotNull(tasks.completedAt);
+  }
+  return undefined;
+}
+
+export async function listTasksView(
   actorId: string,
+  view: TaskViewName,
   status: TaskListStatus,
+  today: string,
+  startDate?: string,
 ): Promise<TaskRecord[]> {
-  const ownerFilter = eq(tasks.ownerId, actorId);
-  const completionFilter =
-    status === "open"
-      ? isNull(tasks.completedAt)
-      : status === "completed"
-        ? isNotNull(tasks.completedAt)
-        : undefined;
-  return getDb()
+  const completionFilter = completedFilter(status);
+  let viewFilter;
+  let orderBy;
+  if (view === "inbox") {
+    viewFilter = isNull(tasks.plannedDate);
+    orderBy = [asc(tasks.sortOrder), asc(tasks.createdAt), asc(tasks.id)];
+  } else if (view === "today") {
+    // Union: попала по плану <= today ИЛИ по дедлайну <= today (хотя бы
+    // одна дата присутствует); порядок/секционирование — единый
+    // pure-контракт compareTodayOrder (R7, тот же, что у Today UI).
+    viewFilter = and(
+      sql`(${tasks.plannedDate} IS NOT NULL OR ${tasks.deadlineDate} IS NOT NULL)`,
+      sql`(${tasks.plannedDate} <= ${today}::date OR ${tasks.deadlineDate} <= ${today}::date)`,
+    );
+    orderBy = [asc(tasks.sortOrder), asc(tasks.createdAt), asc(tasks.id)];
+  } else {
+    if (startDate === undefined) {
+      throw new Error("Upcoming view requires startDate.");
+    }
+    const endDate = addCivilDays(startDate, 6);
+    viewFilter = and(
+      sql`${tasks.plannedDate} >= ${startDate}::date`,
+      sql`${tasks.plannedDate} <= ${endDate}::date`,
+    );
+    orderBy = [
+      asc(tasks.plannedDate),
+      sql`${tasks.plannedTime} ASC NULLS LAST`,
+      asc(tasks.sortOrder),
+      asc(tasks.createdAt),
+      asc(tasks.id),
+    ];
+  }
+  const rows = await getDb()
     .select(taskColumns)
     .from(tasks)
     .where(
       and(
-        ownerFilter,
-        isNull(tasks.deletedAt),
-        isNull(tasks.parentId),
-        isNull(tasks.plannedDate),
-        // project_id NULL либо собственный неархивированный проект.
-        sql`(${tasks.projectId} IS NULL OR EXISTS (
-          SELECT 1 FROM ${projects}
-          WHERE ${projects.id} = ${tasks.projectId}
-            AND ${projects.ownerId} = ${actorId}
-            AND ${projects.archivedAt} IS NULL
-        ))`,
+        ...workingTaskFilters(actorId),
+        viewFilter,
         ...(completionFilter === undefined ? [] : [completionFilter]),
       ),
     )
-    .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt), asc(tasks.id));
+    .orderBy(...orderBy);
+  if (view !== "today") {
+    return rows;
+  }
+  // R7: raw API возвращает Today в том же порядке, что Today UI, — тот же
+  // pure-компаратор rank 1..4 + внутриранговый порядок контракта. Вход уже
+  // отсортирован стабильно (sort_order/created_at/id); стабильная
+  // JS-сортировка сохраняет этот tie-break, DTO не расширяется.
+  return [...rows].sort((a, b) => compareTodayOrder(a, b, today));
 }
 
 /** Собственная не-deleted задача в любом состоянии (даты/архив проекта). */
@@ -129,11 +197,17 @@ export async function getTask(
 
 export async function createTask(
   actorId: string,
-  title: string,
+  input: { title: string } & TaskPlanningValues,
 ): Promise<TaskRecord> {
   const rows = await getDb()
     .insert(tasks)
-    .values({ ownerId: actorId, title })
+    .values({
+      ownerId: actorId,
+      title: input.title,
+      plannedDate: input.plannedDate,
+      plannedTime: input.plannedTime,
+      deadlineDate: input.deadlineDate,
+    })
     .returning(taskColumns);
   const row = rows[0];
   if (!row) {
@@ -192,6 +266,27 @@ export async function mutateTask(
       }
     }
 
+    // R-merge: планировочные поля мерджатся с текущими значениями под
+    // task lock; plannedTime ненулевой требует результирующий plannedDate;
+    // явная очистка plannedDate с ненулевым time → 400.
+    const resultPlannedDate =
+      patch.plannedDate !== undefined ? patch.plannedDate : task.plannedDate;
+    let resultPlannedTime =
+      patch.plannedTime !== undefined
+        ? patch.plannedTime
+        : normalizeCivilTime(task.plannedTime);
+    // Clearing plan автоматически очищает time (если time не передан или
+    // null); явный ненулевой time одновременно с очисткой плана → 400.
+    if (patch.plannedDate === null) {
+      if (patch.plannedTime !== undefined && patch.plannedTime !== null) {
+        return { kind: "validation", field: "plannedTime" };
+      }
+      resultPlannedTime = null;
+    }
+    if (resultPlannedTime !== null && resultPlannedDate === null) {
+      return { kind: "validation", field: "plannedTime" };
+    }
+
     const titleChanged = patch.title !== undefined && patch.title !== task.title;
     const completionTransition =
       patch.completed === undefined
@@ -201,7 +296,14 @@ export async function mutateTask(
           : !patch.completed && task.completedAt !== null
             ? "reopen"
             : null;
-    if (!titleChanged && completionTransition === null) {
+    const plannedDateChanged = resultPlannedDate !== task.plannedDate;
+    const plannedTimeChanged =
+      resultPlannedTime !== normalizeCivilTime(task.plannedTime);
+    const deadlineChanged =
+      patch.deadlineDate !== undefined && patch.deadlineDate !== task.deadlineDate;
+    const planningChanged =
+      plannedDateChanged || plannedTimeChanged || deadlineChanged;
+    if (!titleChanged && completionTransition === null && !planningChanged) {
       // Полный no-op: текущий DTO без изменения revision/timestamps.
       return {
         kind: "task",
@@ -210,6 +312,9 @@ export async function mutateTask(
           title: task.title,
           projectId: task.projectId,
           parentId: task.parentId,
+          plannedDate: task.plannedDate,
+          plannedTime: task.plannedTime,
+          deadlineDate: task.deadlineDate,
           completedAt: task.completedAt,
           revision: task.revision,
           createdAt: task.createdAt,
@@ -221,15 +326,21 @@ export async function mutateTask(
     const updated = await tx
       .update(tasks)
       .set({
-        title: titleChanged ? (patch.title as string) : task.title,
-        // now() в PostgreSQL стабилен внутри транзакции: task.completed_at и
-        // journal.completed_at получают один server timestamp (см. INSERT).
-        completedAt:
-          completionTransition === "complete"
-            ? sql`now()`
-            : completionTransition === "reopen"
-              ? null
-              : task.completedAt,
+        // Записываются только реально изменённые поля; omitted поля и
+        // прочие колонки (notes/priority/project/parent/order/created_at)
+        // не трогаются.
+        ...(titleChanged ? { title: patch.title as string } : {}),
+        ...(completionTransition !== null
+          ? {
+              completedAt:
+                completionTransition === "complete"
+                  ? sql`now()`
+                  : null,
+            }
+          : {}),
+        ...(plannedDateChanged ? { plannedDate: resultPlannedDate } : {}),
+        ...(plannedTimeChanged ? { plannedTime: resultPlannedTime } : {}),
+        ...(deadlineChanged ? { deadlineDate: patch.deadlineDate as string | null } : {}),
         revision: task.revision + 1,
         updatedAt: sql`now()`,
       })
@@ -241,6 +352,8 @@ export async function mutateTask(
     }
     if (completionTransition === "complete") {
       // Журнал в той же транзакции: отказ INSERT откатывает и task.
+      // occurrence_date остаётся NULL для one-off; completed_revision = task
+      // revision ДО перехода.
       await tx.insert(taskCompletions).values({
         ownerId: actorId,
         taskId,

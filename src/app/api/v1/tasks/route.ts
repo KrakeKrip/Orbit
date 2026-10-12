@@ -6,39 +6,75 @@ import {
   readJsonBodyWithLimit,
   NO_STORE,
 } from "@/server/http";
-import { createTask, listInboxTasks } from "@/server/tasks/service";
+import { createTask, listTasksView } from "@/server/tasks/service";
+import { getTasksReadContext } from "@/server/tasks/context";
 import {
+  TASKS_MAX_JSON_BODY_BYTES,
+  parseTaskCollectionViewQuery,
   parseTaskCreate,
-  parseTaskListStatusQuery,
   toTaskDTO,
 } from "@/lib/tasks";
+import { addCivilDays } from "@/lib/calendar";
 
 /**
- * Versioned Inbox collection endpoint (TASK-007). GET — только query
- * `status=open|completed|all` (default open; duplicate/unknown/лишние
- * keys →400); список строго owner-scoped, отсортирован
- * sort_order/created_at/id. POST — ровно {title} → 201 {task}: UUID и
- * owner генерирует сервер/БД, project/parent/notes/dates остаются NULL,
- * priority 4, sort_order 0, revision 0. Query на POST →400. Mutations:
- * точный application/json (415), потоковый лимит 2 KiB (413), malformed
- * 400, точная Origin-защита (403), session до mutation — любой отказ не
- * создаёт task. Все ответы private, no-store.
+ * Versioned tasks collection endpoint (TASK-007 Inbox + TASK-008
+ * planning/views). GET — query `view=inbox|today|upcoming` (default inbox),
+ * `status=open|completed|all` (default open), `start=YYYY-MM-DD` только для
+ * upcoming; duplicate/unknown/лишние keys →400. Ответ единой формы
+ * `{tasks, context:{timezone,today,asOf,view,startDate?,endDate?}}`;
+ * reference instant — один PostgreSQL read на запрос. Списки строго
+ * owner-scoped. POST — {title} + опциональные planning fields → 201
+ * {task}: UUID/owner генерирует сервер/БД, прочие колонки по defaults.
+ * Query на POST →400. Mutations: точный application/json (415), task
+ * streaming лимит 4 KiB (413; title500emoji+schedule), malformed 400,
+ * точная Origin-защита (403), session до mutation — любой отказ не создаёт
+ * task. Все ответы private, no-store.
  */
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
-  const parsedStatus = parseTaskListStatusQuery(
+  const parsedQuery = parseTaskCollectionViewQuery(
     new URL(request.url).searchParams,
   );
-  if (!parsedStatus.ok) {
+  if (!parsedQuery.ok) {
     return errorResponse(400, "VALIDATION_ERROR");
   }
   try {
     const user = await requireUser();
-    const tasks = await listInboxTasks(user.id, parsedStatus.status);
+    const context = await getTasksReadContext(user.id);
+    // Reference instant читается один раз: today из context единый для
+    // секций/границ/метаданных этого read.
+    const startDate =
+      parsedQuery.query.view === "upcoming"
+        ? (parsedQuery.query.startDate ?? context.today)
+        : undefined;
+    const tasks = await listTasksView(
+      user.id,
+      parsedQuery.query.view,
+      parsedQuery.query.status,
+      context.today,
+      startDate,
+    );
+    const contextPayload: {
+      timezone: string;
+      today: string;
+      asOf: string;
+      view: string;
+      startDate?: string;
+      endDate?: string;
+    } = {
+      timezone: context.timezone,
+      today: context.today,
+      asOf: context.asOf,
+      view: parsedQuery.query.view,
+    };
+    if (parsedQuery.query.view === "upcoming" && startDate !== undefined) {
+      contextPayload.startDate = startDate;
+      contextPayload.endDate = addCivilDays(startDate, 6);
+    }
     return Response.json(
-      { tasks: tasks.map(toTaskDTO) },
+      { tasks: tasks.map(toTaskDTO), context: contextPayload },
       { headers: NO_STORE },
     );
   } catch (error) {
@@ -56,7 +92,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!hasJsonContentType(request)) {
     return errorResponse(415, "UNSUPPORTED_MEDIA_TYPE");
   }
-  const body = await readJsonBodyWithLimit(request);
+  const body = await readJsonBodyWithLimit(request, TASKS_MAX_JSON_BODY_BYTES);
   if (!body.ok) {
     return errorResponse(
       body.malformed ? 400 : 413,
@@ -75,7 +111,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!parsed.ok) {
       return errorResponse(400, "VALIDATION_ERROR", parsed.field);
     }
-    const task = await createTask(user.id, parsed.title);
+    const task = await createTask(user.id, parsed.value);
     return Response.json(
       { task: toTaskDTO(task) },
       { status: 201, headers: NO_STORE },
