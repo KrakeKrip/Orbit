@@ -1,17 +1,25 @@
-import type { TaskDTO } from "./tasks";
-
 /**
  * Чистые view-model helpers для Today/Upcoming (TASK-008): группировка и
  * сортировка внутри секций. Входные списки уже owner-scoped/filtered и
  * отсортированы стабильно (sort_order/created_at/id) сервером; JS sort
  * стабилен, поэтому tie-break наследуется от входного порядка.
+ * R7: ранг и внутриранговый порядок Today — единый контракт для UI и
+ * raw API (compareTodayOrder), второго расходящегося comparator нет.
  */
+
+import type { TaskDTO } from "./tasks";
 
 export type TodaySectionKey =
   | "planOverdue"
   | "planToday"
   | "deadlineOverdue"
   | "deadlineToday";
+
+/** Минимальная форма задачи, достаточная для Today-порядка (R7). */
+export type TodayOrderable = Pick<
+  TaskDTO,
+  "plannedDate" | "plannedTime" | "deadlineDate"
+>;
 
 export type TodaySection = {
   rank: 1 | 2 | 3 | 4;
@@ -25,7 +33,7 @@ export type TodaySection = {
  * deadline=today. null — не входит в Today (future/undated вне deadline).
  */
 export function todaySectionOf(
-  task: TaskDTO,
+  task: TodayOrderable,
   today: string,
 ): 1 | 2 | 3 | 4 | null {
   if (task.plannedDate !== null && task.plannedDate < today) {
@@ -50,7 +58,7 @@ function compareCivilAsc(a: string, b: string): number {
   return a < b ? -1 : 1;
 }
 
-function byPlannedDateTimeThenStable(a: TaskDTO, b: TaskDTO): number {
+function byPlannedDateTimeThenStable(a: TodayOrderable, b: TodayOrderable): number {
   const date = compareCivilAsc(a.plannedDate ?? "", b.plannedDate ?? "");
   if (date !== 0) {
     return date;
@@ -68,7 +76,7 @@ function byPlannedDateTimeThenStable(a: TaskDTO, b: TaskDTO): number {
   return 0;
 }
 
-function byPlannedTimeThenStable(a: TaskDTO, b: TaskDTO): number {
+function byPlannedTimeThenStable(a: TodayOrderable, b: TodayOrderable): number {
   if (a.plannedTime === null && b.plannedTime !== null) {
     return 1;
   }
@@ -81,11 +89,42 @@ function byPlannedTimeThenStable(a: TaskDTO, b: TaskDTO): number {
   return 0;
 }
 
-function byDeadlineThenStable(a: TaskDTO, b: TaskDTO): number {
+function byDeadlineThenStable(a: TodayOrderable, b: TodayOrderable): number {
   const deadline = compareCivilAsc(a.deadlineDate ?? "", b.deadlineDate ?? "");
   if (deadline !== 0) {
     return deadline;
   }
+  return 0;
+}
+
+/**
+ * R7: единый компаратор Today-порядка для UI и raw API — ранг 1..4
+ * (plan<today → plan=today → deadline<today → deadline=today), затем
+ * внутриранговый порядок контракта (rank1 plannedDate+time NULLS LAST,
+ * rank2 time NULLS LAST, rank3 deadlineDate, rank4 stable). Ноль на
+ * tie: стабильная сортировка сохраняет входной порядок
+ * sort_order/created_at/id.
+ */
+export function compareTodayOrder(
+  a: TodayOrderable,
+  b: TodayOrderable,
+  today: string,
+): number {
+  const rankA = todaySectionOf(a, today);
+  const rankB = todaySectionOf(b, today);
+  if (rankA !== rankB) {
+    return (rankA ?? 5) - (rankB ?? 5);
+  }
+  if (rankA === 1) {
+    return byPlannedDateTimeThenStable(a, b);
+  }
+  if (rankA === 2) {
+    return byPlannedTimeThenStable(a, b);
+  }
+  if (rankA === 3) {
+    return byDeadlineThenStable(a, b);
+  }
+  // rank4 (и вне Today — не сравнивается на экране): stable.
   return 0;
 }
 
@@ -98,8 +137,9 @@ const SECTION_KEYS: TodaySectionKey[] = [
 
 /**
  * Четыре взаимоисключающие секции Today по приоритету 1..4; каждая task
- * ровно один раз. Сортировки внутри секций — по контракту (plannedDate/
- * time NULLS LAST/deadline + стабильный tie-break из входного порядка).
+ * ровно один раз. Сортировки внутри секций — единый компаратор
+ * compareTodayOrder (ранг внутри секции одинаков, tie-break стабильный
+ * из входного порядка).
  */
 export function groupTodayTasks(
   tasks: TaskDTO[],
@@ -117,14 +157,7 @@ export function groupTodayTasks(
     }
   }
   for (const section of sections) {
-    if (section.rank === 1) {
-      section.tasks.sort(byPlannedDateTimeThenStable);
-    } else if (section.rank === 2) {
-      section.tasks.sort(byPlannedTimeThenStable);
-    } else if (section.rank === 3) {
-      section.tasks.sort(byDeadlineThenStable);
-    }
-    // rank 4: стабильный порядок входа.
+    section.tasks.sort((a, b) => compareTodayOrder(a, b, today));
   }
   return sections.filter((section) => section.key !== undefined);
 }

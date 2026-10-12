@@ -11,6 +11,7 @@ import {
 } from "../src/lib/calendar";
 import type { TaskDTO } from "../src/lib/tasks";
 import {
+  compareTodayOrder,
   groupTodayTasks,
   groupUpcomingTasks,
   todaySectionOf,
@@ -138,6 +139,66 @@ describe("addCivilDays / civilDateRange", () => {
     expect(() => civilDateRange("2199-12-31", 2)).toThrow(RangeError);
     // Старт до границы.
     expect(() => civilDateRange("1899-12-31", 7)).toThrow(RangeError);
+  });
+
+  test("R7: compareTodayOrder — ранги и внутриранговый порядок контракта", () => {
+    const today = "2026-06-15";
+    const planOverdue09 = {
+      plannedDate: "2026-06-14",
+      plannedTime: "09:00",
+      deadlineDate: null,
+    };
+    const planOverdueNull = {
+      plannedDate: "2026-06-14",
+      plannedTime: null,
+      deadlineDate: null,
+    };
+    const planEarlier = {
+      plannedDate: "2026-06-13",
+      plannedTime: "10:00",
+      deadlineDate: null,
+    };
+    const planToday = {
+      plannedDate: "2026-06-15",
+      plannedTime: null,
+      deadlineDate: null,
+    };
+    // rank3: plan future не влияет — порядок только по deadline.
+    const deadlineOverdueFuturePlan = {
+      plannedDate: "2026-07-01",
+      plannedTime: null,
+      deadlineDate: "2026-06-10",
+    };
+    const deadlineOverdueEarlier = {
+      plannedDate: null,
+      plannedTime: null,
+      deadlineDate: "2026-06-09",
+    };
+    const deadlineToday = {
+      plannedDate: null,
+      plannedTime: null,
+      deadlineDate: "2026-06-15",
+    };
+
+    // Ранги: plan<today → plan=today → deadline<today → deadline=today.
+    expect(compareTodayOrder(planOverdue09, planToday, today)).toBeLessThan(0);
+    expect(
+      compareTodayOrder(planToday, deadlineOverdueFuturePlan, today),
+    ).toBeLessThan(0);
+    expect(
+      compareTodayOrder(deadlineOverdueFuturePlan, deadlineToday, today),
+    ).toBeLessThan(0);
+    // rank1: более ранняя plannedDate прежде поздней; time NULLS LAST.
+    expect(compareTodayOrder(planEarlier, planOverdue09, today)).toBeLessThan(0);
+    expect(
+      compareTodayOrder(planOverdue09, planOverdueNull, today),
+    ).toBeLessThan(0);
+    // rank3: deadline раньше прежде поздней, planned future не влияет.
+    expect(
+      compareTodayOrder(deadlineOverdueEarlier, deadlineOverdueFuturePlan, today),
+    ).toBeLessThan(0);
+    // rank4/tie: ноль — стабильный входной порядок (sort_order/created_at/id).
+    expect(compareTodayOrder(deadlineToday, deadlineToday, today)).toBe(0);
   });
 });
 

@@ -469,6 +469,99 @@ describe("context: timezone/today/asOf", () => {
   });
 });
 
+describe("R7: Today raw API ordering", () => {
+  test("raw GET view=today: ranks/within-rank как в UI-контракте, тот же порядок в open/completed/all", async () => {
+    const context = contextOf(
+      await tasksCall({ cookie: uCookie, query: "?view=today&status=all" }),
+    );
+    const today = context.today;
+    const past = (days: number): string => shift(today, -days);
+    const future = (days: number): string => shift(today, days);
+
+    // Перемешанный порядок создания = базовый sort_order (стабильный
+    // tie-break контролируем собственными fixture rows).
+    const specs: Record<string, Record<string, unknown>> = {
+      p4: { title: "R7 p4", plannedDate: past(1), plannedTime: "09:00", deadlineDate: future(5) },
+      e2: { title: "R7 e2", plannedDate: null, plannedTime: null, deadlineDate: today },
+      p1: { title: "R7 p1", plannedDate: past(2), plannedTime: "09:00", deadlineDate: null },
+      d2: { title: "R7 d2", plannedDate: future(30), plannedTime: null, deadlineDate: past(1) },
+      p7: { title: "R7 p7", plannedDate: today, plannedTime: "09:00", deadlineDate: null },
+      p5: { title: "R7 p5", plannedDate: past(3), plannedTime: null, deadlineDate: null },
+      e1: { title: "R7 e1", plannedDate: null, plannedTime: null, deadlineDate: today },
+      p8: { title: "R7 p8", plannedDate: today, plannedTime: "10:00", deadlineDate: null },
+      d3: { title: "R7 d3", plannedDate: null, plannedTime: null, deadlineDate: past(2) },
+      p2: { title: "R7 p2", plannedDate: past(2), plannedTime: null, deadlineDate: null },
+      d1: { title: "R7 d1", plannedDate: null, plannedTime: null, deadlineDate: past(2) },
+      p6: { title: "R7 p6", plannedDate: today, plannedTime: null, deadlineDate: null },
+      p3: { title: "R7 p3", plannedDate: past(1), plannedTime: "10:00", deadlineDate: null },
+    };
+    const created: Record<string, TaskDTO> = {};
+    for (const [key, payload] of Object.entries(specs)) {
+      created[key] = await createTask(uCookie, payload);
+    }
+    // Чужая задача не проникает в Today пользователя U.
+    const foreign = await createTask(vCookie, {
+      title: "R7 foreign",
+      plannedDate: today,
+    });
+
+    // rank1 plannedDate ASC + time NULLS LAST; rank2 time NULLS LAST;
+    // rank3 deadline ASC со стабильным tie по созданию (d3 раньше d1);
+    // rank4 stable по созданию (e2 раньше e1). Без дублей.
+    const expectedOrder = [
+      created.p5.id,
+      created.p1.id,
+      created.p2.id,
+      created.p4.id,
+      created.p3.id,
+      created.p7.id,
+      created.p8.id,
+      created.p6.id,
+      created.d3.id,
+      created.d1.id,
+      created.d2.id,
+      created.e2.id,
+      created.e1.id,
+    ];
+    expect(new Set(expectedOrder).size).toBe(expectedOrder.length);
+
+    const idsOf = (result: ApiResult): string[] =>
+      (result.body as { tasks: TaskDTO[] }).tasks.map((task) => task.id);
+    // Скоуп assertions на свои fixture ids (чужие строки других тестов
+    // этого файла не влияют на относительный порядок).
+    const subset = (ids: string[]): string[] =>
+      ids.filter((id) => expectedOrder.includes(id));
+
+    const open = await tasksCall({
+      cookie: uCookie,
+      query: "?view=today&status=open",
+    });
+    expect(open.status).toBe(200);
+    const openIds = idsOf(open);
+    expect(subset(openIds)).toEqual(expectedOrder);
+    expect(openIds).not.toContain(foreign.id);
+
+    // Завершаем все fixtures: completed/all используют тот же порядок.
+    for (const task of Object.values(created)) {
+      const patched = await tasksCall({
+        method: "PATCH",
+        cookie: uCookie,
+        path: `${COLLECTION_PATH}/${task.id}`,
+        payload: { completed: true },
+      });
+      expect(patched.status).toBe(200);
+    }
+    for (const status of ["completed", "all"] as const) {
+      const result = await tasksCall({
+        cookie: uCookie,
+        query: `?view=today&status=${status}`,
+      });
+      expect(result.status).toBe(200);
+      expect(subset(idsOf(result))).toEqual(expectedOrder);
+    }
+  });
+});
+
 describe("view/status/start query", () => {
   test("start в не-upcoming view/duplicate/unknown → 400", async () => {
     for (const query of [

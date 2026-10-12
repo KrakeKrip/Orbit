@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { addCivilDays, normalizeCivilTime } from "@/lib/calendar";
+import { compareTodayOrder } from "@/lib/task-view";
 import { and, asc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
 import { projects, taskCompletions, tasks } from "@/server/db/schema";
@@ -130,7 +131,8 @@ export async function listTasksView(
     orderBy = [asc(tasks.sortOrder), asc(tasks.createdAt), asc(tasks.id)];
   } else if (view === "today") {
     // Union: попала по плану <= today ИЛИ по дедлайну <= today (хотя бы
-    // одна дата присутствует); секционирование — pure-хелпер groupTodayTasks.
+    // одна дата присутствует); порядок/секционирование — единый
+    // pure-контракт compareTodayOrder (R7, тот же, что у Today UI).
     viewFilter = and(
       sql`(${tasks.plannedDate} IS NOT NULL OR ${tasks.deadlineDate} IS NOT NULL)`,
       sql`(${tasks.plannedDate} <= ${today}::date OR ${tasks.deadlineDate} <= ${today}::date)`,
@@ -153,7 +155,7 @@ export async function listTasksView(
       asc(tasks.id),
     ];
   }
-  return getDb()
+  const rows = await getDb()
     .select(taskColumns)
     .from(tasks)
     .where(
@@ -164,6 +166,14 @@ export async function listTasksView(
       ),
     )
     .orderBy(...orderBy);
+  if (view !== "today") {
+    return rows;
+  }
+  // R7: raw API возвращает Today в том же порядке, что Today UI, — тот же
+  // pure-компаратор rank 1..4 + внутриранговый порядок контракта. Вход уже
+  // отсортирован стабильно (sort_order/created_at/id); стабильная
+  // JS-сортировка сохраняет этот tie-break, DTO не расширяется.
+  return [...rows].sort((a, b) => compareTodayOrder(a, b, today));
 }
 
 /** Собственная не-deleted задача в любом состоянии (даты/архив проекта). */

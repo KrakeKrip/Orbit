@@ -570,3 +570,40 @@ READY_FOR_REVIEW (test-only: три тестовых файла; R1–R5 при�
 - Только test-only файлы; src/API/schema/settings persistence/limiter/runner/pool/controller не менялись; R1–R5 не переписывались; R7/R8 и EOF/debug cleanup не тронуты; TASK-008 DONE не объявляется.
 - Полные suites не повторялись (по заданию; будут перед итоговой приёмкой). Целевой PG17 недоступен (выключен не мной) — targeted прогоны на временном PG 18.6 с честной версией.
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets/storageState/credentials не печатались и не коммитились.
+
+---
+
+# Коррекция TASK-008-R7 — единый порядок Today в raw API
+
+## Статус
+
+READY_FOR_REVIEW (read-only ordering; R1–R6 приняты на executor HEAD `ed07ce2fc1c42a276ec993734536ba4ab4542b35` (review `reports/TASK-008-R6.md`); R8/TASK-009 не начаты). Assignment `tasks/TASK-008-R7.md`; старт — coordinator commit `9cc9938ee768d829ae74ee03e4aae2e09b3b6cac` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+`listTasksView` для view=today отдавал rows только в stable-triple порядке (sort_order/created_at/id) — четыре Today-ранга и внутриранговый порядок применял только client helper. Исправление:
+
+- **src/lib/task-view.ts**: новый экспорт `compareTodayOrder(a, b, today)` — ЕДИНЫЙ компаратор контракта (ранг 1 plan<today → 2 plan=today → 3 deadline<today → 4 deadline=today; внутри ранга: rank1 plannedDate+time NULLS LAST, rank2 time NULLS LAST, rank3 deadlineDate, rank4/tie — stable). `TodayOrderable` (Pick plannedDate/plannedTime/deadlineDate) + `todaySectionOf` ослаблены до этой формы; `groupTodayTasks` теперь сортирует секции тем же `compareTodayOrder` — второго расходящегося компаратора нет. Stable tie: JS-сортировка стабильна, вход упорядочен sort_order/created_at/id — DTO не расширяется.
+- **src/server/tasks/service.ts** (только read ordering): `listTasksView` для view=today сортирует результат тем же `compareTodayOrder` (Inbox/Upcoming SQL ordering не менялись). Writes/transactions/locks/completion, timezone persistence/context, DTO/API shape, UI/controllers — не тронуты.
+
+## Регрессия raw API (tests/auth/tasks-planning.auth.test.ts, новый describe «R7: Today raw API ordering»)
+
+Собственные синтетические fixtures пользователя U, даты от server context.today, перемешанный порядок создания (контролируемый базовый sort_order): 4 ранга, 13 задач без дублей — rank1 (5: даты T-3/T-2/T-1, time 09:00 прежде 10:00 и NULL last), rank2 (3: time NULL last), rank3 (3: deadline ASC, включая plan-future+deadline-past, стабильный tie d3 раньше d1 по созданию), rank4 (2: stable e2 раньше e1), включая task с plan+deadline (p4, deadline будущий не влияет на ранг). Assertions: `subset(ids реального response.tasks)` == expectedOrder для **status=open**, затем все fixtures завершаются реальным PATCH и **completed/all дают тот же порядок** (общая проверка). Чужая задача пользователя V не проникает; assertions скоупнуты на свои fixture ids (extra rows других тестов файла не влияют на относительный порядок). Существующие фильтр-тесты не ослаблены.
+
+## Проверки
+
+| Команда | Результат |
+| --- | --- |
+| Node24 ДО gates | /private/tmp/orbit-r4-review-runtime — v24.21.0; системный Node не менялся |
+| Состояние test DB | PG17/55432 закрыт (Colima/CRM не запускались); поднят временный локальный guarded **PostgreSQL 18.6 (Homebrew)**: кластер /private/tmp, scram-sha-256, эфемерный пароль (0600), loopback-порт 37610, TEST_DATABASE_URL только через env |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `npm test -- tests/calendar-view.test.ts` | exit 0 — **25/25** (24 + 1 R7 компаратор: ранги, time NULLS LAST, rank3 deadline без влияния plan future, tie=0) |
+| `npm run test:auth -- tests/auth/tasks-planning.auth.test.ts` (весь planning file, свежий production build) | exit 0 — **23/23** (22 + новый R7 ordering test); raw API order evidence — см. секцию регрессии выше |
+| Cleanup | read-only check на временном инстансе: **0** orbit_test\*-баз; `pg_ctl stop` — server stopped; кластер/пароль/env-файлы удалены, порт закрыт; `git diff --check` чист |
+
+## Ограничения / не входило
+
+- DTO/API shape, UI/controllers, schema, writes/transactions/locks/completion, timezone persistence/context, Inbox/Upcoming ordering — не менялись; второй компаратор/большая SQL переработка не вводились. R8 и EOF/debug cleanup не тронуты; TASK-008 DONE не объявляется.
+- Browser прогон не требовался (UI не менялся, groupTodayTasks использует тот же компаратор). Полные gates — перед итоговой приёмкой TASK-008. Целевой PG17 недоступен (выключен не мной) — прогон на временном PG 18.6.
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets/URI не печатались и не коммитились.
