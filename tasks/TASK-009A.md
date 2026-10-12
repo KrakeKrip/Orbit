@@ -1,5 +1,7 @@
 # TASK-009A — чтение задач проекта
 
+**PAUSED по решению пользователя**, 2026-10-12: приоритет перенесён на native/local-first. Не выполнять этот TASK, даже если старый prompt разрешает. Ветка/worktree и требования сохранены.
+
 ## Одна цель / старт
 
 Добавить owner-scoped GET /api/v1/projects/[projectId]/tasks для будущего экрана проекта. Только read service + HTTP + tests, без UI и новых mutations. База review: 463c8f16f6317ae1a6257ff704c23c9f1716b2fa (принятый TASK-008). Стартовый SHA — coordinator assignment HEAD после базы, зафиксировать полный SHA до работы. Ветка task/TASK-009A, worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-009A. Проверить Git root/branch/status; при чужих правках остановить затронутую работу.
