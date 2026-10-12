@@ -1,0 +1,12 @@
+# SwiftPM build artifacts
+.build/
+
+# Local stores (never commit real or test databases)
+*.store
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Local/generated files
+.DS_Store
+*.log
