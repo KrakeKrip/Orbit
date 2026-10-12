@@ -1,5 +1,7 @@
 # TASK-008-R4 — rename draft на новое открытие
 
+Статус: ACCEPTED на 6937135, 2026-10-12; reports/TASK-008-R4.md. Следующее задание только tasks/TASK-008-R5.md.
+
 ## Одна цель и база
 
 R4 из reports/TASK-008.md: title=A → открыть rename → draft=B → Cancel → reopen; сейчас B возвращается, потому что renameDraft живёт в TaskRow со стабильным task.id key. При внешнем изменении title + refresh новое открытие тоже может показать старый draft. Новое открытие должно брать актуальный task.title; только текущее открытие сохраняет draft при ошибке.
