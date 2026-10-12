@@ -287,18 +287,8 @@ test.describe("входящие: quick-add/rename/complete (desktop 1280)", () =
     await expect(row).toBeVisible();
     const taskId = await row.getAttribute("data-task-id");
     expect(taskId).not.toBeNull();
-    page.on("console", (message) => {
-      if (message.text().startsWith("PROBE")) {
-        console.log("PAGE:", message.text());
-      }
-    });
 
     // Keyboard open: фокус внутри confirmation — безопасная «Отмена».
-    page.on("console", (message) => {
-      if (message.text().startsWith("PROBE")) {
-        console.log("PAGE:", message.text());
-      }
-    });
     await row.getByRole("button", { name: "Удалить" }).focus();
     await page.keyboard.press("Enter");
     await expect(page.getByText("Удалить задачу?")).toBeVisible();
@@ -306,13 +296,6 @@ test.describe("входящие: quick-add/rename/complete (desktop 1280)", () =
     await expect(
       page.locator(`#task-delete-cancel-${taskId}`),
     ).toBeFocused({ timeout: 5000 });
-    console.log(
-      "R3 DEBUG active after open:",
-      await page.evaluate(() => {
-        const el = document.activeElement;
-        return `${el?.tagName}#${el?.id}`;
-      }),
-    );
 
     // Escape до DELETE: отмена + фокус на trigger, мутирующего запроса нет.
     await page.keyboard.press("Escape");

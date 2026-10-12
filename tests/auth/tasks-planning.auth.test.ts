@@ -902,5 +902,3 @@ async function journalCount(taskId: string): Promise<number> {
     return Number(rows[0].count);
   });
 }
-
-

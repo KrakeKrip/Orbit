@@ -15,7 +15,7 @@ export default defineConfig({
   reporter: "list",
   globalTeardown: "./tests/e2e/global-teardown.ts",
   use: {
-    trace: 'on',
+    trace: 'retain-on-failure',
     baseURL,
     ...devices["Desktop Chrome"],
   },
@@ -32,13 +32,12 @@ export default defineConfig({
     {
       name: "auth-setup",
       testMatch: /auth\.setup\.ts/,
-      use: {
-    trace: 'on', ...devices["Desktop Chrome"] },
+      use: { trace: 'retain-on-failure', ...devices["Desktop Chrome"] },
     },
     {
       name: "chromium",
       use: {
-    trace: 'on',
+        trace: 'retain-on-failure',
         ...devices["Desktop Chrome"],
         storageState: `${storageDir}/user-a.json`,
       },

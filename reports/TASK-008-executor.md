@@ -648,3 +648,47 @@ Fixtures: Inbox-задача без плана, Today-задача (план с�
 - schema/service/API/settings persistence/writes/controllers не менялись; TaskDTO не расширялся; guards R1–R7 не переделывались; весь контекст в editor не дублировался. Финальный cleanup/gates и TASK-009 не начаты; TASK-008 DONE не объявляется.
 - Полные auth/DB/unit/E2E — отдельный проход после review R8. Целевой PG17 недоступен (выключен не мной) — прогон на временном PG 18.6.
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets/URI/storageState не печатались и не коммитились.
+
+---
+
+# Финальная уборка TASK-008-FINAL и полный проход gates
+
+## Статус
+
+**NEEDS_FIXES (один детерминированный auth-flow expiry-тест вне scope FINAL; вся уборка и остальные gates зелёные).** Cleanup-часть готова к review. R1–R8 приняты на executor HEAD `01ac0cea9dd44de1bd33b5f69daf737ce30c83ca`; старт — coordinator commit `645c2161aa3034de8dd044fbfc6f00e2b5789ae1` (root/ветка/status проверены, дерево чистое).
+
+## Cleanup (без продуктовых изменений)
+
+- **tests/e2e/planning.spec.ts** (только R8 test): настоящий `try/finally` — try открывается ДО первой settings mutation, в finally восстановление захваченной `initialZone` (Origin, точный 200, GET-подтверждение), работает при упавшем assertion; ложный комментарий «finally-семантика» удалён. Проверки подписи/draft/PATCH/GET сохранены без изменений.
+- **tests/e2e/inbox.spec.ts**: удалены два PROBE console listener и «R3 DEBUG» console.log; assertions/response synchronization не тронуты.
+- **playwright.config.ts**: временные `trace: 'on'` overrides (3 места, включая кривое форматирование) заменены на `trace: 'retain-on-failure'`; CI/reuse/globalTeardown/storageState/workers/guards не менялись.
+- **src/components/orbit/task-row.tsx, tests/auth/tasks-planning.auth.test.ts**: только trim лишних EOF blank lines (накопленные замечания cumulative diff --check).
+- **README.md**: убраны устаревшие утверждения, противоречащие принятым R1–R8 («Данных задач ещё нет» / «Данных задач и серверной бизнес-логики пока нет») — заменены на фактическое состояние (one-off задачи, планирование, Today/Upcoming); список реально отсутствующих фич (notes/priority/project move/subtasks/recurrence/search и пр.) сохранён без изменений.
+
+## Вне scope — новая проблема: детерминированный auth-flow expiry-тест (NEEDS_FIXES)
+
+`tests/auth/auth-flow.auth.test.ts > «просроченный expiresAt в БД: me 401 (cookie cache отключён)»` — **детерминированно падает** (2 прогона: полный suite и одиночный файл): тест экспирирует сессию прямым `UPDATE session SET expires_at = now() - interval '1 second'`, но `me`/`GET /api/auth/get-session` возвращают 200 с **обновлённой сессией (+7 дней, updatedAt = момент запроса)** — better-auth 1.7.7 refresh-семантика перезаписывает сессию вместо отказа. Строка в БД экспериментально подтверждена просроченной (expires_at < db_now), cookieCache выключен (instance.ts:52). Продукт с R1–R8 не менялся; исходные 123/123 прогоны проходили на PG17 (Colima), сейчас среда — временный PG18.6; PG17 этим проходом не проверен (недоступен, Colima не запускалась). Точный repro: `npm run test:auth -- tests/auth/auth-flow.auth.test.ts` на временном PG18; лог сохранён (/tmp, удалён после записи evidence в отчёт). Исправление — отдельная коррекция (test: expiry через обновление собственно сессии/более глубокий сдвиг, либо проверка better-auth refresh-семантики), в scope FINAL не входила.
+
+## Полный последовательный проход gates (после cleanup)
+
+| Gate | Результат |
+| --- | --- |
+| Node24 ДО gates | /private/tmp/orbit-r4-review-runtime — v24.21.0; системный Node не менялся |
+| `npm ci` (Node24) | exit 0 (npm warn install-scripts — известно), lockfile без изменений |
+| `npm run lint` | exit 0, **0 warnings** |
+| `npm run typecheck` | exit 0 |
+| `npm test` | exit 0 — **69/69** |
+| `npm run test:db` (temp PG) | exit 0 — **47/47** |
+| `npm run test:auth` (полный, свежий production build) | **123/124** — 1 failed: auth-flow expiry (см. выше; вне scope FINAL, детерминирован, repro приложен) |
+| `CI=1 E2E_PORT=37730 npm run test:e2e` (полный, свежий `next build`) | exit 0 — **123/123** (3 auth-setup + 120 chromium), включая все R1–R8 regressions |
+| Скан полных auth/E2E логов | `idle client error` / `terminating connection` / `57P05` / `uncaughtException` / `unhandled rejection` — **0 вхождений** |
+| No-env production build | exit 0 в отдельной временной копии tracked дерева (git archive, без .env/credential env, `npm ci` + `npm run build`; env-переменные БД/auth сняты перед сборкой); temp-копия удалена |
+| DB | PG17/55432 закрыт — не проверен этим проходом (Colima/CRM не запускались); временный guarded **PostgreSQL 18.6** (Homebrew, loopback 37700, scram, эфемерный пароль 0600, TEST_DATABASE_URL только через env): после всех прогонов **0 orbit_test\*-баз / 0 соединений**; `pg_ctl stop`, кластер/пароль/env удалены, порт закрыт |
+| Diff | `git diff --check` (uncommitted cleanup) чист; cumulative `git diff --check 394aef441a..HEAD` — чист после EOF-trim коммита (до коммита показывал 2 известных EOF blank line, устраняемых этим коммитом) |
+| Dev StrictMode | не повторялся: product effects с R8 не менялись (перманентного dev suite нет — известное ограничение) |
+
+## Ограничения / не входило
+
+- Никаких новых продуктовых изменений; R1–R8 не переписывались. R7/R8-файлы не тронуты (кроме EOF trim task-row.tsx). Корневые coordination docs и review reports не менялись.
+- PG17 не проверен этим проходом (недоступен); auth-flow expiry failure детерминирован на temp PG18 — причина в better-auth refresh-семантике при прямом UPDATE expires_at, исправление вне FINAL scope.
+- main/другие worktree/localhost:3000/CRM/VPN/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets/URI/storageState не печатались и не коммитились; DONE не объявляется — остановка до независимой финальной приёмки Codex.

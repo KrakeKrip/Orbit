@@ -693,6 +693,7 @@ test.describe("Timezone editor label (R8, desktop 1280)", () => {
     // Account Asia/Tokyo: Origin, точный 200, GET-подтверждение.
     await page.goto("/inbox");
     const origin = new URL(page.url()).origin;
+    try {
     const patch = await page.request.patch("/api/v1/settings", {
       data: { timezone: "Asia/Tokyo" },
       headers: { "content-type": "application/json", origin },
@@ -826,19 +827,22 @@ test.describe("Timezone editor label (R8, desktop 1280)", () => {
     expect(itemTask.deadlineDate).toBeNull();
     await expect(inboxRow).toHaveCount(0);
 
-    // finally-семантика: восстановление прежней зоны (200 + GET).
-    const restore = await page.request.patch("/api/v1/settings", {
-      data: { timezone: initialZone },
-      headers: { "content-type": "application/json", origin },
-    });
-    expect(restore.status()).toBe(200);
-    const confirmRestore = await page.request.get("/api/v1/settings");
-    expect(confirmRestore.status()).toBe(200);
-    expect(
-      (
-        (await confirmRestore.json()) as { settings: { timezone: string } }
-      ).settings.timezone,
-    ).toBe(initialZone);
+    } finally {
+      // Восстановление захваченной initialZone работает и при упавшем
+      // assertion: Origin, точный 200, GET-подтверждение.
+      const restore = await page.request.patch("/api/v1/settings", {
+        data: { timezone: initialZone },
+        headers: { "content-type": "application/json", origin },
+      });
+      expect(restore.status()).toBe(200);
+      const confirmRestore = await page.request.get("/api/v1/settings");
+      expect(confirmRestore.status()).toBe(200);
+      expect(
+        (
+          (await confirmRestore.json()) as { settings: { timezone: string } }
+        ).settings.timezone,
+      ).toBe(initialZone);
+    }
     expect(pageErrors).toEqual([]);
   });
 });
