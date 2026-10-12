@@ -16,7 +16,7 @@ GLM работает только в назначенном отдельном w
 
 1. Codex фиксирует координационные документы и базу сравнения, создаёт task/TASK-NNN и отдельный worktree вне исходников.
 2. Пользователь передаёт GLM путь и TASK. Локальный worktree доступен лишь исполнителю на том же компьютере; облачная доступность не подразумевается.
-3. GLM проверяет корень Git, ветку и status перед изменениями. При чужих изменениях останавливает затронутую работу.
+3. GLM проверяет корень Git, ветку и status перед изменениями. При чужих изменениях останавливает затронутую работу. Для NATIVE-001 pre-existing untracked Swift starter явно разрешён в tasks/NATIVE-001.md, сохранён coordinator snapshot; новые неожиданные изменения вне snapshot не перезаписывать.
 4. GLM делает обычные новые коммиты и возвращает READY_FOR_REVIEW либо BLOCKED, ветку, полный SHA, изменения, фактические проверки и ограничения.
 5. Codex проверяет все коммиты от указанной базы, scope, ownership, ошибки и критерии; самостоятельно запускает релевантные проверки.
 6. Замечания: NEEDS_FIXES, reports/TASK-NNN.md, исправления в той же ветке новыми коммитами.
@@ -39,7 +39,7 @@ TODO означает в том числе подготовленную, но е
 
 ## Активные native проверки
 
-NATIVE-001: swift build/swift test, disk reopen и actual macOS GUI evidence на own temp store. Только native code/документы в scope; web/DB/auth suites не повторять без изменений веб-кода. Не устанавливать Xcode и не переключать системный xcode-select без отдельного указания. Реальная iOS проверка требует соответствующего tooling; непроверенное явно помечать.
+NATIVE-001: swift build/swift test, disk reopen и actual macOS GUI evidence на own temp store. Только native code/документы в scope; web/DB/auth suites не повторять без изменений веб-кода. Xcode уже установлен: использовать DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer для native команд, системный xcode-select не менять. Реальная iOS проверка требует соответствующего tooling; непроверенное явно помечать.
 
 ## Исторические web проверки
 TASK-001 добавил package.json, npm scripts dev/start/lint/typecheck/test/build и README. Целевой runtime Node 24 LTS. Review — reports/TASK-001.md; тесты foundation не подтверждают будущие DB/auth/task flows.
