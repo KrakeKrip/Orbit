@@ -1,5 +1,7 @@
 # TASK-008-R5 — границы семидневного окна
 
+**ACCEPTED**, 2026-10-12: a4e8a84f413c56c2a277690e8419671f8ef783f2, reports/TASK-008-R5.md. Следующая выдача tasks/TASK-008-R6.md.
+
 ## Одна цель
 
 R5 из reports/TASK-008.md. Исправить допустимые границы календаря Upcoming без исключений/невалидных переходов. R1–R4 приняты на executor HEAD 69371354f13057b1cc4d6de334523029e38860aa, review reports/TASK-008-R4.md. Начать с нового coordinator assignment HEAD; проверить root/branch/status. Ветка task/TASK-008, worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
