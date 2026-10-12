@@ -422,35 +422,100 @@ test.describe("Today/Upcoming (desktop 1280)", () => {
     await expect(page.getByText("Некорректная дата начала периода")).toBeVisible();
   });
 
-  test("timezone labels server-driven: account tz ≠ browser tz", async ({
+test.describe("Timezone labels (R6, desktop 1280)", () => {
+  // R6: браузер явно в UTC; account зона меняется серверно (Asia/Tokyo) —
+  // «Сегодня» обязан показывать server-derived context, а не зону браузера.
+  test.use({
+    viewport: { width: 1280, height: 800 },
+    storageState: USER_C_STATE,
+    timezoneId: "UTC",
+  });
+
+  test("R6: account Asia/Tokyo — Сегодня показывает server context из ответа Refresh", async ({
     page,
   }) => {
-    // Браузерная зона (playwright default UTC) ≠ Moscow: контекст/заголовок
-    // рендерится сервером; проверяем server-driven отображение today.
-    const contextResponse = await page.request.get(
-      "/api/v1/tasks?view=today&status=open",
-    );
-    const context = (await contextResponse.json()) as {
-      context: { timezone: string; today: string };
-    };
-    // Устанавливаем зону, отличную от UTC браузера.
-    const settingsPatch = await page.request.patch("/api/v1/settings", {
-      data: { timezone: "Asia/Tokyo" },
-      headers: { "content-type": "application/json" },
-    });
+    const pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    // Фактическая зона браузера — UTC (не полагаемся на настройки стенда).
     expect(
-      settingsPatch.status(),
-      "settings patch requires origin; fallback ниже",
-    ).toBeDefined();
+      await page.evaluate(() =>
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ),
+    ).toBe("UTC");
+
+    // Прежняя зона аккаунта для восстановления в finally.
+    const initialSettings = await page.request.get("/api/v1/settings");
+    expect(initialSettings.status()).toBe(200);
+    const initialZone = (
+      (await initialSettings.json()) as { settings: { timezone: string } }
+    ).settings.timezone;
     await page.goto("/today");
-    await expect(page.getByText(context.context.today).first()).toBeVisible();
-    // Восстановление UTC через UI settings API с Origin.
-    const restore = await page.request.patch("/api/v1/settings", {
-      data: { timezone: "UTC" },
-      headers: { "content-type": "application/json", origin: page.url().split("/").slice(0, 3).join("/") },
-    });
-    expect(restore.ok() || restore.status() === 403).toBe(true);
+    const origin = new URL(page.url()).origin;
+
+    try {
+      // Установка Asia/Tokyo: валидный Origin, точный 200, GET-подтверждение
+      // (403 не успех).
+      const patch = await page.request.patch("/api/v1/settings", {
+        data: { timezone: "Asia/Tokyo" },
+        headers: { "content-type": "application/json", origin },
+      });
+      expect(patch.status()).toBe(200);
+      const confirm = await page.request.get("/api/v1/settings");
+      expect(confirm.status()).toBe(200);
+      expect(
+        (
+          (await confirm.json()) as { settings: { timezone: string } }
+        ).settings.timezone,
+      ).toBe("Asia/Tokyo");
+
+      // Ждём ответ РЕАЛЬНОГО Refresh (waitForResponse до клика), UI
+      // проверяем по ЕГО context — без отдельного прежнего GET и без
+      // гонки полуночи.
+      const refreshed = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          response.url().includes("/api/v1/tasks?") &&
+          response.status() === 200,
+      );
+      await page.getByRole("button", { name: "Обновить" }).click();
+      const context = (
+        (await (await refreshed).json()) as {
+          context: { timezone: string; today: string; asOf: string };
+        }
+      ).context;
+      expect(context.timezone).toBe("Asia/Tokyo");
+      // today из собственного asOf в зоне ответа.
+      const tokyoToday = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Tokyo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date(context.asOf));
+      expect(context.today).toBe(tokyoToday);
+
+      // UI показывает server-derived зону и дату (браузер при этом в UTC).
+      await expect(
+        page.getByText(`${context.today} · Asia/Tokyo`),
+      ).toBeVisible();
+    } finally {
+      // Восстановление прежней зоны: точный 200 + GET-подтверждение.
+      const restore = await page.request.patch("/api/v1/settings", {
+        data: { timezone: initialZone },
+        headers: { "content-type": "application/json", origin },
+      });
+      expect(restore.status()).toBe(200);
+      const confirmRestore = await page.request.get("/api/v1/settings");
+      expect(confirmRestore.status()).toBe(200);
+      expect(
+        (
+          (await confirmRestore.json()) as { settings: { timezone: string } }
+        ).settings.timezone,
+      ).toBe(initialZone);
+    }
+    expect(pageErrors).toEqual([]);
   });
+});
 });
 
 test.describe("Upcoming границы окна (R5, desktop 1280)", () => {

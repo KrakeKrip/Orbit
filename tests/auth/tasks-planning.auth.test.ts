@@ -340,57 +340,123 @@ describe("context: timezone/today/asOf", () => {
   });
 
   test("timezone от saved account settings; смена tz переписывает только today/context", async () => {
-    // Создаём задачу с фиксированным plan до смены timezone.
+    // R6: прежняя зона фиксируется через GET и восстанавливается в finally
+    // (точный 200 + GET-подтверждение); никакой привязки к времени суток.
+    const initialSettings = await fetch(`${authBaseURL()}/api/v1/settings`, {
+      method: "GET",
+      headers: { cookie: uCookie },
+    });
+    expect(initialSettings.status).toBe(200);
+    const initialZone = (
+      (await initialSettings.json()) as { settings: { timezone: string } }
+    ).settings.timezone;
+
+    // Локальная дата собственного asOf в заданной зоне.
+    const localDate = (asOf: string, zone: string): string =>
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: zone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date(asOf));
+
+    // Задача с фиксированным планом; неизменность полей проверяем через
+    // GET item до/после, не через попадание в Today.
     const task = await createTask(uCookie, {
       title: "TZ task",
       plannedDate: "2026-06-10",
     });
+    const beforeItem = taskOf(
+      await tasksCall({
+        cookie: uCookie,
+        path: `${COLLECTION_PATH}/${task.id}`,
+      }),
+      "task",
+    );
+
     const before = await tasksCall({
       cookie: uCookie,
       query: "?view=today&status=all",
     });
+    expect(before.status).toBe(200);
     const beforeContext = contextOf(before);
-    const beforeTask = (before.body as { tasks: TaskDTO[] }).tasks.find(
-      (t) => t.id === task.id,
+    expect(beforeContext.timezone).toBe(initialZone);
+    expect(beforeContext.today).toBe(
+      localDate(beforeContext.asOf, initialZone),
     );
-    expect(beforeTask?.plannedDate).toBe("2026-06-10");
 
-    // Меняем account timezone на Europe/Moscow (через принятый settings API).
-    const settingsPatch = await fetch(`${authBaseURL()}/api/v1/settings`, {
-      method: "PATCH",
-      headers: {
+    try {
+      // Смена зоны: правильный Origin, точный 200 + GET-подтверждение.
+      const settingsPatch = await fetch(`${authBaseURL()}/api/v1/settings`, {
+        method: "PATCH",
+        headers: {
+          cookie: uCookie,
+          origin: authBaseURL(),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ timezone: "Europe/Moscow" }),
+      });
+      expect(settingsPatch.status).toBe(200);
+      const confirmPatch = await fetch(`${authBaseURL()}/api/v1/settings`, {
+        method: "GET",
+        headers: { cookie: uCookie },
+      });
+      expect(confirmPatch.status).toBe(200);
+      expect(
+        (
+          (await confirmPatch.json()) as { settings: { timezone: string } }
+        ).settings.timezone,
+      ).toBe("Europe/Moscow");
+
+      const after = await tasksCall({
         cookie: uCookie,
-        origin: authBaseURL(),
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ timezone: "Europe/Moscow" }),
-    });
-    expect(settingsPatch.status).toBe(200);
+        query: "?view=today&status=all",
+      });
+      expect(after.status).toBe(200);
+      const afterContext = contextOf(after);
+      // R6: today сравнивается с local date СОБСТВЕННОГО asOf в зоне
+      // ответа — без предположения, что UTC today и Moscow today
+      // обязательно различны.
+      expect(afterContext.timezone).toBe("Europe/Moscow");
+      expect(afterContext.today).toBe(
+        localDate(afterContext.asOf, "Europe/Moscow"),
+      );
 
-    const after = await tasksCall({
-      cookie: uCookie,
-      query: "?view=today&status=all",
-    });
-    const afterContext = contextOf(after);
-    expect(afterContext.timezone).toBe("Europe/Moscow");
-    expect(afterContext.today).not.toBe(beforeContext.today);
-    // Сохранённые даты не переписаны сменой timezone.
-    const afterTask = (after.body as { tasks: TaskDTO[] }).tasks.find(
-      (t) => t.id === task.id,
-    );
-    expect(afterTask?.plannedDate).toBe("2026-06-10");
-
-    // Возврат UTC для последующих сценариев.
-    const restore = await fetch(`${authBaseURL()}/api/v1/settings`, {
-      method: "PATCH",
-      headers: {
-        cookie: uCookie,
-        origin: authBaseURL(),
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ timezone: "UTC" }),
-    });
-    expect(restore.status).toBe(200);
+      // Сохранённые поля задачи не переписаны сменой timezone (GET item).
+      const afterItem = taskOf(
+        await tasksCall({
+          cookie: uCookie,
+          path: `${COLLECTION_PATH}/${task.id}`,
+        }),
+        "task",
+      );
+      expect(afterItem.title).toBe(beforeItem.title);
+      expect(afterItem.plannedDate).toBe(beforeItem.plannedDate);
+      expect(afterItem.plannedTime).toBe(beforeItem.plannedTime);
+      expect(afterItem.deadlineDate).toBe(beforeItem.deadlineDate);
+    } finally {
+      // Восстановление прежней зоны: точный 200 + GET-подтверждение.
+      const restore = await fetch(`${authBaseURL()}/api/v1/settings`, {
+        method: "PATCH",
+        headers: {
+          cookie: uCookie,
+          origin: authBaseURL(),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ timezone: initialZone }),
+      });
+      expect(restore.status).toBe(200);
+      const confirmRestore = await fetch(`${authBaseURL()}/api/v1/settings`, {
+        method: "GET",
+        headers: { cookie: uCookie },
+      });
+      expect(confirmRestore.status).toBe(200);
+      expect(
+        (
+          (await confirmRestore.json()) as { settings: { timezone: string } }
+        ).settings.timezone,
+      ).toBe(initialZone);
+    }
   });
 
   test("client timezone/today/owner overrides не принимаются", async () => {

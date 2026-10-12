@@ -537,3 +537,36 @@ READY_FOR_REVIEW (только границы календаря Upcoming; R1–
 - Service/API/schema, read/write guards (R2/R3), frozen snapshot R1, другие экраны — не менялись; общего controller нет. R6–R8 и EOF/debug cleanup — не тронуты; TASK-008 DONE не объявляется.
 - Целевой PG17 недоступен (выключен не мной) — целевой E2E выполнен на временном PG 18.6 (как независимые review R1/R2a); полные gates — перед итоговой приёмкой TASK-008.
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились.
+
+---
+
+# Коррекция TASK-008-R6 — достоверные timezone-тесты
+
+## Статус
+
+READY_FOR_REVIEW (test-only: три тестовых файла; R1–R5 приняты на executor HEAD `a4e8a84f413c56c2a277690e8419671f8ef783f2` (review `reports/TASK-008-R5.md`); R7/R8/TASK-009 не начаты). Assignment `tasks/TASK-008-R6.md`; старт — coordinator commit `37f23251c3c4da6cfe7bc066ea29f0cbc404307a` (root/ветка/status проверены, дерево чистое).
+
+## Изменения (без src/API/schema/settings persistence)
+
+1. **tests/auth/tasks-planning.auth.test.ts** («timezone от saved account settings…» переписан): удалено предположение `today(UTC) ≠ today(Moscow)`; каждое `context.today` (до и после смены) сравнивается с local date **собственного** `response.asOf` в **собственной** `response.timezone` (Intl en-CA). Прежняя зона фиксируется GET settings и восстанавливается в `finally` с точным 200 + GET-подтверждением; смена зоны — правильный Origin, точный 200 + GET-подтверждение Europe/Moscow. Неизменность задачи проверяется GET item до/после (title/plannedDate/plannedTime/deadlineDate), не попаданием в Today. Context/ownership проверки не ослаблены.
+2. **tests/e2e/planning.spec.ts** — старый тест заменён новым describe «Timezone labels (R6)» с явным `timezoneId: "UTC"` (только этот describe) + проверка фактической `Intl…timeZone === "UTC"`; account Asia/Tokyo через валидный Origin, **точный 200** (403 не успех), GET settings подтверждает; `waitForResponse` ставится ДО реального «Обновить», UI проверяется по context ЭТОГО ответа (timezone Asia/Tokyo, today == local date его asOf, заголовок «today · Asia/Tokyo» виден при браузере в UTC) — без гонки полуночи; прежняя зона восстановлена в finally (200 + GET). `pageerror` — ноль.
+3. **tests/calendar-view.test.ts** (+1 R6 pure-тест): fixed-instant 2026-01-15T12:00:00Z → одинаковый день 2026-01-15 в UTC и Europe/Moscow; 2026-01-15T22:30:00Z → UTC 2026-01-15, Moscow/Tokyo 2026-01-16; явные literals. Существующие calendar assertions сохранены.
+
+## Проверки
+
+| Команда | Результат |
+| --- | --- |
+| Node24 ДО команд | /private/tmp/orbit-r4-review-runtime — `node --version` = v24.21.0; системный Node не менялся |
+| Состояние test DB | PG17/55432 закрыт (не запускал Colima/CRM); поднят временный локальный guarded **PostgreSQL 18.6 (Homebrew)**: отдельный кластер /private/tmp, scram-sha-256, эфемерный пароль (0600), loopback-порт 37550, TEST_DATABASE_URL только через env |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `npm test -- tests/calendar-view.test.ts` | exit 0 — **24/24** (23 + 1 R6) |
+| `npm run test:auth -- tests/auth/tasks-planning.auth.test.ts -t 'timezone'` | exit 0 — **3 passed / 19 skipped**: нужный тест реально выбран (включая переписанный «timezone от saved account settings»); доказана смена на Europe/Moscow (200 + GET) и восстановление прежней зоны (200 + GET) |
+| `CI=1 E2E_PORT=37580 npm run test:e2e -- tests/e2e/planning.spec.ts --project=chromium --grep "timezone\|R6:"` (свежий `next build`) | exit 0 — **4/4**: 3 auth-setup + R6 browser (Asia/Tokyo применена и видна в UI при browser UTC; зона восстановлена) |
+| Cleanup | Auth/E2E запускались последовательно; read-only check на временном инстансе: **0** orbit_test\*-баз; `pg_ctl stop` — server stopped; кластер/пароль/env-файлы удалены, порт закрыт; `git diff --check` чист |
+
+## Ограничения / не входило
+
+- Только test-only файлы; src/API/schema/settings persistence/limiter/runner/pool/controller не менялись; R1–R5 не переписывались; R7/R8 и EOF/debug cleanup не тронуты; TASK-008 DONE не объявляется.
+- Полные suites не повторялись (по заданию; будут перед итоговой приёмкой). Целевой PG17 недоступен (выключен не мной) — targeted прогоны на временном PG 18.6 с честной версией.
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets/storageState/credentials не печатались и не коммитились.

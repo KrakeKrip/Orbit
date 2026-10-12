@@ -173,6 +173,19 @@ describe("instantToLocalDate", () => {
     expect(() => instantToLocalDate(instant, "")).toThrow(RangeError);
   });
 
+  test("R6: fixed-instant одинаковый/разный день UTC vs Moscow/Tokyo", () => {
+    // Одинаковый день: 2026-01-15T12:00:00Z → 15-е и в UTC, и в Moscow (+3).
+    const noon = new Date("2026-01-15T12:00:00.000Z");
+    expect(instantToLocalDate(noon, "UTC")).toBe("2026-01-15");
+    expect(instantToLocalDate(noon, "Europe/Moscow")).toBe("2026-01-15");
+    // Разные дни: 2026-01-15T22:30:00Z → UTC 2026-01-15, Moscow/Tokyo
+    // уже 2026-01-16. Явные ожидаемые literals.
+    const evening = new Date("2026-01-15T22:30:00.000Z");
+    expect(instantToLocalDate(evening, "UTC")).toBe("2026-01-15");
+    expect(instantToLocalDate(evening, "Europe/Moscow")).toBe("2026-01-16");
+    expect(instantToLocalDate(evening, "Asia/Tokyo")).toBe("2026-01-16");
+  });
+
   test("независимость от process TZ: результат только от явной зоны", () => {
     const previous = process.env.TZ;
     try {
