@@ -1,5 +1,7 @@
 # TASK-008-R6 — достоверные timezone-тесты
 
+**ACCEPTED**, 2026-10-12: ed07ce2fc1c42a276ec993734536ba4ab4542b35, reports/TASK-008-R6.md. Следующее задание tasks/TASK-008-R7.md.
+
 ## Одна цель и старт
 
 Исправить R6 из reports/TASK-008.md: timezone checks не зависят от времени суток и доказывают настоящую смену account timezone. R1–R5 приняты, R5 HEAD a4e8a84f413c56c2a277690e8419671f8ef783f2, review reports/TASK-008-R5.md. Начать с нового coordinator assignment HEAD; записать полный стартовый SHA, проверить root/branch/status. Ветка task/TASK-008, worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
