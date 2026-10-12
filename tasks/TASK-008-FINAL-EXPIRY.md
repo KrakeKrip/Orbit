@@ -1,5 +1,7 @@
 # TASK-008-FINAL-EXPIRY — auth fixture без зависимости от SQL timezone
 
+**ACCEPTED**, 2026-10-12: 237f711018efdb8d299428f5390a6e870096afe5, reports/TASK-008-FINAL-EXPIRY.md. Все findings закрыты; следующий шаг — локальная интеграция координатором.
+
 ## Одна цель / старт
 
 Исправить только expiry-тест из auth-flow: expires_at должен действительно быть в прошлом для Better Auth при SQL timezone UTC И Europe/Moscow. Cleanup FINAL принят на 34998aea9cef6970e52c73d434d1e816db764360; причина и независимая matrix — reports/TASK-008-FINAL.md. Начать с нового coordinator assignment HEAD, записать полный SHA, проверить root/branch/status. task/TASK-008, /Users/atlhnv/Codex/orbit-worktrees/TASK-008.

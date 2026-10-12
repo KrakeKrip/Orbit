@@ -1,6 +1,10 @@
 # TASK-008 — независимый review Codex
 
-## Вердикт
+## Итоговая приёмка — ACCEPTED, 2026-10-12
+
+Принят executor HEAD `237f711018efdb8d299428f5390a6e870096afe5`. R1–R8, final cleanup и auth expiry fixture закрыты. Независимо на этом точном дереве Node24.21.0/собственный PostgreSQL18.6: lint0 warnings/typecheck, **69 unit**, **47 DB**, **124 auth**, **123 E2E**, no-env build — все PASS. Auth matrix: UTC auth-flow15/15, Europe/Moscow полный auth124/124. Логи без lifecycle error patterns, test DB/connections0/0; временные кластеры/пароли/копия no-env убраны. PG17 недоступен, в финальном проходе не проверен; реальные устройства/proxy/deployment не проверены. Source tree и cumulative diff чистые. Подробный финальный review — reports/TASK-008-FINAL-EXPIRY.md. Следующий шаг координатора: local no-ff integration в чистую main; push/deploy не разрешены. Ниже сохранён исторический первоначальный review.
+
+## Первоначальный вердикт (исторический)
 
 **NEEDS_FIXES**, 2026-10-09. Проверен executor HEAD `6388a088a13d657e236d4120ff094586c8317186`, база `394aef441a05d95969596bf088b37fb1f087432e`, assignment `9a81313bb498fd1e584b14a0bc2b87b506102c6b`. Ветка `task/TASK-008`, worktree `/Users/atlhnv/Codex/orbit-worktrees/TASK-008`; перед review дерево чистое. Main осталась на assignment SHA, merge/push не выполнялись. Продуктовый код Codex не менял.
 
