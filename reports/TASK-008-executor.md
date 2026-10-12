@@ -692,3 +692,37 @@ Fixtures: Inbox-задача без плана, Today-задача (план с�
 - Никаких новых продуктовых изменений; R1–R8 не переписывались. R7/R8-файлы не тронуты (кроме EOF trim task-row.tsx). Корневые coordination docs и review reports не менялись.
 - PG17 не проверен этим проходом (недоступен); auth-flow expiry failure детерминирован на temp PG18 — причина в better-auth refresh-семантике при прямом UPDATE expires_at, исправление вне FINAL scope.
 - main/другие worktree/localhost:3000/CRM/VPN/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets/URI/storageState не печатались и не коммитились; DONE не объявляется — остановка до независимой финальной приёмки Codex.
+
+---
+
+# Коррекция TASK-008-FINAL-EXPIRY — auth expiry fixture без зависимости от SQL timezone
+
+## Статус
+
+READY_FOR_REVIEW (test-only: один файл auth-flow + отчёт; cleanup FINAL принят на `34998aea9cef6970e52c73d434d1e816db764360`, review `reports/TASK-008-FINAL.md`). Старт — coordinator commit `8282e52302a4b656684b152d965d1a9ff31440a1` (root/ветка/status проверены, дерево чистое).
+
+## Причина (уточнение прежнего диагноза)
+
+Прежний диагноз FINAL («better-auth refresh истёкшей сессии / отличие PG18») был **ошибочным**. Evidence независимой matrix координатора и исправленного теста: колонка `expires_at` — `timestamp WITHOUT time zone` (UTC wall-clock representation); `now() - interval '1 second'` через implicit cast пишет **wall-clock SQL-сессии** — при TimeZone Europe/Moscow записанное значение читается как UTC на ~3 часа в будущем, сессия «действительна» → me 200. Better Auth проверяет expiry до refresh; версия PG ни при чём.
+
+## Исправление (tests/auth/auth-flow.auth.test.ts, только fixture expiry)
+
+`expireUserBSessions()` (обе точки существующего сценария): expiry пишется **параметризованным UTC ISO** из JS (`new Date(Date.now() - 60_000).toISOString()` — разумный запас 60s вместо хрупкой 1s), без интерполяции данных в SQL. Проверки: `rowCount > 0`; фактические записанные rows читаются (`expires_at::text`), интерпретируются как UTC (…Z) и утверждаются меньше текущего Node-времени. me 200 до экспирации, me 401 после; cookieCache off и контракт preserved. Никаких изменений src/auth config/options/cache/refresh/limiter/schema/runner; fixture — только synthetic sessions собственного actor.
+
+## Timezone matrix и gates (Node24 v24.21.0 — /private/tmp/orbit-r4-review-runtime)
+
+| Запуск | Результат |
+| --- | --- |
+| `npm run lint` / `npm run typecheck` | exit 0 / exit 0, 0 warnings |
+| Временный кластер **UTC** (порт 37731, `timezone=UTC`, собственная конфигурация) — targeted `auth-flow` | exit 0 — **15/15** (свежий production build штатного runner) |
+| Временный кластер **Europe/Moscow** (порт 37730, `timezone=Europe/Moscow`) — **полный `npm run test:auth`** (non-UTC target, зачтён как full gate) | exit 0 — **124/124** (все файлы, включая исправленный expiry-тест и planning suite) |
+| Скан полного auth лога (Moscow) | `idle client error` / `terminating connection` / `57P05` / `uncaughtException` — **0 вхождений** |
+| Cleanup обоих кластеров | каждая БД: **0 orbit_test\*-баз / 0 соединений** до stop; `pg_ctl stop` ×2; кластеры/пароли/env удалены, порты 37730/37731 закрыты |
+| Diff | `git diff --check` чист; cumulative `git diff --check 394aef441a..HEAD` — чист |
+
+Остальные suites (unit/DB/E2E/no-env build) не повторялись: test-only correction; финальное evidence FINAL на `34998ae` сохраняется с честной пометкой прошлого SHA. PG17 оставался недоступен — не проверен (Colima/CRM не запускались).
+
+## Ограничения / не входило
+
+- Продукт (src/auth config/Better Auth options/cache/refresh/limiter/schema/migrations/runner) не менялся; refresh не отключался; тест не подменён revoke-вариантом и не маскирует отказ ожидаемым 200; чужие среды не затронуты.
+- main/другие worktree/localhost:3000/CRM/VPN/hooks не менялись; merge/push/amend/rebase/reset/stash/deploy не выполнялись; cookie/token/credentials не печатались; TASK-008 DONE и TASK-009 не объявляются — остановка до review Codex.
