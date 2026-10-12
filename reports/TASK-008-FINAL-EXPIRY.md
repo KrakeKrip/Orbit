@@ -19,3 +19,9 @@ Node **24.21.0**, собственный Homebrew PostgreSQL **18.6**, guarded n
 Auth/E2E логи без idle client error/terminating connection/57P01/uncaughtException. После suites0testDB/0connections; свой PG остановлен, кластер/пароль удалены; no-env copy удалена. Независимый npm ci в этом раунде не повторялся, executor final install evidence сохранено. Dev StrictMode не повторялся после test-only cleanup; прежние live probes описаны в executor report, permanent dev suite отсутствует.
 
 Ограничения: PG17 закрыт и в финальном проходе не проверен, реальные устройства/production proxy/deployment/offline/PWA не проверены. TASK-008 не реализует priority/notes/project assignment/subtasks/recurrence. Все findings TASK-008 закрыты; готов к локальной интеграции. Main до merge чистая на9a81313bb498fd1e584b14a0bc2b87b506102c6b. Push/deploy отсутствуют; TASK-009 не назначен.
+
+## Локальная интеграция — DONE, 2026-10-12
+
+Executor237f711018efdb8d299428f5390a6e870096afe5, review commit e87d3d6d5d717267023d669d00e962e1b4f45fdc; no-ff merge **8ec706867efb75f2b316d66a876622a1df38ed79** в чистую main, без конфликтов. `git diff --exit-code task/TASK-008 HEAD` после merge — exit0: дерево интеграции полностью идентично независимо проверенному task-tree. Затем на main Node24 lint/typecheck/69unit PASS. DB/auth/E2E/no-env gates не повторялись после merge: исходники/tests/config/package/lock идентичны, изменения после merge только coordinator docs. Независимые gates на237f711: 69unit/47DB/124auth/123browser/no-env build PASS, auth UTC/Moscow matrix PASS; ресурсы0/0 и временные кластеры/копия удалены.
+
+TASK-008 DONE. PG17 не проверен финальным проходом; реальные устройства/proxy/deployment не проверены. Push/deploy отсутствуют, user env не изменялся; TASK-009 не назначен. Следующее задание должно быть небольшим самостоятельным результатом из исходного пакета TASK-009.
