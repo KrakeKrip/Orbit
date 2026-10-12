@@ -57,7 +57,13 @@ function project(id: string, name: string, archived = false): ProjectDTO {
 describe("TasksView (unit render)", () => {
   it("пустой список: tabs, quick-add форма и honest empty state открытых", () => {
     const html = renderToStaticMarkup(
-      <TasksView initialOpen={[]} initialCompleted={[]} actorId="user-1" today="2026-06-15" />,
+      <TasksView
+        initialOpen={[]}
+        initialCompleted={[]}
+        actorId="user-1"
+        today="2026-06-15"
+        timezone="UTC"
+      />,
     );
 
     expect(html).toContain("Открытые");
@@ -83,6 +89,7 @@ describe("TasksView (unit render)", () => {
         ]}
         actorId="user-1"
         today="2026-06-15"
+        timezone="UTC"
       />,
     );
 

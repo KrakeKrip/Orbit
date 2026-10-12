@@ -13,12 +13,15 @@ import { ru } from "@/lib/i18n/ru";
 export function TaskItemsList({
   tasks,
   today,
+  timezone,
   completedMode,
   writes,
   emptyState,
 }: {
   tasks: TaskDTO[];
   today: string;
+  /** R8: server-derived account timezone — подпись времени редактора. */
+  timezone: string;
   completedMode: boolean;
   writes: {
     create: { pending: boolean };
@@ -116,6 +119,7 @@ export function TaskItemsList({
             task={task}
             completed={rowCompleted}
             today={today}
+            timezone={timezone}
             state={rowState}
             handlers={handlers}
           />

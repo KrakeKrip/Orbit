@@ -14,7 +14,7 @@ type TaskTab = "open" | "completed";
 
 async function fetchInboxList(
   status: "open" | "completed",
-): Promise<{ tasks: TaskDTO[]; today: string } | null> {
+): Promise<{ tasks: TaskDTO[]; today: string; timezone: string } | null> {
   const response = await fetch(`/api/v1/tasks?view=inbox&status=${status}`);
   if (!response.ok) {
     return null;
@@ -22,7 +22,7 @@ async function fetchInboxList(
   try {
     const payload = (await response.json()) as {
       tasks?: TaskDTO[];
-      context?: { today?: string };
+      context?: { today?: string; timezone?: string };
     };
     if (!Array.isArray(payload.tasks)) {
       return null;
@@ -30,6 +30,10 @@ async function fetchInboxList(
     return {
       tasks: payload.tasks,
       today: typeof payload.context?.today === "string" ? payload.context.today : "",
+      timezone:
+        typeof payload.context?.timezone === "string"
+          ? payload.context.timezone
+          : "",
     };
   } catch {
     return null;
@@ -53,18 +57,22 @@ export function TasksView({
   initialCompleted,
   actorId,
   today: initialToday,
+  timezone: initialTimezone,
 }: {
   initialOpen: TaskDTO[];
   initialCompleted: TaskDTO[];
   actorId: string;
   /** Server context today (account timezone) для deadline-бейджей. */
   today: string;
+  /** R8: server-derived account timezone — подпись времени редактора. */
+  timezone: string;
 }) {
   const [lists, setLists] = useState({
     open: initialOpen,
     completed: initialCompleted,
   });
   const [contextToday, setContextToday] = useState(initialToday);
+  const [contextTimezone, setContextTimezone] = useState(initialTimezone);
   const [tab, setTab] = useState<TaskTab>("open");
   const [listError, setListError] = useState(false);
   const [listPending, setListPending] = useState(false);
@@ -117,6 +125,9 @@ export function TasksView({
       setLists({ open: open.tasks, completed: completed.tasks });
       if (open.today !== "") {
         setContextToday(open.today);
+      }
+      if (open.timezone !== "") {
+        setContextTimezone(open.timezone);
       }
       setListError(false);
       return true;
@@ -300,6 +311,7 @@ export function TasksView({
         <TaskItemsList
           tasks={visibleTasks}
           today={contextToday}
+          timezone={contextTimezone}
           completedMode={tab === "completed"}
           writes={writes}
           emptyState={

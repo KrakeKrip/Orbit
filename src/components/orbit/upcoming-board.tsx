@@ -303,6 +303,7 @@ export function UpcomingBoard({
               <TaskItemsList
                 tasks={group.tasks}
                 today={context.today}
+                timezone={context.timezone}
                 completedMode={statusMode === "completed"}
                 writes={writes}
                 emptyState={{

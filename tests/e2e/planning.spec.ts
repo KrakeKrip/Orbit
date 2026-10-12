@@ -639,6 +639,210 @@ async function flushMicrotasks(page: import("@playwright/test").Page): Promise<v
   );
 }
 
+test.describe("Timezone editor label (R8, desktop 1280)", () => {
+  test.use({
+    viewport: { width: 1280, height: 800 },
+    storageState: USER_C_STATE,
+    timezoneId: "UTC",
+  });
+
+  test("R8: подпись зоны в Inbox/Today/Upcoming; Refresh обновляет её при dirty draft без unsolicited PATCH", async ({
+    page,
+  }) => {
+    const pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    // Прежняя зона аккаунта для восстановления в finally.
+    const initialSettings = await page.request.get("/api/v1/settings");
+    expect(initialSettings.status()).toBe(200);
+    const initialZone = (
+      (await initialSettings.json()) as { settings: { timezone: string } }
+    ).settings.timezone;
+
+    // Fixtures: Inbox (без плана), Today (план сегодня), Upcoming (план +2).
+    const today = await serverToday(page);
+    const upcomingDay = shift(today, 2);
+    await page.goto("/inbox");
+    const inboxTitle = `R8 inbox ${run}`;
+    const todayTitle = `R8 today ${run}`;
+    const upcomingTitle = `R8 upcoming ${run}`;
+    const created = page.getByLabel("Название задачи");
+    async function quickAdd(title: string): Promise<string> {
+      await created.fill(title);
+      await page.getByRole("button", { name: "Добавить задачу" }).click();
+      const row = page.locator("li[data-task-id]", { hasText: title });
+      await expect(row).toBeVisible();
+      const id = await row.getAttribute("data-task-id");
+      expect(id).not.toBeNull();
+      return id as string;
+    }
+    const inboxTaskId = await quickAdd(inboxTitle);
+    const todayTaskId = await quickAdd(todayTitle);
+    const todayRow = page.locator(`li[data-task-id="${todayTaskId}"]`);
+    await todayRow.getByRole("button", { name: "Планирование" }).click();
+    await todayRow.getByLabel("Дата выполнения").fill(today);
+    await todayRow.getByRole("button", { name: "Сохранить" }).click();
+    await expect(todayRow).toHaveCount(0);
+    const upcomingTaskId = await quickAdd(upcomingTitle);
+    const upcomingRow = page.locator(`li[data-task-id="${upcomingTaskId}"]`);
+    await upcomingRow.getByRole("button", { name: "Планирование" }).click();
+    await upcomingRow.getByLabel("Дата выполнения").fill(upcomingDay);
+    await upcomingRow.getByRole("button", { name: "Сохранить" }).click();
+    await expect(upcomingRow).toHaveCount(0);
+
+    // Account Asia/Tokyo: Origin, точный 200, GET-подтверждение.
+    await page.goto("/inbox");
+    const origin = new URL(page.url()).origin;
+    const patch = await page.request.patch("/api/v1/settings", {
+      data: { timezone: "Asia/Tokyo" },
+      headers: { "content-type": "application/json", origin },
+    });
+    expect(patch.status()).toBe(200);
+    const confirm = await page.request.get("/api/v1/settings");
+    expect(confirm.status()).toBe(200);
+    expect(
+      (
+        (await confirm.json()) as { settings: { timezone: string } }
+      ).settings.timezone,
+    ).toBe("Asia/Tokyo");
+
+    // Inbox получил зону из SSR до патча — metadata обновляется штатным
+    // Refresh (waitForResponse до клика), как в принятой R6 модели.
+    const tokyoRefreshed = page.waitForResponse(
+      (response) =>
+        response.request().method() === "GET" &&
+        response.url().includes("/api/v1/tasks?") &&
+        response.status() === 200,
+    );
+    await page.getByRole("button", { name: "Обновить" }).click();
+    const tokyoContext = (
+      (await (await tokyoRefreshed).json()) as {
+        context: { timezone: string };
+      }
+    ).context;
+    expect(tokyoContext.timezone).toBe("Asia/Tokyo");
+
+    // PATCH-наблюдатель для unsolicited-PATCH проверки.
+    let patchCount = 0;
+    await page.route("**/api/v1/tasks/*", async (route) => {
+      if (route.request().method() === "PATCH") {
+        patchCount += 1;
+      }
+      await route.continue();
+    });
+
+    // Таблица-сценарий: подпись зоны editor на трёх экранах.
+    const inboxRow = page.locator(`li[data-task-id="${inboxTaskId}"]`);
+    await inboxRow.getByRole("button", { name: "Планирование" }).click();
+    await expect(
+      inboxRow.getByText("Время в зоне Asia/Tokyo"),
+    ).toBeVisible();
+    await inboxRow.getByRole("button", { name: "Отмена" }).click();
+
+    await page.goto("/today");
+    const todayBoardRow = page.locator(`li[data-task-id="${todayTaskId}"]`);
+    await expect(todayBoardRow).toBeVisible();
+    await todayBoardRow.getByRole("button", { name: "Планирование" }).click();
+    await expect(
+      todayBoardRow.getByText("Время в зоне Asia/Tokyo"),
+    ).toBeVisible();
+    await todayBoardRow.getByRole("button", { name: "Отмена" }).click();
+
+    await page.goto(`/upcoming?start=${today}`);
+    const upcomingBoardRow = page.locator(
+      `li[data-task-id="${upcomingTaskId}"]`,
+    );
+    await expect(upcomingBoardRow).toBeVisible();
+    await upcomingBoardRow.getByRole("button", { name: "Планирование" }).click();
+    await expect(
+      upcomingBoardRow.getByText("Время в зоне Asia/Tokyo"),
+    ).toBeVisible();
+    await upcomingBoardRow.getByRole("button", { name: "Отмена" }).click();
+
+    // Inbox dirty draft: смена зоны на Europe/Moscow через API, реальный
+    // Refresh — подпись обновляется в открытом editor, draft сохранён,
+    // без unsolicited PATCH.
+    await page.goto("/inbox");
+    await inboxRow.getByRole("button", { name: "Планирование" }).click();
+    const dateInput = inboxRow.getByLabel("Дата выполнения");
+    const draftDay = shift(today, 4);
+    await dateInput.fill(draftDay);
+
+    const moscowPatch = await page.request.patch("/api/v1/settings", {
+      data: { timezone: "Europe/Moscow" },
+      headers: { "content-type": "application/json", origin },
+    });
+    expect(moscowPatch.status()).toBe(200);
+
+    const refreshed = page.waitForResponse(
+      (response) =>
+        response.request().method() === "GET" &&
+        response.url().includes("/api/v1/tasks?") &&
+        response.status() === 200,
+    );
+    const patchesBeforeRefresh = patchCount;
+    await page.getByRole("button", { name: "Обновить" }).click();
+    const refreshedResponse = await refreshed;
+    const refreshedContext = (
+      (await refreshedResponse.json()) as {
+        context: { timezone: string };
+      }
+    ).context;
+    expect(refreshedContext.timezone).toBe("Europe/Moscow");
+    await expect(
+      inboxRow.getByText("Время в зоне Europe/Moscow"),
+    ).toBeVisible();
+    await expect(dateInput).toHaveValue(draftDay);
+    expect(patchCount).toBe(patchesBeforeRefresh);
+
+    // Save: только dirty plannedDate, значение без преобразования; GET item
+    // подтверждает сохранение.
+    const saved = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes(`/api/v1/tasks/${inboxTaskId}`) &&
+        response.status() === 200,
+    );
+    await inboxRow.getByRole("button", { name: "Сохранить" }).click();
+    const savedResponse = await saved;
+    const sent = JSON.parse(
+      savedResponse.request().postData() ?? "{}",
+    ) as Record<string, unknown>;
+    expect(Object.keys(sent).sort()).toEqual(["plannedDate"]);
+    expect(sent.plannedDate).toBe(draftDay);
+    const item = await page.request.get(`/api/v1/tasks/${inboxTaskId}`);
+    expect(item.status()).toBe(200);
+    const itemTask = (
+      (await item.json()) as {
+        task: {
+          plannedDate: string | null;
+          plannedTime: string | null;
+          deadlineDate: string | null;
+        };
+      }
+    ).task;
+    expect(itemTask.plannedDate).toBe(draftDay);
+    expect(itemTask.plannedTime).toBeNull();
+    expect(itemTask.deadlineDate).toBeNull();
+    await expect(inboxRow).toHaveCount(0);
+
+    // finally-семантика: восстановление прежней зоны (200 + GET).
+    const restore = await page.request.patch("/api/v1/settings", {
+      data: { timezone: initialZone },
+      headers: { "content-type": "application/json", origin },
+    });
+    expect(restore.status()).toBe(200);
+    const confirmRestore = await page.request.get("/api/v1/settings");
+    expect(confirmRestore.status()).toBe(200);
+    expect(
+      (
+        (await confirmRestore.json()) as { settings: { timezone: string } }
+      ).settings.timezone,
+    ).toBe(initialZone);
+    expect(pageErrors).toEqual([]);
+  });
+});
+
 test.describe("Inbox планирование на мобильной ширине (360)", () => {
   test.use({ viewport: { width: 360, height: 740 }, storageState: USER_C_STATE });
 

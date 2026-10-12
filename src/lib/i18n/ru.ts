@@ -107,6 +107,7 @@ export const ru = {
       action: "Планирование",
       plannedDate: "Дата выполнения",
       plannedTime: "Время выполнения",
+      timeInZone: (zone: string) => `Время в зоне ${zone}`,
       deadlineDate: "Дедлайн",
       save: "Сохранить",
       saving: "Сохранение…",

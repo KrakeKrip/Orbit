@@ -319,6 +319,7 @@ export function TodayBoard({
               <TaskItemsList
                 tasks={section.tasks}
                 today={context.today}
+                timezone={context.timezone}
                 completedMode={statusMode === "completed"}
                 writes={writes}
                 emptyState={{

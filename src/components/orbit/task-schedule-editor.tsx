@@ -30,11 +30,14 @@ export function TaskScheduleEditor({
   blocked,
   error,
   dateInputId,
+  timezone,
   onSave,
   onCancel,
 }: {
   snapshot: TaskScheduleSnapshot;
   pending: boolean;
+  /** R8: server-derived account timezone для подписи времени. */
+  timezone: string;
   /**
    * R2a-fix: блокировка из-за ЧУЖОЙ write в полёте (общий busy экрана).
    * Отключает controls/Escape/Save/Cancel, но не меняет собственные
@@ -161,7 +164,14 @@ export function TaskScheduleEditor({
             title={
               dateDraft === "" ? ru.tasks.schedule.timeNeedsDate : undefined
             }
+            aria-describedby={`${dateInputId}-time-zone`}
           />
+          <p
+            id={`${dateInputId}-time-zone`}
+            className="mt-1 text-xs leading-4 text-muted-foreground"
+          >
+            {ru.tasks.schedule.timeInZone(timezone)}
+          </p>
         </div>
         <div>
           <Label htmlFor={`${dateInputId}-deadline`}>

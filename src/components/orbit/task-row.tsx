@@ -60,12 +60,15 @@ export function TaskRow({
   task,
   completed,
   today,
+  timezone,
   state,
   handlers,
 }: {
   task: TaskDTO;
   /** Server context today — для deadline-бейджей (просрочен/сегодня). */
   today: string;
+  /** R8: server-derived account timezone — подпись времени редактора. */
+  timezone: string;
   /** true в completed-режиме: даты показываются нейтрально. */
   completed: boolean;
   state: TaskRowState;
@@ -130,6 +133,7 @@ export function TaskRow({
             blocked={state.busy}
             error={state.scheduleError}
             dateInputId={`task-schedule-date-input-${task.id}`}
+            timezone={timezone}
             onSave={handlers.onSubmitSchedule}
             onCancel={handlers.onScheduleCancel}
           />

@@ -27,6 +27,7 @@ export default async function InboxPage() {
         initialCompleted={completed.map(toTaskDTO)}
         actorId={user.id}
         today={context.today}
+        timezone={context.timezone}
       />
     </div>
   );

@@ -607,3 +607,44 @@ READY_FOR_REVIEW (read-only ordering; R1–R6 приняты на executor HEAD 
 - DTO/API shape, UI/controllers, schema, writes/transactions/locks/completion, timezone persistence/context, Inbox/Upcoming ordering — не менялись; второй компаратор/большая SQL переработка не вводились. R8 и EOF/debug cleanup не тронуты; TASK-008 DONE не объявляется.
 - Browser прогон не требовался (UI не менялся, groupTodayTasks использует тот же компаратор). Полные gates — перед итоговой приёмкой TASK-008. Целевой PG17 недоступен (выключен не мной) — прогон на временном PG 18.6.
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets/URI не печатались и не коммитились.
+
+---
+
+# Коррекция TASK-008-R8 — зона аккаунта в редакторе планирования
+
+## Статус
+
+READY_FOR_REVIEW (metadata props + подпись времени; R1–R7 приняты на executor HEAD `3b1bd4035ad7bd98048bd2a75d84143d3e4aa23c` (review `reports/TASK-008-R7.md`); финальный cleanup/gates и TASK-009 не начаты). Assignment `tasks/TASK-008-R8.md`; старт — coordinator commit `beab5af8904748b00e21016ca003af60232eddca` (root/ветка/status проверены, дерево чистое).
+
+## Изменения — одна цепочка передачи timezone
+
+- **inbox/page.tsx**: `timezone={context.timezone}` из существующего `getTasksReadContext` рядом с today.
+- **tasks-view.tsx**: props + `contextTimezone` state; `fetchInboxList` возвращает также `context.timezone`; Refresh (`onConfirmed`) обновляет zone из того же актуального GET context (R3 latest/mounted/actor guards сохранены). Никакого browser/localStorage/hardcoded UTC и отдельного settings fetch.
+- **task-items-list.tsx → task-row.tsx → task-schedule-editor.tsx**: проброс `timezone`; в editor — видимая подпись под TIME control `ru.tasks.schedule.timeInZone(zone)` («Время в зоне Asia/Tokyo») с `aria-describedby` на time input. Подпись обновляется при Refresh даже в открытом editor (только prop — frozen snapshot R1/dirty draft не сбрасываются). DATE/TIME остаются civil/wall-clock, без UTC/instant-конверсий.
+- **today-board.tsx / upcoming-board.tsx**: `timezone={context.timezone}` из существующего refetch context.
+- **src/lib/i18n/ru.ts**: только строка подписи `timeInZone`.
+- **tests/workspace-pages.test.tsx**: механическое `timezone="UTC"` в двух существующих renderToStaticMarkup-рендерах TasksView (новый required prop;behavior тестов не менялся).
+
+## Browser доказательство (planning.spec.ts, describe «Timezone editor label (R8)», timezoneId UTC)
+
+Fixtures: Inbox-задача без плана, Today-задача (план сегодня), Upcoming (план +2). Account Asia/Tokyo через accepted API (Origin, точный 200, GET-подтверждение); Inbox metadata — штатным Refresh (waitForResponse до клика, context зоны Asia/Tokyo из ответа). Таблица: подпись «Время в зоне Asia/Tokyo» видима в открытом editor на всех трёх экранах. Затем Inbox dirty draft (plannedDate=+4), смена зоны Europe/Moscow через API, реальный Refresh: подпись → «Время в зоне Europe/Moscow», draft сохранён, PATCH-счётчик не изменился (без unsolicited PATCH). Save: тело настоящего PATCH содержит ровно `["plannedDate"]` со значением draft (без преобразований), GET item подтверждает plannedDate/plannedTime/deadlineDate. Прежняя зона восстановлена (200 + GET). `pageerror` — ноль.
+
+## Проверки
+
+| Команда | Результат |
+| --- | --- |
+| Node24 ДО gates | /private/tmp/orbit-r4-review-runtime — v24.21.0; системный Node не менялся |
+| Состояние test DB | PG17/55432 закрыт (Colima/CRM не запускались); временный локальный guarded **PostgreSQL 18.6 (Homebrew)**: кластер /private/tmp, scram-sha-256, эфемерный пароль (0600), loopback-порт 37640, TEST_DATABASE_URL только через env |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `npm test` (полный unit) | exit 0 — **69/69** (включая адаптированные workspace-pages рендеры) |
+| Промежуточный R8 прогон | 1 failed: тест ждал смену подписи без Refresh — на Inbox metadata обновляется штатным Refresh (принятая R6-модель), product-дефекта не было; добавлен Refresh-шаг |
+| `CI=1 E2E_PORT=37446 npx playwright test read-lifecycle --project=chromium` | exit 0 — **10/10** (3 auth-setup + 7) |
+| `CI=1 E2E_PORT=37672 npm run test:e2e -- planning.spec.ts write-guard.spec.ts --project=chromium --grep "R8:\|snapshot\|schedule"` (финальный, свежий `next build`) | exit 0 — **14/14**: 3 auth-setup + R8 + 3 R1 snapshot + failed schedule save + 7 schedule guard cases (R2a/R2b1/R2b2/R2b3/R2b4) |
+| Cleanup | read-only check на временном инстансе: **0** orbit_test\*-баз; `pg_ctl stop` — server stopped; кластер/пароль/env-файлы удалены, порт закрыт; `git diff --check` чист |
+
+## Ограничения / не входило
+
+- schema/service/API/settings persistence/writes/controllers не менялись; TaskDTO не расширялся; guards R1–R7 не переделывались; весь контекст в editor не дублировался. Финальный cleanup/gates и TASK-009 не начаты; TASK-008 DONE не объявляется.
+- Полные auth/DB/unit/E2E — отдельный проход после review R8. Целевой PG17 недоступен (выключен не мной) — прогон на временном PG 18.6.
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets/URI/storageState не печатались и не коммитились.
