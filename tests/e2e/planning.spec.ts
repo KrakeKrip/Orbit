@@ -453,6 +453,127 @@ test.describe("Today/Upcoming (desktop 1280)", () => {
   });
 });
 
+test.describe("Upcoming границы окна (R5, desktop 1280)", () => {
+  test.use({ viewport: { width: 1280, height: 800 }, storageState: USER_C_STATE });
+
+  test("R5: нижняя граница — 7 групп 1900-01-01..07, prev disabled, bypass безопасен, next работает", async ({
+    page,
+  }) => {
+    const pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    await page.goto("/upcoming?start=1900-01-01");
+    const groups = page.locator("[data-testid='upcoming-groups'] section");
+    await expect(groups).toHaveCount(7);
+    await expect(groups.first()).toHaveAttribute("data-group-date", "1900-01-01");
+    await expect(groups.last()).toHaveAttribute("data-group-date", "1900-01-07");
+    await expect(page.getByTestId("upcoming-range")).toHaveText(
+      "Период: 01.01.1900 — 07.01.1900",
+    );
+
+    const prev = page.getByRole("button", { name: "Предыдущие 7 дней" });
+    const next = page.getByRole("button", { name: "Следующие 7 дней" });
+    await expect(prev).toBeDisabled();
+    await expect(next).toBeEnabled();
+
+    // Программный обход disabled: URL не меняется, без uncaught.
+    const urlBefore = page.url();
+    await prev.dispatchEvent("click");
+    await flushMicrotasks(page);
+    expect(page.url()).toBe(urlBefore);
+
+    // Обычный next работает; после перехода prev снова доступен.
+    await next.click();
+    await expect(page).toHaveURL(/start=1900-01-08/);
+    await expect(page.getByTestId("upcoming-range")).toHaveText(
+      "Период: 08.01.1900 — 14.01.1900",
+    );
+    await expect(prev).toBeEnabled();
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("R5: последнее допустимое окно 2199-12-25..31 — next disabled, bypass безопасен, prev/next работают", async ({
+    page,
+  }) => {
+    const pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    await page.goto("/upcoming?start=2199-12-25");
+    const groups = page.locator("[data-testid='upcoming-groups'] section");
+    await expect(groups).toHaveCount(7);
+    await expect(groups.first()).toHaveAttribute("data-group-date", "2199-12-25");
+    await expect(groups.last()).toHaveAttribute("data-group-date", "2199-12-31");
+    await expect(page.getByTestId("upcoming-range")).toHaveText(
+      "Период: 25.12.2199 — 31.12.2199",
+    );
+
+    const prev = page.getByRole("button", { name: "Предыдущие 7 дней" });
+    const next = page.getByRole("button", { name: "Следующие 7 дней" });
+    await expect(next).toBeDisabled();
+    await expect(prev).toBeEnabled();
+
+    const urlBefore = page.url();
+    await next.dispatchEvent("click");
+    await flushMicrotasks(page);
+    expect(page.url()).toBe(urlBefore);
+
+    // Обычная навигация: prev → 2199-12-18, next обратно → 2199-12-25,
+    // reload сохраняет диапазон.
+    await prev.click();
+    await expect(page).toHaveURL(/start=2199-12-18/);
+    await expect(next).toBeEnabled();
+    await next.click();
+    await expect(page).toHaveURL(/start=2199-12-25/);
+    await expect(next).toBeDisabled();
+    await page.reload();
+    await expect(page).toHaveURL(/start=2199-12-25/);
+    await expect(page.getByTestId("upcoming-range")).toHaveText(
+      "Период: 25.12.2199 — 31.12.2199",
+    );
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("R5: промежуточный край start=2199-12-20 — next запрещён из-за недопустимого end", async ({
+    page,
+  }) => {
+    const pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+
+    // Окно 20..26 валидно (SSR принимает), но +7 дало бы 27..33 —
+    // next запрещён, хотя start=2199-12-27 сам по себе валиден.
+    await page.goto("/upcoming?start=2199-12-20");
+    const groups = page.locator("[data-testid='upcoming-groups'] section");
+    await expect(groups).toHaveCount(7);
+    await expect(groups.last()).toHaveAttribute("data-group-date", "2199-12-26");
+
+    const prev = page.getByRole("button", { name: "Предыдущие 7 дней" });
+    const next = page.getByRole("button", { name: "Следующие 7 дней" });
+    await expect(next).toBeDisabled();
+    await expect(prev).toBeEnabled();
+
+    const urlBefore = page.url();
+    await next.dispatchEvent("click");
+    await flushMicrotasks(page);
+    expect(page.url()).toBe(urlBefore);
+
+    // Безопасная навигация: prev → 2199-12-13, next обратно → 2199-12-20.
+    await prev.click();
+    await expect(page).toHaveURL(/start=2199-12-13/);
+    await expect(next).toBeEnabled();
+    await next.click();
+    await expect(page).toHaveURL(/start=2199-12-20/);
+    await expect(next).toBeDisabled();
+    expect(pageErrors).toEqual([]);
+  });
+});
+
+async function flushMicrotasks(page: import("@playwright/test").Page): Promise<void> {
+  // Один macrotask-flush: обработка заблокированного handler-а в странице.
+  await page.evaluate(
+    () => new Promise<void>((resolve) => setTimeout(resolve, 0)),
+  );
+}
+
 test.describe("Inbox планирование на мобильной ширине (360)", () => {
   test.use({ viewport: { width: 360, height: 740 }, storageState: USER_C_STATE });
 

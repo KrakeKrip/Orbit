@@ -500,3 +500,40 @@ READY_FOR_REVIEW (только rename editor lifecycle; R1/R2/R3 приняты 
 
 - Key строки, hook/screens/API/service/schema, frozen snapshot R1 — не менялись. R5–R8, debug/EOF cleanup (в т.ч. видный в логах «R3 DEBUG» из inbox.spec) — не тронуты; TASK-008 DONE не объявляется.
 - main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились.
+
+---
+
+# Коррекция TASK-008-R5 — границы семидневного окна
+
+## Статус
+
+READY_FOR_REVIEW (только границы календаря Upcoming; R1–R4 приняты на executor HEAD `69371354f13057b1cc4d6de334523029e38860aa` (review `reports/TASK-008-R4.md`); R6–R8 не начаты). Assignment `tasks/TASK-008-R5.md`; старт — coordinator commit `0dbd55a0cc66fceb09d46d14e2ed7e076a8fd235` (root/ветка/status проверены, дерево чистое).
+
+## Дефект и исправление
+
+1. **`src/lib/calendar.ts` — `civilDateRange`**: шаг `addCivilDays` выполнялся и после последнего элемента, поэтому диапазон до границы (`civilDateRange('2199-12-25',7)` → последний день 2199-12-31) бросал RangeError на лишнем шаге. Теперь шаг выполняется только МЕЖДУ элементами (`if (index > 0)`); старт явно валидируется (невалидный формат/вне 1900..2199 → RangeError — раньше это делал первый шаг, который больше не выполняется). Диапазон с последним днём за границей по-прежнему отвергается. Civil semantics 1900..2199 не менялись.
+2. **`src/components/orbit/upcoming-board.tsx`**: раньше проверялся только новый `start`; недопустимый `end` (start+6 за границей) давал невалидный переход/RangeError. Теперь `isWindowReachable(newStart)` проверяет ВЕСЬ окно (`addCivilDays(newStart, 6)` в try/catch, никогда не бросает); prev/next `disabled` по render-безопасным `canNavigatePrev/Next`; `navigateByDays` — guard политики (write/form/listPending по принятой R2b2-fix policy) → addCivilDays в try/catch → проверка всего окна → только потом `navigateTo` (effects/URL/state/GET); `navigateTo` (current) тоже валидирует окно. Недопустимая попытка (включая bypass disabled) не меняет URL/state и не стартует GET.
+
+## Тесты
+
+- **Unit (tests/calendar-view.test.ts, +4 R5)**: ровно 2199-12-25..31 без исключения; одноэлементный диапазон на max (2199-12-31); нижняя граница 1900-01-01..07; реально выходящие за границы диапазоны отвергаются (2199-12-26+7, 2199-12-31+2, старт 1899-12-31). Прежние leap/month/year/DST тесты сохранены.
+- **Browser (tests/e2e/planning.spec.ts, новый describe «Upcoming границы окна (R5)», 3 теста)**: нижняя граница (7 групп 01..07.01.1900, prev disabled, dispatchEvent bypass — URL не изменён, next работает); последнее допустимое окно (7 групп 25..31.12.2199, next disabled, bypass безопасен, prev→18→next→25, reload сохраняет); промежуточный край start=2199-12-20 (окно 20..26 валидно, но +7 дало бы 27..недопустимый end → next disabled, bypass безопасен, prev→13→next→20). В каждом тесте `pageerror`-коллектор: ноль uncaught. Синхронизация по URL/range assertions, без sleeps.
+
+## Проверки
+
+| Команда | Результат |
+| --- | --- |
+| Node24 ДО gates | `/tmp/orbit-node24` исчез; использован проверенный временный **/private/tmp/orbit-r4-review-runtime/node-v24.21.0-darwin-arm64** — `node --version` = v24.21.0; системный Node не менялся |
+| Состояние test DB | `nc 127.0.0.1 55432` closed (PG17 недоступен, Colima/CRM не запускались); поднят временный локальный guarded **PostgreSQL 18.6 (Homebrew)** — отдельный кластер /private/tmp, scram-sha-256, эфемерный пароль (0600), loopback-порт 37490, `TEST_DATABASE_URL` только через env (namespace orbit_test) |
+| `npm run lint` | exit 0, 0 warnings |
+| `npm run typecheck` | exit 0 |
+| `npm test -- tests/calendar-view.test.ts` | exit 0 — **23/23** (19 прежних + 4 R5) |
+| `npm test` (полный unit) | exit 0 — **67/67** |
+| `CI=1 E2E_PORT=37520 npm run test:e2e -- planning.spec.ts write-guard.spec.ts --project=chromium --grep "R5:\|Upcoming:"` (свежий `next build`) | exit 0 — **9/9 с первого прогона**: 3 auth-setup + существующая Upcoming навигация + 3 новых R5 + 2 Upcoming write guard (R2b2) |
+| Cleanup | read-only check на временном инстансе: **0** orbit_test\*-баз; `pg_ctl stop` — server stopped; кластер/пароль/env-файлы удалены, порт закрыт; `git diff --check` чист |
+
+## Ограничения / не входило
+
+- Service/API/schema, read/write guards (R2/R3), frozen snapshot R1, другие экраны — не менялись; общего controller нет. R6–R8 и EOF/debug cleanup — не тронуты; TASK-008 DONE не объявляется.
+- Целевой PG17 недоступен (выключен не мной) — целевой E2E выполнен на временном PG 18.6 (как независимые review R1/R2a); полные gates — перед итоговой приёмкой TASK-008.
+- main/другие worktree/localhost:3000/CRM/hooks не менялись; merge/push/amend/rebase/reset/stash/деплой не выполнялись; secrets не коммитились.

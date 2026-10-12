@@ -106,13 +106,30 @@ export function addCivilDays(date: string, days: number): string {
   return value;
 }
 
-/** Инклюзивный список из `days` последовательных civil дат от startDate. */
+/**
+ * Инклюзивный список из `days` последовательных civil дат от startDate.
+ * R5: шаг addCivilDays не выполняется после последнего элемента —
+ * диапазон, оканчивающийся на границе supported range (2199-12-31),
+ * возвращается без исключения; день за границей по-прежнему отвергается
+ * при попытке добавить его в диапазон.
+ */
 export function civilDateRange(startDate: string, days: number): string[] {
+  // R5: старт валидируется как раньше — невалидный формат/вне
+  // 1900..2199 отвергается RangeError (раньше это делал первый шаг
+  // addCivilDays, который больше не выполняется лишний раз).
+  const parsed = parseCivilDate(startDate);
+  if (!parsed.ok || parsed.value < CIVIL_DATE_MIN || parsed.value > CIVIL_DATE_MAX) {
+    throw new RangeError(
+      `Civil date ${startDate} is outside the supported range ${CIVIL_DATE_MIN}..${CIVIL_DATE_MAX}.`,
+    );
+  }
   const range: string[] = [];
   let cursor = startDate;
   for (let index = 0; index < days; index += 1) {
+    if (index > 0) {
+      cursor = addCivilDays(cursor, 1);
+    }
     range.push(cursor);
-    cursor = addCivilDays(cursor, 1);
   }
   return range;
 }

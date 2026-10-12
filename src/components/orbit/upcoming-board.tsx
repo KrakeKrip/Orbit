@@ -33,7 +33,10 @@ type UpcomingPayload = {
  * реактивным флагам и синхронный ref-guard в switchMode/navigate до
  * setState/refetch/replaceState; failed Save держит mode lock (форма
  * открыта), Cancel/успешный Save освобождают. listPending политика
- * prev/next/current сохранена; sequencing чтений — R3.
+ * prev/next/current сохранена; sequencing чтений — R3. R5: переходы
+ * разрешены только в полностью допустимое окно (start..start+6 в
+ * 1900..2199) — prev/next disabled на границах, guard до effects,
+ * вычисление доступности на render без исключений.
  */
 export function UpcomingBoard({
   initialTasks,
@@ -139,11 +142,43 @@ export function UpcomingBoard({
     ),
   });
 
+  // R5: весь destination window (newStart..newStart+6) должен попадать в
+  // supported range 1900..2199; addCivilDays бросает за границами —
+  // перехватываем и возвращаем false (никогда не бросает на render).
+  function isWindowReachable(newStart: string): boolean {
+    try {
+      addCivilDays(newStart, 6);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Доступность prev/next на render: невозможное окно → disabled, без
+  // необработанных исключений.
+  const canNavigatePrev = (() => {
+    try {
+      return isWindowReachable(addCivilDays(startDate, -7));
+    } catch {
+      return false;
+    }
+  })();
+  const canNavigateNext = (() => {
+    try {
+      return isWindowReachable(addCivilDays(startDate, 7));
+    } catch {
+      return false;
+    }
+  })();
+
   function navigateTo(newStart: string): void {
-    // R2b2: статус/диапазон не меняются при write в полёте или открытой
-    // форме — синхронный ref-guard до replaceState/setState/refetch;
-    // заблокированная попытка не стартует GET.
+    // R2b2: guard политики (write/form/listPending) до расчётов окна.
     if (listPending || writes.anyInFlight() || writes.anyFormOpen()) {
+      return;
+    }
+    // R5: переход только в полностью допустимое окно — недопустимая
+    // попытка не меняет URL/state и не стартует GET.
+    if (!isWindowReachable(newStart)) {
       return;
     }
     // Диапазон в URL: reload через SSR вернёт тот же диапазон.
@@ -152,14 +187,23 @@ export function UpcomingBoard({
     void refetch(statusMode, newStart);
   }
 
-  // R2b2-fix: guard выполняется ДО addCivilDays — для заблокированной
-  // попытки расчёт даты не выполняется вовсе (сами границы 1900/2199 —
-  // отдельная коррекция R5).
+  // R2b2-fix/R5: guard политики до addCivilDays; затем проверяется ВЕСЬ
+  // destination window (newStart..newStart+6) — недопустимый переход не
+  // выполняет effects/RangeError даже при обходе disabled.
   function navigateByDays(deltaDays: number): void {
     if (listPending || writes.anyInFlight() || writes.anyFormOpen()) {
       return;
     }
-    navigateTo(addCivilDays(startDate, deltaDays));
+    let newStart: string;
+    try {
+      newStart = addCivilDays(startDate, deltaDays);
+    } catch {
+      return;
+    }
+    if (!isWindowReachable(newStart)) {
+      return;
+    }
+    navigateTo(newStart);
   }
 
   // R2b2: смена status-режима запрещена при write в полёте или открытой
@@ -277,7 +321,7 @@ export function UpcomingBoard({
           variant="outline"
           className="min-h-11 px-4"
           onClick={() => navigateByDays(-7)}
-          disabled={listPending || writes.anyPending || writes.formOpen}
+          disabled={listPending || writes.anyPending || writes.formOpen || !canNavigatePrev}
         >
           {ru.tasks.upcoming.prev}
         </Button>
@@ -286,7 +330,7 @@ export function UpcomingBoard({
           variant="outline"
           className="min-h-11 px-4"
           onClick={() => navigateByDays(7)}
-          disabled={listPending || writes.anyPending || writes.formOpen}
+          disabled={listPending || writes.anyPending || writes.formOpen || !canNavigateNext}
         >
           {ru.tasks.upcoming.next}
         </Button>
