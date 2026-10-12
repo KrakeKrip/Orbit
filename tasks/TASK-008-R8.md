@@ -1,5 +1,7 @@
 # TASK-008-R8 — зона аккаунта в редакторе планирования
 
+**PRODUCT FIX ACCEPTED**, 2026-10-12: 01ac0cea9dd44de1bd33b5f69daf737ce30c83ca, reports/TASK-008-R8.md. Test finally cleanup и full gates назначены отдельно в tasks/TASK-008-FINAL.md.
+
 ## Одна цель
 
 Закрыть R8 из reports/TASK-008.md: общий schedule editor показывает актуальную server-derived account timezone в Inbox/Today/Upcoming. R1–R7 приняты, последний executor HEAD 3b1bd4035ad7bd98048bd2a75d84143d3e4aa23c, review reports/TASK-008-R7.md. Начать с нового coordinator assignment HEAD; записать полный SHA, проверить root/branch/status. Ветка task/TASK-008, worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
