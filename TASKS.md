@@ -5,12 +5,12 @@
 | TASK | Статус | Одна цель |
 | --- | --- | --- |
 | NATIVE-001 | TODO | macOS Inbox: add/complete/reopen с локальным disk persistence; shared Swift core, без сервера |
-| NATIVE-002 | TODO (план) | iOS target и тот же Inbox, Simulator/реальное устройство после доступности Xcode |
+| NATIVE-002 | PREPARED / WAITING_FOR_NATIVE_001 | iOS target + тот же локальный Inbox; tasks/NATIVE-002.md. Xcode/Simulator доступны, запуск только после приёмки NATIVE-001 |
 | NATIVE-003 | TODO (план) | редактирование заголовка задачи |
 | NATIVE-004 | TODO (план) | удаление с безопасным подтверждением |
 | NATIVE-005 | TODO (план) | локальные проекты, scope уточняется после первых GUI reviews |
 
-Выдан только tasks/NATIVE-001.md. Следующие строки не разрешают начинать работу. Если Xcode остаётся недоступным, независимые macOS возможности можно выдавать дальше; iOS готовым не считать. Даты/Today/Upcoming, backup/export и длительная личная проверка — последующие небольшие задания. Sync/web/Telegram/MCP — позже, без текущего срока и количества TASK.
+Выдан только tasks/NATIVE-001.md. Следующие строки не разрешают начинать работу. NATIVE-002 подготовлен, но не выдан исполнителю до приёмки NATIVE-001. Xcode/Simulator подтверждены2026-10-13; iOS код и GUI ещё не проверены. Даты/Today/Upcoming, backup/export и длительная личная проверка — последующие небольшие задания. Sync/web/Telegram/MCP — позже, без текущего срока и количества TASK.
 
 ## Сохранённая работа
 
