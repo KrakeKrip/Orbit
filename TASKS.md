@@ -13,7 +13,7 @@
 | TASK-005 | DONE | Настройки timezone/theme, проверка сохранения и существующего sign-out, сохранение после refresh; IANA validation и owner isolation |
 | TASK-006 | DONE | Projects create/rename/archive/unarchive, server ownership, исключение архивных данных; tests с двумя пользователями |
 | TASK-007 | DONE | Task CRUD, quick-add/Inbox, one-off complete/reopen/soft delete, стабильный порядок; refresh persistence и IDOR tests |
-| TASK-008 | NEEDS_FIXES | Review executor SHA 6388a08: reports/TASK-008.md; R1 принят (3b3688a), R2a принят на 437e5a2; R2b1 принят на c68d3a8; R2b2 принят на 9d9566e; R2b3 принят на 0274215; R2b4 принят на 15c5487, R2 закрыт; R3a product fix принят на 18f13ba; R3b принят на 54780f1, R3 закрыт; R4 принят на 6937135; R5 принят на a4e8a84; R6 принят на ed07ce2; назначена только tasks/TASK-008-R7.md (Today API ordering), остальные отдельно |
+| TASK-008 | NEEDS_FIXES | Review executor SHA 6388a08: reports/TASK-008.md; R1 принят (3b3688a), R2a принят на 437e5a2; R2b1 принят на c68d3a8; R2b2 принят на 9d9566e; R2b3 принят на 0274215; R2b4 принят на 15c5487, R2 закрыт; R3a product fix принят на 18f13ba; R3b принят на 54780f1, R3 закрыт; R4 принят на 6937135; R5 принят на a4e8a84; R6 принят на ed07ce2; R7 принят на 3b1bd40; назначена только tasks/TASK-008-R8.md (account timezone label), остальные отдельно |
 | TASK-009 | TODO | Project tasks, parent/subtask один уровень, atomic move/delete, priority/notes, полноценный task details sheet |
 | TASK-010 | TODO | Owner-scoped search по title/notes, loading/error/empty states, shortcuts Q / Esc, rollback ошибок сохранения |
 | TASK-011 | TODO | DAILY/WEEKDAYS/WEEKLY и completion history, transaction/revision/idempotency, конкуренция, overdue/Friday/timezone tests |

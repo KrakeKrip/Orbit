@@ -1,5 +1,7 @@
 # TASK-008-R7 — единый порядок Today в raw API
 
+**ACCEPTED**, 2026-10-12: 3b1bd4035ad7bd98048bd2a75d84143d3e4aa23c, reports/TASK-008-R7.md. Следующее задание tasks/TASK-008-R8.md.
+
 ## Одна цель и старт
 
 Закрыть R7 из reports/TASK-008.md: GET /api/v1/tasks?view=today возвращает задачи в том же порядке, что Today UI. R1–R6 приняты, последний executor HEAD ed07ce2fc1c42a276ec993734536ba4ab4542b35, review reports/TASK-008-R6.md. Начать с нового coordinator assignment HEAD, записать полный SHA и проверить root/branch/status. Ветка task/TASK-008, worktree /Users/atlhnv/Codex/orbit-worktrees/TASK-008.
