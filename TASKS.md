@@ -1,6 +1,6 @@
 # Orbit — очередь MVP
 
-Этап EVERYDAY CORE, 2026-10-12. TASK-001–008 приняты и локально интегрированы после независимого review. Работают auth/settings/Projects, Inbox one-off CRUD, civil planning, Today/Upcoming. TASK-008 DONE, итоговый review reports/TASK-008.md. Активного задания GLM нет; TASK-009–013 — исходные пакеты, которые нужно дробить перед выдачей.
+Этап EVERYDAY CORE, 2026-10-12. TASK-001–008 приняты и локально интегрированы после независимого review. Работают auth/settings/Projects, Inbox one-off CRUD, civil planning, Today/Upcoming. TASK-008 DONE, итоговый review reports/TASK-008.md. Выдан только TASK-009A — read API задач проекта; TASK-009–013 — исходные пакеты, а не разрешение реализовать их целиком.
 Статусы: TODO → IN_PROGRESS → REVIEW → DONE; NEEDS_FIXES / BLOCKED при необходимости.
 Каждый следующий TASK зависит от успешной интеграции предыдущего. Строка очереди не разрешает начать реализацию.
 
@@ -14,7 +14,8 @@
 | TASK-006 | DONE | Projects create/rename/archive/unarchive, server ownership, исключение архивных данных; tests с двумя пользователями |
 | TASK-007 | DONE | Task CRUD, quick-add/Inbox, one-off complete/reopen/soft delete, стабильный порядок; refresh persistence и IDOR tests |
 | TASK-008 | DONE | Civil планирование DATE/TIME/deadline, Today/Upcoming, raw API ordering, account timezone labels; R1–R8/final cleanup/auth fixture закрыты. 69 unit/47 DB/124 auth/123 E2E + no-env build PASS, local merge 8ec7068; PG17 и реальные устройства финально не проверены |
-| TASK-009 | TODO | Project tasks, parent/subtask один уровень, atomic move/delete, priority/notes, полноценный task details sheet |
+| TASK-009 | TODO (пакет) | Project tasks, notes/priority/details/subtasks/move — отдельные малые задания; сейчас выдан только TASK-009A |
+| TASK-009A | TODO | Read-only GET /api/v1/projects/[projectId]/tasks: owner/status/order/archive/context, без UI и mutations |
 | TASK-010 | TODO | Owner-scoped search по title/notes, loading/error/empty states, shortcuts Q / Esc, rollback ошибок сохранения |
 | TASK-011 | TODO | DAILY/WEEKDAYS/WEEKLY и completion history, transaction/revision/idempotency, конкуренция, overdue/Friday/timezone tests |
 | TASK-012 | TODO | PWA manifest/icons, онлайн-режим, проверка реальной установки где доступно; без push/offline edits |
@@ -30,3 +31,11 @@ Milestone 0 Foundations: TASK-001–005. Milestone 1 Everyday core: TASK-006–0
 
 ## Путь до использования на iPhone
 После TASK-008 до web/PWA MVP остаются task details/project flows, поиск, recurrence, PWA и итоговая интеграция; прежние пакеты TASK-009–013 будут разбиты на меньшие задания, поэтому точное число handoff пересчитывается. Inbox CRUD и Today/Upcoming уже реализованы; полноценная PWA и итоговая проверка — TASK-012/013. Это браузер/PWA, не native iOS app. Доступ с iPhone вне local Mac требует отдельного этапа TLS/deployment/backup и реальной проверки устройства; он пока не назначен. Нативное iOS/macOS приложение отдельная будущая очередь, её размер/технология ещё не утверждены. Число задач не является оценкой сроков и может измениться по результатам review.
+
+## Ближайшие малые шаги после TASK-008
+
+1. TASK-009A — read API задач проекта (выдано, tasks/TASK-009A.md).
+2. TASK-009B — создание root one-off task в собственном активном проекте через API (план, не выдано).
+3. TASK-009C — небольшой экран проекта со списком задач (план, не выдано).
+4. TASK-009D — quick-add на экране проекта через принятый API (план, не выдано).
+Далее отдельные решения для details/notes/priority, assignment/move и subtasks. Scope и порядок уточняются после review; весь пакет GLM не передавать.
