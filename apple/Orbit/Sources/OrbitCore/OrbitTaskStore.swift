@@ -54,6 +54,26 @@ public final class OrbitTaskStore {
             throw error
         }
     }
+
+    /// Assigns, changes or clears (`nil`) the civil planned date of one task.
+    /// Invalid values are rejected before any mutation; completion, title, id
+    /// and list order are never touched, and tasks with a date stay in the Inbox.
+    public func setPlannedDate(_ plannedDate: String?, for id: UUID) throws {
+        if let plannedDate, !TaskPlannedDate.isValid(plannedDate) {
+            throw TaskPlannedDateError.invalid(plannedDate)
+        }
+        let descriptor = FetchDescriptor<OrbitTask>(predicate: #Predicate { $0.id == id })
+        guard let task = try context.fetch(descriptor).first else {
+            throw OrbitStoreError.taskNotFound(id: id)
+        }
+        task.setPlannedDate(plannedDate)
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
+        }
+    }
 }
 
 public enum OrbitStoreError: Error, Equatable {
