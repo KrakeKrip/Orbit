@@ -1,10 +1,10 @@
 ## Актуальный статус 2026-10-13
 
-NATIVE-007A принят и локально integrated9c499d4; read-only projection11/iOS build PASS. Назначен только tasks/NATIVE-007B.md, task/NATIVE-007B, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007B: Day UI, три product iOS файла, без изменения core. Один grid00–24, actual Calendar tab, existing editors;3days/Month/drag/quick-add/GPT не назначены. NATIVE-006 DONE; macOS-R1/web/sync PAUSED. Старые задания не выполнять, отчёт в файл/чат краткий.
+NATIVE-007B NEEDS_FIXES: bounded layout (untimed вытесняет grid/controls, dense overlap шире viewport, short block geometry растягивается). Назначен только tasks/NATIVE-007B-R1.md в task/NATIVE-007B, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007B; correction start4aa3b893e69b78466058c58fcfe818fb600ea0e8. Scope два UI файла+отчёт, core не менять. Independent build/own Simulator layout repro/width probe есть в reports/NATIVE-007B.md task worktree; tap/context/late-hour GUI пока UNVERIFIED. Merge/следующий TASK отсутствуют.007A DONE, macOS-R1/web/sync PAUSED. Старые assignments не выполнять; отчёт в файл/чат краткий.
 
 # Orbit — правила координации
 
-Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; NATIVE-005 завершён; NATIVE-006 принят; NATIVE-007A принят; назначен только tasks/NATIVE-007B.md в отдельном worktree. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
+Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; NATIVE-005 завершён; NATIVE-006 принят; NATIVE-007A принят; назначена только коррекция tasks/NATIVE-007B-R1.md в task worktree. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований
