@@ -100,3 +100,45 @@ READY_FOR_REVIEW (R1 [P1] + R2 [P2] + R3 [P2] + уборка из reports/NATIVE
 ## Git
 
 Новый обычный scoped commit (CalendarDayScreen.swift + DayTimelineView.swift + R1-секция отчёта); полный latest SHA в чате. Без merge/push/amend/rebase/reset/stash/deploy; 007B не принят; 3дня/Месяц/AI/macOS-R1 не начинались; main/чужие worktrees/CRM/3000/hooks/xcode-select/system settings/signing не тронуты.
+
+---
+
+# Коррекция NATIVE-007B-R1b — читаемые блоки и доступный выбор коротких задач
+
+## Статус
+
+READY_FOR_REVIEW (только R1b [P2] из reports/NATIVE-007B.md PARTIAL; R1/R2 из предыдущей коррекции не переписывались). Starting correction SHA `16fa7eb71e712bb4540288e0997faa767e7f753c`, дерево чистое до правок.
+
+## Изменения (единственный product-файл DayTimelineView.swift)
+
+1. **Видимые captions обычных блоков возвращены**: в 60-минутных блоках (paintedHeight ≥ 24) снова видны title и range «09:00–10:00», completed — muted стиль. Caption/clip адаптивны: текст внутри painted-границ, обрезается `.clipped()` по карточке, не растягивает интервал; полный title/range всегда в AX и menu.
+2. **Точная painted-геометрия**: floor 2pt удалён — paintedHeight = `(endMinute − startMinute)/60 × hourHeight` (1min ≈ 1.07pt при 64pt/hour). Same-lane adjacent 1-мин и 15-мин задачи не перекрываются.
+3. **Компактный native Menu «Задачи с временем»** над сеткой: ≥44pt, a11y identifier `day-interval-menu`, disabled при пустых segments (без fake actions); пункты — подменю каждой timed задачи выбранного дня с полным названием/диапазоном/continuation-маркерами (↑/↓) и существующими callbacks: «Редактировать время…» (interval editor), «Дата задачи…» (date editor), «Завершить»/«Снова открыть». Это alternate доступный путь для tiny/dense задач; block tap/context menu остаётся.
+4. **Lane gutter 2pt** между side-by-side lane'ами (fit-ширина сохранена: GeometryReader/half-open assignment без изменений).
+
+CalendarDayScreen/OrbitIOSApp/core/projection/model/store/editors — не менялись.
+
+## Проверки
+
+| Проверка | Результат |
+| --- | --- |
+| `xcodebuild -scheme OrbitIOS -sdk iphonesimulator -derivedDataPath /tmp/orbit-r1c-dd CODE_SIGNING_ALLOWED=NO build` | exit 0 — BUILD SUCCEEDED; DerivedData удалён |
+| Fixture (временный генератор, удалён) | 11 timed задач на today: 8×Overlap 09:00/60 + Минута А 13:00/1 + Минута Б 13:01/1 + Обычная 16:00/60; sqlite readonly подтверждает 11 строк с точными значениями |
+| GUI (свой Simulator UDID 0E900B84-…, удалён после) | см. ниже |
+
+## GUI evidence (AX + pixel-скриншоты; каталог `/Users/atlhnv/Codex/orbit-outputs/NATIVE-007B/`)
+
+1. **Read60 block**: «Обычная задача 16:00–17:00» — видимые title и range внутри coral-блока на 16:00–17:00. Скриншоты `02-day-grid-evening.png` (уже содержал), финальный кадр с menu — `09-r1b-menu-all-tasks.png`.
+2. **Menu «Задачи с временем»**: открытие → popupbutton со всеми 11 timed сегментами дня, полные labels: «Overlap N · 09:00–10:00» ×8, «Минута А · 13:00–13:01», «Минута Б · 13:01–13:02» — всё через AX-экспозицию Device Hub, без координат. Скриншот `09-r1b-menu-all-tasks.png`.
+3. **Editor через menu**: клик «Минута А» в menu → interval editor открыт: поля Начало=13:00, Длительность=1 (реальные source-значения). Cancel не проверялся отдельно (editor закрыт через переход к следующему шагу —/store не записан: sqlite readonly до и после).
+4. **Adjacent 1min на сетке**: Минута А/Б видны как две отдельные тонкие полосы на 13:00/13:01 (AX: «Минута А, 13:00–13:01» и «Минута Б, 13:01–13:02» — отдельные элементы, не накрытие).
+
+## Ограничения / не проверено
+
+- Реальный iPhone/тёмная тема/RTL не проверялись.
+- Core 66/legacy/web/full — не повторялись (core/schema не менялись; один swift test 50/50 в 007B-R1 уже покрыл).
+- Coords scroll нестабилен в Device Hub (известное ограничение) — вечерние часы за фолдом не скриншотились, но menu даёт доступ ко всем timed задачам независимо от скролла.
+
+## Git
+
+Новый обычный scoped commit (DayTimelineView.swift + R1b-секция отчёта); полный latest SHA в чате. Без merge/push/amend/rebase/reset/stash/deploy; 007B не принят; 3дня/Месяц/AI/macOS-R1 не начинались; main/чужие worktrees/CRM/3000/hooks/xcode-select/Apple ID/signing/system settings не тронуты.
