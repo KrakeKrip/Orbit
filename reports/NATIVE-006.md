@@ -20,3 +20,11 @@
 Неблокирующие замечания не превращать в дополнительные большие TASK: синяя системная tint у tab bar отличается от будущего coral направления; cosmetic consistency можно учесть с последующей навигацией. Date caption на полностью пустом store находится только в list, а не empty state — допустима маленькая уборка того же view, не блокирует R1 сама по себе.
 
 NATIVE-006 не принят, merge/push/deploy отсутствуют; NATIVE-007 не назначен.
+
+## Повторное review R1 — PASS
+
+2026-10-13, product SHA `52ba760d9e19d3baf65b22e830f9f66c09345078`. Source diff в разрешённом scope: TodayScreen показывает существующий model.writeError над list/empty/read error, не очищает его и не меняет mutations. Plain Text banner имеет доступный id и системный scalable font. import Combine устранил publisher warnings; local date видна на empty store. Новый test assertion сравнивает фактические fixture fields с ожидаемыми construction values, а не всегда true title!=nil; это не snapshot before/after кортежей, как неточно описано в чате, но проверяет неизменность заданных полей после selection.
+
+Независимо targeted swift test --filter TaskDaySelection: exit0,6/6, без warnings. iOS Simulator build на новых own DerivedData: exit0,BUILD SUCCEEDED, только AppIntents metadata warning. Дерево/cumulative diff check чистые. Core helper/mutations не менялись, полный56/legacy/web прогон не повторялся. Runtime screenshot баннера НЕ проверен ни исполнителем, ни Codex; по R1 это явно допустимое ограничение малой rendering-коррекции. Проверены source/wiring и compilation, не disk failure GUI.
+
+R1 закрыт, NATIVE-006 принят в scope Today list. Реальный iPhone/системная clock-timezone смена/RTL/dark/runtime disk failure остаются непроверенными. Проекция overnight для календарной сетки — отдельный следующий небольшой TASK; Today list по-прежнему только start date. Push/deploy не выполнялись.
