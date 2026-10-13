@@ -59,17 +59,23 @@ public enum TaskPlannedDate {
         (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
     }
 
-    /// UI adapter: the local civil day of `date` in `calendar` as `YYYY-MM-DD`.
+    /// UI adapter: the local civil day of `date` in `calendar`'s time zone as
+    /// `YYYY-MM-DD`. Components are always read in the Gregorian calendar —
+    /// the stored contract is Gregorian regardless of the system calendar
+    /// (Buddhist/Islamic etc. only change the displayed rendering).
     public static func civilDateString(from date: Date, calendar: Calendar = .current) -> String {
-        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        let components = gregorian(withTimeZone: calendar.timeZone)
+            .dateComponents([.year, .month, .day], from: date)
         let year = String(components.year ?? 1900)
         let month = String(format: "%02d", components.month ?? 1)
         let day = String(format: "%02d", components.day ?? 1)
         return "\(year)-\(month)-\(day)"
     }
 
-    /// UI adapter: start of the civil day `value` in `calendar`, or nil when the
-    /// value is not a valid civil date.
+    /// UI adapter: the instant of noon on civil day `value` in `calendar`'s
+    /// time zone, or nil when the value is not a valid civil date. The day is
+    /// constructed in the Gregorian calendar (storage contract); noon keeps
+    /// the civil day stable across small UTC-offset/DST shifts.
     public static func date(fromCivilDateString value: String, calendar: Calendar = .current) -> Date? {
         guard isValid(value) else { return nil }
         let year = Int(value.prefix(4)) ?? 1900
@@ -80,6 +86,15 @@ public enum TaskPlannedDate {
         components.month = month
         components.day = day
         components.hour = 12 // noon keeps the civil day stable across small offsets
-        return calendar.date(from: components)
+        return gregorian(withTimeZone: calendar.timeZone).date(from: components)
+    }
+
+    /// Gregorian calendar carrying the time zone of the supplied calendar:
+    /// year/month/day semantics stay Gregorian while "local civil day" keeps
+    /// meaning the user's own time zone.
+    private static func gregorian(withTimeZone timeZone: TimeZone) -> Calendar {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = timeZone
+        return gregorian
     }
 }

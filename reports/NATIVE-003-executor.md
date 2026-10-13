@@ -67,3 +67,39 @@ READY_FOR_REVIEW.
 
 - Ветка `task/NATIVE-003`; starting SHA `fb338c440128d71779b84ffb425911e150d2d42d`; обычные scoped коммиты (core+tests; iOS UI+README; отчёт), полный latest SHA в чате.
 - Merge/push/amend/rebase/reset/stash/deploy не выполнялись; main/другие worktrees/CRM/localhost:3000/hooks/xcode-select/Xcode settings не тронуты; SQLite stores/user data не коммитились; NATIVE-004/календарь/macOS-R1 не начинались.
+
+---
+
+# Коррекция NATIVE-003-R1 — Gregorian storage adapter
+
+## Статус
+
+READY_FOR_REVIEW (только R1 [P2] из reports/NATIVE-003.md; остальной TASK не переписывался). Starting correction SHA `d1e908807d91a3044303ce35672379a339d17d10`, дерево чистое.
+
+## Дефект и исправление
+
+Оба UI-адаптера `TaskPlannedDate` (civilDateString / date(fromCivilDateString:)) использовали supplied Calendar целиком: при системном Buddhist/Islamic календаре запись сегодняшней даты давала «2569-10-13» (store отвергал), чтение stored «2026-10-13» давало Gregorian «1483-10-13». Исправление (`apple/Orbit/Sources/OrbitCore/TaskPlannedDate.swift`, только этот product-файл): внутренний `Calendar(identifier: .gregorian)` с **timezone supplied calendar** используется для extraction и construction; timezone/local-civil-day семантика сохранена (не UTC day), persisted строки/schema/валидация 1900–2199/сигнатуры не менялись, invalid не нормализуется. Комментарии приведены к фактическому noon-адаптеру.
+
+## Тесты
+
+`Tests/OrbitCoreTests/TaskPlannedDateTests.swift`: новый тест «non-Gregorian calendars still produce Gregorian storage strings» — Buddhist(UTC) и Islamic Civil(Europe/Moscow): запись известного Gregorian instant 2026-10-13T12:00Z → ровно «2026-10-13» (не 2569/1448-формат); обратное чтение канонической строки → тот же Gregorian instant (Buddhist: noon UTC 1791892800; Islamic: noon MSK 1791882000, проверено ре-чтением через Gregorian calendar). Прежние Moscow/NewYork local-day/roundtrip и invalid-value тесты сохранены. **Итог: swift test 31/31.**
+
+## Проверки
+
+| Команда | Результат |
+| --- | --- |
+| `swift build` (DEVELOPER_DIR) | exit 0 |
+| `swift test` | exit 0 — **31/31 в 5 suites** |
+| `xcodebuild -scheme OrbitIOS -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/orbit-r1-dd CODE_SIGNING_ALLOWED=NO build` | exit 0 — BUILD SUCCEEDED; DerivedData удалён после проверки |
+
+GUI/legacy-повтор не выполнялся по TASK (pure fix; legacy upgrade независимо подтверждён Codex на копии fixture).
+
+## Ограничения / не проверено (без изменений и честно)
+
+- GUI change (выбор другой даты в picker) остаётся непроверенным — вне этого pure fix, зеркальное ограничение Device Hub из основного отчёта.
+- Invalid-before-save тесты не являются проверкой настоящего runtime save failure/rollback (Codex note подтверждён).
+- Реальный iPhone/тёмная тема/RTL не проверялись; system calendar/xcode-select/signing не менялись.
+
+## Git
+
+Новый обычный scoped commit (TaskPlannedDate.swift + его тест + запись в этом отчёте); полный latest SHA в чате. Без merge/push/amend/rebase/reset/stash/deploy; NATIVE-004/macOS-R1 не начинались; main/чужие worktrees/CRM/3000/hooks не тронуты.

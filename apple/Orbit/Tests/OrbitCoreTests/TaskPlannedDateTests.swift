@@ -71,4 +71,45 @@ struct TaskPlannedDateTests {
         // Adapter rejects invalid values instead of shifting them.
         #expect(TaskPlannedDate.date(fromCivilDateString: "2026-02-30", calendar: moscow) == nil)
     }
+
+    @Test("non-Gregorian calendars still produce Gregorian storage strings")
+    func nonGregorianCalendars() {
+        // 2026-10-13T12:00:00Z — a known Gregorian instant (noon UTC).
+        let noonUTC = Date(timeIntervalSince1970: 1_791_892_800)
+
+        var buddhistUTC = Calendar(identifier: .buddhist)
+        buddhistUTC.timeZone = TimeZone(identifier: "UTC") ?? .current
+        // The Buddhist year for 2026 is 2569; the adapter must not use it.
+        #expect(
+            TaskPlannedDate.civilDateString(from: noonUTC, calendar: buddhistUTC) == "2026-10-13"
+        )
+        // Reading a stored canonical string back through the Buddhist calendar
+        // yields the same Gregorian instant (old code produced Gregorian 1483).
+        let fromBuddhist = TaskPlannedDate.date(fromCivilDateString: "2026-10-13", calendar: buddhistUTC)
+        #expect(fromBuddhist == noonUTC)
+        var gregorianUTC = Calendar(identifier: .gregorian)
+        gregorianUTC.timeZone = TimeZone(identifier: "UTC") ?? .current
+        #expect(
+            fromBuddhist != nil
+                && TaskPlannedDate.civilDateString(from: fromBuddhist!, calendar: gregorianUTC) == "2026-10-13"
+        )
+
+        // Second non-Gregorian calendar, non-UTC time zone (Moscow, UTC+3):
+        // stored day round-trips to the same Gregorian civil day.
+        var islamicMoscow = Calendar(identifier: .islamicCivil)
+        islamicMoscow.timeZone = TimeZone(identifier: "Europe/Moscow") ?? .current
+        #expect(
+            TaskPlannedDate.civilDateString(from: noonUTC, calendar: islamicMoscow) == "2026-10-13"
+        )
+        // Noon MSK on 2026-10-13 = 09:00:00Z.
+        let noonMoscowInstant = Date(timeIntervalSince1970: 1_791_882_000)
+        let fromIslamic = TaskPlannedDate.date(fromCivilDateString: "2026-10-13", calendar: islamicMoscow)
+        #expect(fromIslamic == noonMoscowInstant)
+        var gregorianMoscow = Calendar(identifier: .gregorian)
+        gregorianMoscow.timeZone = TimeZone(identifier: "Europe/Moscow") ?? .current
+        #expect(
+            fromIslamic != nil
+                && TaskPlannedDate.civilDateString(from: fromIslamic!, calendar: gregorianMoscow) == "2026-10-13"
+        )
+    }
 }
