@@ -156,3 +156,83 @@ READY_FOR_REVIEW (R2 поверх R1; независимая приёмка R1 �
 ## Git
 
 - Ветка `task/NATIVE-007C`; R2 start `120e2cf28eb2ecc61d42998c4c3e506291ff48e5`; полный SHA итогового коммита — в чате.
+
+---
+
+# NATIVE-007C-R3 — плотные карточки и компактное меню календаря
+
+## Статус
+
+READY_FOR_REVIEW (R3 поверх R2 в той же ветке; приёмка R2 отдельно не выполнялась — итоговый Codex review кумулятивный R1+R2+R3).
+
+## Исходное состояние
+
+- Та же ветка `task/NATIVE-007C`, тот же worktree; **starting SHA R3 = full SHA завершённого R2 `5804d9e352544f6bf717855e16d13b042be18142`**; `git status --porcelain` перед началом пустой, чужих изменений нет. R2-правки не отменялись и не смешивались: R3 — отдельный новый commit поверх R2.
+- Прочитаны `/Users/atlhnv/Codex/orbit-outputs/NATIVE-007C-R3.md`, свой R1/R2 отчёт выше.
+
+## Изменённые файлы
+
+| Файл | Изменение |
+| --- | --- |
+| `apple/OrbitIOS/OrbitIOS/CompactCalendarTaskRow.swift` | одна общая Capsule теперь под кругом И title (круг внутри карточки слева от title); визуальная капсула ~34pt (вертикальный inset 5) внутри hit-ряда ≥44pt; круг 20pt с собственным 44×44 hit region в ряду, отдельным от title — tap по title/card круг не переключает; title `.frame(minHeight: 44)`; completed по-прежнему muted (tertiarySystemFill + secondary) |
+| `apple/OrbitIOS/OrbitIOS/CalendarDayScreen.swift` | плотность: spacing между chips 6→2 (collapsed и expanded), карточки с content-отступом 16 (общий Capsule больше не касается краёв экрана), `estimatedCompactRowHeight` 44→46 (44 hit + 2 gap); панель-меню: native «⋯» Menu рядом с датой/«Сегодня» (min 44×44, AX label «Меню календаря», identifier `calendar-day-menu`) с пунктом «Задачи дня» — реальные TIMED сегменты выбранного дня (полное source-название + диапазон + маркеры ↑/↓), подменю с существующими «Редактировать время…»/«Дата задачи…»/«Завершить/Снова открыть» через существующие sheets/model; без сегментов — disabled-строка «Нет задач с временем» (никаких fake actions); helper-резолвер `untimedTask` переименован в общий `task(withID:)` (одна и та же модель, без дублей); `dayControlsReserve` 64→104 под адаптивную шапку (см. «наблюдения»); ViewThatFits-адаптация сохранена и расширена на «⋯» |
+| `apple/OrbitIOS/OrbitIOS/DayTimelineView.swift` | удалена верхняя панель-меню «Задачи с временем» (intervalMenu) и её эксклюзивный helper `menuTitle`; body — сразу GeometryReader-сетка (grid/ruler/paint/lane layout/block tap/context callbacks/24h/scrollTo/identity не тронуты); обновлены только doc-комментарий и AX-hint блока, ссылавшиеся на удалённую панель («меню «Задачи дня» в шапке — полный список») |
+| `apple/OrbitIOS/README.md` | секция Calendar Day под R3 (круг внутри общей капсулы, «⋯»/«Задачи дня», панель удалена, плотность 2pt) |
+| `reports/NATIVE-007C-executor.md` | эта R3-секция |
+
+Не менялись: core/model/store/projector, Today/Inbox/shared InboxRowView, TaskDateSheet/TaskIntervalSheet, OrbitIOSApp/nav tabs, Xcode project, root docs, tests, web. Новых writes/cache/зависимостей нет — меню читает `projection.timedSegments` и резолвит живые задачи из той же модели.
+
+## Поведение (сверка с пунктами TASK)
+
+1. **Плотность.** Стандартный ряд: hit-row 44pt, зазор 2pt, визуальная капсула ~34pt (в границах 30–36), числа подчинены Dynamic Type — при accessibility-размерах ряд и капсула растут вместе (капсула всегда ≥ текста). Три задачи — компактная группа без крупных прослоек; hit regions соседних рядов не перекрываются (каждый ряд самостоятельные 44pt+2), минимальные hit targets не сжимались. Default 3/«Ещё N»/expanded/internal scroll/adaptive sizing R1 сохранены, row budget актуализирован (46).
+2. **Цельная карточка.** Круг завершения внутри общей rounded tinted capsule слева от title; собственный 44×44 hit в ряду; отдельный title/card tap открывает существующий date sheet источника и никогда не завершает задачу; completion — только через существующий `model.setCompleted` для source task; контекстное меню карточки прежнее. Completed визуально muted. Полный title в AX, tail truncation, accessibility size адаптируется; shared list строки вне календаря не тронуты.
+3. **Меню.** Большая панель «Задачи с временем» над сеткой удалена (вместе с ней сетка получила её место). «⋯» рядом с датой/«Сегодня», min 44×44, «Меню календаря» + `calendar-day-menu`. «Задачи дня» — реальные сегменты выбранного дня: `С временем 09:00 · 09:00–10:00`, `Мини 1 · 11:05–11:10`, `Мини 2 · 11:07–11:11`, `Мини 3 · 23:55–24:00`; подменю — существующие interval/date/complete callbacks. Пункт не включает untimed/другие дни (тот список остаётся отдельным). Пустой день — disabled «Нет задач с временем». Второго 44pt menu bar над сеткой нет. R1/R2 collapse/adaptive/scroll/grid-identity contracts сохранены (проверено: expand/collapse, смена дня — collapsed-дефолт без фиктивного toggle при 2 задачах).
+
+## Наблюдения (честно, в рамках scope)
+
+- **Адаптивная шапка.** С добавлением «⋯» (min 44pt) один ряд контролов на iPhone 17 Pro (402pt) перестал помещаться (~435pt нужна); ViewThatFits переносит «Сегодня»+«⋯» на вторую компактную строку — это разрешённый TASK вариант «native адаптивное размещение в компактной верхней строке, без возвращения large title». На более широких устройствах ряд остаётся одним (spacing/padding подтянуты 12→8). `dayControlsReserve` актуализирован 64→104, чтобы ceiling expanded-viewport честно учитывал двухстрочный вариант.
+- **Формат pill даты.** Compact DatePicker под ru_RU в зависимости от предложенной ViewThatFits ширины рендерит «14 окт. 2026 г.» либо числовой «14.10.2026» (оба русские форматы системного стиля); locale-код не менялся. Заметка для review — поведение самого DatePicker, не новая логика.
+- AX-hint блока сетки обновлён на ссылку на новое меню (старый текст ссылался на удалённую панель) — единственная правка в DayTimelineView помимо удаления панели.
+
+## Команды и результаты
+
+| Команда | Результат |
+| --- | --- |
+| `xcodebuild -project OrbitIOS.xcodeproj -scheme OrbitIOS -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/orbit-n7c-r3-dd CODE_SIGNING_ALLOWED=NO build` (DEVELOPER_DIR), дважды (после плотностного фикса) | exit 0, **BUILD SUCCEEDED** |
+| Core `swift test` / web / legacy / full suites | НЕ повторялись — core не менялся (по TASK) |
+| Fixture | временный macOS-генератор, слинкованный с OrbitCore (`swift build` + `swiftc -parse-as-library`, Package.swift не менялся); даты через `TaskDaySelection.currentDay()` → today=2026-10-14; 12 untimed + 1 timed (09:00/60) + tiny/dense («Мини 1» 11:05/5, «Мини 2» 11:07/4 — перекрытие в 2 lane, «Мини 3» 23:55/5, конец ровно в 24:00) на today, 2 untimed на 15 Oct, 1 undated; 19 задач; store положен в песочницу приложения до первого launch; генератор удалён |
+| Simulator | собственный `orbit-n7c-r3-gui` (iPhone 17 Pro, iOS 27.0, UDID A4C54875-1F89-4592-8C9F-3DA598812FF0): создан/booted/deleted мной; после плотностного фикса app переустановлен в тот же контейнер (store сохранён) |
+| Ввод | Device Hub (`/Applications/Xcode.app/Contents/Applications/DeviceHub.app`, Xcode 27): AX-дерево iOS-приложения зеркалится в macOS — клики шли по элементам AX; координатный клик только для таб-бара (табы не отражены в AX) |
+
+## GUI evidence реального запуска
+
+Скриншоты — `xcrun simctl io screenshot` (пиксели устройства), каталог `/Users/atlhnv/Codex/orbit-outputs/NATIVE-007C/r3/`:
+
+1. `01-collapsed-dense.png` — collapsed: ровно 3 капсулы плотной группой (зазор ~2pt), круг ВНУТРИ каждой капсулы слева от title, «Ещё 9»; большой панели «Задачи с временем» НЕТ — сетка начинается сразу после разделителя и занимает бо́льшую часть экрана (08:00–14:00+ и блок 09:00–10:00 видимы); «⋯» в шапке.
+2. `02-chip-completed.png` — после клика по кругу «Без времени 1»: круг заполнен coral с галочкой, title приглушён, позиция задачи не изменилась; AX-метка сменилась на «Снова открыть: Без времени 1». Повторный клик вернул открытое состояние (AX подтверждён).
+3. `03-title-tap-date-sheet.png` — tap по title «Без времени 2»: существующий sheet «Дата задачи / Без времени 2», колесо на 14 October 2026 (правильный source); «Отмена» закрыла без записи (экран/AX без изменений).
+4. `04-day-tasks-menu.png` — «⋯» → «Задачи дня»: все 4 реальных TIMED сегмента дня с полными названиями и диапазонами (включая tiny 11:05–11:10 и 23:55–24:00).
+5. `05-tiny-interval-editor.png` — «Мини 1 · 11:05–11:10» → «Редактировать время…»: существующий «Время задачи / Мини 1» с фактическими значениями Начало=11:05, Длительность=5 (AX-значения полей подтверждены); «Отмена» закрыла без записи.
+6. `06-expanded-bounded.png` — «Ещё 9»: bounded region (5 видимых строк + «Свернуть» ниже), шапка/меню/сетка остаются видимы; AX содержит все 12 строк.
+7. `07-day-switch-collapsed.png` — «Следующий день»: 15 Oct, collapsed-дефолт, «Сосед 1/2», без фиктивного toggle; возврат «Сегодня» — collapsed по умолчанию.
+8. `08-dynamic-type-axl.png` — content size accessibility-extra-large: «Сегодня»+«⋯» на своей строке, все контролы и строки доступны (AX: menu/today/prev/more/rows/grid = true), капсулы выросли со шрифтом; после smoke размер возвращён на `large`.
+
+**sqlite readonly до/после всей сессии** (`store-before.txt`/`store-after.txt` в r3/): 19 строк идентичны — complete был возвращён reopen'ом, оба Cancel не пишут, collapse/expand/смена дня/меню/ Dynamic Type не пишут store.
+
+## UNVERIFIED (честно)
+
+- **Внутренний scroll expanded-региона до 12-й строки** — как в R1/R2: pan-жесты зеркалом Device Hub не доставляются; факты: region ограничена (06: 5 из 12 при «Свернуть» ниже), это нативный ScrollView, AX содержит все 12 строк. UNVERIFIED пиксельно.
+- **Context menu карточки (long-press)** и **grid offset при toggle на прокрученной сетке** — как в R1/R2 UNVERIFIED (жесты не доставляются); source не содержит условий на collapse у timeline, context menu не менялся.
+- Grid-скролл-контракт (отсутствие сброса offset при toggle) — source-уровень + визуальная идентичность до/после; пиксельная проверка на прокрученной сетке невозможна без pan (как в R1/R2).
+- Реальный iPhone, тёмная тема, RTL, VoiceOver-сессия, SE-класс/landscape — не проверялись.
+
+## Ограничения / гигиена
+
+- Один scoped commit поверх R2; `git diff --check` чисто; без merge/push/amend/rebase/reset/stash/deploy.
+- main/чужие worktrees/CRM/порт 3000/hooks/device settings/xcode-select/signing/Apple ID не трогались; системная locale/content size устройства не менялись (content size возвращён на large, ephemeral simulator удалён).
+- Cleanup: свой simulator удалён, `/tmp/orbit-n7c-r3-*` (DerivedData, генератор, store-копии) удалены, Device Hub закрыт; outputs R1/R2 не тронуты.
+- Stop: Codex cumulative review R1+R2+R3; drag/resize/3-дня/Месяц/AI не начинались.
+
+## Git
+
+- Ветка `task/NATIVE-007C`; R3 start `5804d9e352544f6bf717855e16d13b042be18142` (full SHA R2); полный SHA итогового коммита — в чате.

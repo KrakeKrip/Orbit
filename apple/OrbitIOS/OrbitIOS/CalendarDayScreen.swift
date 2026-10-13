@@ -4,7 +4,8 @@ import OrbitCore
 /// The «Календарь» day view: one selected civil day shown as a 00:00–24:00
 /// timeline (via `TaskDayProjector`) with untimed compact chips listed
 /// separately (user reference IMG_1210 — no large navigation title, the
-/// compact date controls sit directly under the safe area).
+/// compact date controls sit directly under the safe area, the native «⋯»
+/// menu next to them holds «Задачи дня» — the timed segments of the day).
 /// Read-only slice over the shared model — taps and the context menu reuse
 /// the existing complete/reopen and date/interval editors for the source
 /// task; creation stays in the Inbox composer.
@@ -36,13 +37,16 @@ struct CalendarDayScreen: View {
 
     private static let collapsedUntimedLimit = 3
 
-    /// Rough height of one compact untimed chip row (44pt interactive row).
-    /// Only a sizing estimate for the expanded viewport floor; real rows
-    /// always render at their natural, Dynamic-Type-aware height.
-    private static let estimatedCompactRowHeight: CGFloat = 44
+    /// Rough height of one compact untimed chip row (44pt interactive row
+    /// plus the 2pt group gap). Only a sizing estimate for the expanded
+    /// viewport floor; real rows always render at their natural,
+    /// Dynamic-Type-aware height.
+    private static let estimatedCompactRowHeight: CGFloat = 46
     /// Reserves subtracted from the measured content height before the
-    /// expanded untimed viewport may take its ~⅓ share.
-    private static let dayControlsReserve: CGFloat = 64
+    /// expanded untimed viewport may take its ~⅓ share. The date controls
+    /// reserve covers the adaptive header: one 44pt row where it fits, or
+    /// two rows («Сегодня» + «⋯» move down) on narrow widths.
+    private static let dayControlsReserve: CGFloat = 104
     private static let toggleReserve: CGFloat = 56
     private static let gridReserve: CGFloat = 220
 
@@ -106,7 +110,7 @@ struct CalendarDayScreen: View {
         TaskDayProjector.project(day: selectedDay, in: model.tasks)
     }
 
-    private func untimedTask(withID id: UUID) -> OrbitTask? {
+    private func task(withID id: UUID) -> OrbitTask? {
         model.tasks.first { $0.id == id }
     }
 
@@ -118,23 +122,28 @@ struct CalendarDayScreen: View {
     /// rest of the content sideways.
     private var dayControls: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 prevDayButton
                 datePickerField
                 nextDayButton
                 Spacer(minLength: 0)
                 todayButton
+                calendarMenu
             }
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     prevDayButton
                     datePickerField
                     nextDayButton
                 }
-                todayButton
+                HStack {
+                    todayButton
+                    Spacer(minLength: 0)
+                    calendarMenu
+                }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(.bar)
     }
@@ -191,6 +200,56 @@ struct CalendarDayScreen: View {
         .tint(.orbitAccent)
     }
 
+    /// Native «⋯» menu next to the date controls. The standalone timed panel
+    /// above the grid is gone; this menu is the one compact accessible path
+    /// to every timed segment of the selected day («Задачи дня»), including
+    /// tiny/dense stripes, through the existing editors and completion
+    /// callbacks. With no timed segments it shows an honest disabled line —
+    /// never a fake action.
+    private var calendarMenu: some View {
+        Menu {
+            if projection.timedSegments.isEmpty {
+                Button("Нет задач с временем") {}
+                    .disabled(true)
+            } else {
+                Menu("Задачи дня") {
+                    ForEach(projection.timedSegments, id: \.taskID) { segment in
+                        if let timed = task(withID: segment.taskID) {
+                            Menu(dayTaskMenuTitle(segment)) {
+                                Button("Редактировать время…") { presentation = .interval(timed) }
+                                Button("Дата задачи…") { presentation = .date(timed) }
+                                Button(timed.isCompleted ? "Снова открыть" : "Завершить") {
+                                    model.setCompleted(!timed.isCompleted, for: timed)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Меню календаря")
+        .accessibilityIdentifier("calendar-day-menu")
+    }
+
+    /// Full source title plus the selected-day range with continuation cues
+    /// («↑»/«↓» at day edges) — the same data the grid block label shows.
+    private func dayTaskMenuTitle(_ segment: TaskDayIntervalSegment) -> String {
+        guard let timed = task(withID: segment.taskID) else { return "Задача" }
+        let endTime = segment.endMinute == 1440 ? "24:00" : clockString(segment.endMinute)
+        var range = "\(clockString(segment.startMinute))–\(endTime)"
+        if segment.continuesFromPreviousDay { range += " ↑" }
+        if segment.continuesIntoNextDay { range += " ↓" }
+        return "\(timed.title) · \(range)"
+    }
+
+    private func clockString(_ minute: Int) -> String {
+        String(format: "%02d:%02d", minute / 60, minute % 60)
+    }
+
     /// ±1 civil day anchored at noon, valid only inside 1900–2199.
     private func shiftedDay(_ delta: Int) -> String? {
         guard let anchor = TaskPlannedDate.date(
@@ -214,12 +273,13 @@ struct CalendarDayScreen: View {
 
     /// Default collapsed: up to 3 untimed chips at their natural height — no
     /// ScrollView, no reserved empty rows, no blind clipping (Dynamic Type
-    /// rows grow instead of truncating their controls). «Ещё N» expands into
-    /// a bounded, independently scrollable viewport capped near ⅓ of the
-    /// measured content height; the toggle is a sibling below the chips, so
-    /// its 44pt budget is laid out exactly once. Expanding/collapsing never
-    /// writes, never recreates the timeline, and never resets the grid
-    /// scroll position.
+    /// rows grow instead of truncating their controls). The chips form one
+    /// tight group (2pt gaps, cards inset to the content margin — no large
+    /// interleaved padding). «Ещё N» expands into a bounded, independently
+    /// scrollable viewport capped near ⅓ of the measured content height; the
+    /// toggle is a sibling below the chips, so its 44pt budget is laid out
+    /// exactly once. Expanding/collapsing never writes, never recreates the
+    /// timeline, and never resets the grid scroll position.
     private var untimedSection: some View {
         let ids = projection.untimedTaskIDs
         let overLimit = ids.count > Self.collapsedUntimedLimit
@@ -243,11 +303,12 @@ struct CalendarDayScreen: View {
                 if untimedExpanded {
                     expandedUntimedRegion(ids: ids)
                 } else {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 2) {
                         ForEach(ids.prefix(Self.collapsedUntimedLimit), id: \.self) { id in
                             untimedRow(id)
                         }
                     }
+                    .padding(.horizontal, 16)
                 }
 
                 if overLimit {
@@ -261,7 +322,7 @@ struct CalendarDayScreen: View {
 
     private func untimedRow(_ id: UUID) -> some View {
         Group {
-            if let task = untimedTask(withID: id) {
+            if let task = task(withID: id) {
                 CompactCalendarTaskRow(task: task, model: model) {
                     presentation = .date(task)
                 } onEditInterval: {
@@ -277,11 +338,12 @@ struct CalendarDayScreen: View {
     /// day switch; the timeline is a separate subtree and never remounts.
     private func expandedUntimedRegion(ids: [UUID]) -> some View {
         ScrollView {
-            VStack(spacing: 6) {
+            VStack(spacing: 2) {
                 ForEach(ids, id: \.self) { id in
                     untimedRow(id)
                 }
             }
+            .padding(.horizontal, 16)
             .background(
                 GeometryReader { proxy in
                     Color.clear

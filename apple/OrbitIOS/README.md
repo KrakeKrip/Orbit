@@ -31,19 +31,29 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   на appear/active и не реже раза в минуту; без сетки/overdue/quick-add.
 - `OrbitIOS/CalendarDayScreen.swift` + `OrbitIOS/DayTimelineView.swift` +
   `OrbitIOS/CompactCalendarTaskRow.swift` — вкладка «Календарь»
-  (NATIVE-007B/007C/007C-R2): без крупного заголовка, под safe area сразу
-  компактные date controls — Prev/Next ±1 день с guard 1900–2199, «Сегодня»,
-  compact DatePicker с view-local ru_RU locale (системная locale не
-  меняется); untimed-задачи отдельной **collapsible областью «Без времени»**
-  из компактных chips (NATIVE-007C-R2: тонированная rounded capsule ~32pt,
-  маленький completion-круг + однострочный title с tail truncation (полный
-  title в AX), без повторной даты и постоянных clock/calendar иконок; tap —
-  существующий date sheet, context menu — дата/время/complete через
-  существующие callbacks; hit-row ≥44pt) (NATIVE-007C: default до 3 chips +
-  «Ещё N», раскрытие в adaptive bounded scroll — viewport ~⅓ измеренной
-  высоты content area с резервом date controls/toggle/сетки, короткие
-  списки не оставляют пустой области, «Свернуть», сброс только
-  untimed-скролла при смене дня);
+  (NATIVE-007B/007C/007C-R2/007C-R3): без крупного заголовка, под safe area
+  сразу компактные date controls — Prev/Next ±1 день с guard 1900–2199,
+  «Сегодня», compact DatePicker с view-local ru_RU locale (системная locale
+  не меняется) и native «⋯» меню («Меню календаря», hit ≥44pt); при
+  стандартном шрифте ряд может не помещаться — `ViewThatFits` переносит
+  «Сегодня» + «⋯» на вторую компактную строку, без возвращения large title.
+  «⋯» содержит «Задачи дня» — реальные TIMED сегменты выбранного дня
+  (полное source-название + диапазон с маркерами ↑/↓) с существующими
+  interval/date/complete-reopen действиями; при отсутствии сегментов —
+  честная disabled-строка «Нет задач с временем», без fake actions. Это
+  единственный доступный путь к tiny/dense блокам — отдельная панель над
+  сеткой удалена (007C-R3); untimed-задачи отдельной **collapsible областью
+  «Без времени»** из компактных chips (007C-R3: одна общая tinted capsule
+  на круг+title, визуально ~34pt внутри hit-ряда ≥44pt, completion-круг
+  20pt с собственным 44×44 hit внутри ряда (tap по title круг не
+  переключает), однострочный title с tail truncation (полный title в AX),
+  плотная группа с 2pt-зазорами и content-отступом 16, без повторной даты и
+  постоянных clock/calendar иконок; tap по title — существующий date sheet,
+  context menu — дата/время/complete через существующие callbacks)
+  (NATIVE-007C: default до 3 chips + «Ещё N», раскрытие в adaptive bounded
+  scroll — viewport ~⅓ измеренной высоты content area с резервом
+  date controls/toggle/сетки, короткие списки не оставляют пустой области,
+  «Свернуть», сброс только untimed-скролла при смене дня);
   ниже — сетка 00:00–24:00 (64pt/час, initial scroll
   к 08:00) с timed-блоками из `TaskDayProjector.project`: side-by-side
   overlap через локальный greedy lane layout (touching segments не

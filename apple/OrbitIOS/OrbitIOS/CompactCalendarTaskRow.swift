@@ -2,13 +2,15 @@ import SwiftUI
 import OrbitCore
 
 /// Compact untimed chip for the Calendar Day list (user reference IMG_1210):
-/// a calm tinted capsule with a small completion circle and a single-line
-/// title. No repeated date label and no always-visible action icons — date
-/// and time editing stay behind tap and the native context menu through the
-/// existing callbacks and sheets. The visual capsule stays ~32pt; the
-/// interactive row keeps a ≥44pt hit area without overlapping neighbours.
-/// Accessibility sizes grow the capsule with Dynamic Type; the full source
-/// title always stays in the accessibility label.
+/// one calm tinted capsule that holds the small completion circle (left of
+/// the title) and the single-line title together. No repeated date label and
+/// no always-visible action icons — date and time editing stay behind the
+/// title tap and the native context menu through the existing callbacks and
+/// sheets. The visual capsule stays ~34pt inside the ≥44pt interaction row;
+/// the circle keeps its own 44×44 hit region within the row, so a title or
+/// card tap never completes a task by accident. Accessibility sizes grow the
+/// row and the capsule together with Dynamic Type; the full source title
+/// always stays in the accessibility label.
 struct CompactCalendarTaskRow: View {
     let task: OrbitTask
     let model: IOSInboxModel
@@ -35,6 +37,8 @@ struct CompactCalendarTaskRow: View {
                     }
                 }
                 .frame(width: 20, height: 20)
+                // Own 44×44 hit region inside the shared capsule's row; it
+                // never extends into the title's area.
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
             }
@@ -44,28 +48,29 @@ struct CompactCalendarTaskRow: View {
             )
 
             Button(action: onEditDate) {
-                HStack(spacing: 0) {
-                    Text(task.title)
-                        .font(.subheadline)
-                        .foregroundStyle(task.isCompleted ? Color.secondary : Color.primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule().fill(
-                        task.isCompleted ? Color(.tertiarySystemFill) : Color(.secondarySystemBackground)
-                    )
-                )
-                .frame(maxWidth: .infinity, minHeight: 32)
-                .contentShape(Rectangle())
+                Text(task.title)
+                    .font(.subheadline)
+                    .foregroundStyle(task.isCompleted ? Color.secondary : Color.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .padding(.trailing, 16)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(task.title)
             .accessibilityHint("Открывает редактор даты; контекстное меню — время и завершение")
         }
+        // One shared capsule behind circle and title; the 5pt vertical inset
+        // keeps the visual capsule ~34pt inside the ≥44pt hit row and grows
+        // with Dynamic Type.
+        .background(
+            Capsule().fill(
+                task.isCompleted ? Color(.tertiarySystemFill) : Color(.secondarySystemBackground)
+            )
+            .padding(.vertical, 5)
+        )
         .frame(minHeight: 44)
         .contextMenu {
             Button("Дата задачи…") { onEditDate() }
