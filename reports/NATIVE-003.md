@@ -30,3 +30,7 @@ TaskPlannedDate.swift: civilDateString/date(fromCivilDateString) принима�
 Регрессия проверяет не только roundtrip, но точные Gregorian instant: BuddhistUTC canonical2026-10-13 -> noonUTC1791892800; IslamicCivilMoscow -> noonMSK1791882000. Прежний Moscow/NewYork midnight/day case сохранён. В независимом повторе DEVELOPER_DIR Xcode27: swift test31/31 exit0, iOS Simulator build в собственном чистом DerivedData CODE_SIGNING_ALLOWED=NO exit0/BUILD SUCCEEDED. Единственный build warning — штатное отсутствие AppIntents metadata.
 
 R1 закрыт. NATIVE-003 принят в scope даты задачи; исходная legacy upgrade/disk regression проверена независимо в предыдущем раунде, schema с тех пор не менялась. GUI change/реальный iPhone/runtime save failure остаются непроверенными, не заявляются GUI PASS. Повтор GUI не назначался для pure fix. Локальная интеграция после review; push/deploy не разрешались и не выполнялись.
+
+## Локальная интеграция
+
+Main merge762e7ad257e156cef5b485a58d831d6881ca1281 (обычный no-ff, без конфликтов). git diff --exit-code task/NATIVE-003 -- apple/Orbit apple/OrbitIOS: exit0, native sources идентичны независимо собранным и протестированным. Проверки31/iOS build выполнены в task worktree до merge; одинаковые исходники повторно без причины не прогонялись. Итог NATIVE-003 DONE в scope даты, с перечисленными GUI/device ограничениями. Push/deploy не выполнялись.

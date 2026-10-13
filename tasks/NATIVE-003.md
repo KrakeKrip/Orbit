@@ -1,6 +1,6 @@
 # NATIVE-003 — дата задачи в iOS Inbox
 
-ASSIGNED, 2026-10-13. Одна небольшая вертикальная функция перед календарём: назначить, поменять и убрать дату задачи с сохранением на диске. Без времени/длительности/дедлайна и без новых календарных экранов.
+DONE, 2026-10-13. Одна небольшая вертикальная функция перед календарём: назначить, поменять и убрать дату задачи с сохранением на диске. Без времени/длительности/дедлайна и без новых календарных экранов.
 
 ## Старт
 
@@ -43,3 +43,5 @@ plannedDate — String? строго YYYY-MM-DD, Gregorian civil date1900–2199
 ## Передача
 
 Обычные новые scoped коммиты, full reports/NATIVE-003-executor.md (start/latest SHA,files,commands/exits,baseline upgrade/disk/GUI evidence,limitations). В чат только4–5коротких строк: статус,full SHA,итог/checks,путь отчёта. Остановиться до review Codex. NATIVE-004/календарь/macOS-R1 не начинать; без merge/push/amend/rebase/reset/stash/deploy, main/чужие worktrees/CRM/localhost3000/hooks не менять.
+
+Принято после R1 на product7baab2c: независимые core31/iOS build PASS, прежний legacy upgrade подтверждён; main merge762e7ad. Ограничения GUI/device в reports/NATIVE-003.md.

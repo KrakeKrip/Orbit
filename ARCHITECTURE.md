@@ -1,4 +1,4 @@
-Актуально2026-10-13: NATIVE-002 интегрирован как локальная iOS база (apple/OrbitIOS + OrbitCore), main build/core20 PASS. NATIVE-001-R1 остаётся открытым для macOS CLI, iOS его resolver не вызывает. Выдан только NATIVE-003: nullable plannedDate civil string, explicit save и обратная совместимость прежних stores. Sync/server/полный календарь не входит. Историческое условие «NATIVE-002 после приёмки NATIVE-001» ниже заменено прямым разрешением пользователя iOS первым.
+Актуально2026-10-13: NATIVE-002 интегрирован как локальная iOS база (apple/OrbitIOS + OrbitCore), main build/core20 PASS. NATIVE-001-R1 остаётся открытым для macOS CLI, iOS его resolver не вызывает. NATIVE-003 принят: nullable plannedDate civil Gregorian string, explicit save и проверенная миграция прежнего store; UI adapters фиксируют Gregorian calendar, сохраняя локальную timezone. GUI смены даты и реальный iPhone остаются непроверенными. Sync/server/полный календарь не входит. Историческое условие «NATIVE-002 после приёмки NATIVE-001» ниже заменено прямым разрешением пользователя iOS первым.
 
 # Orbit — активная native архитектура
 
