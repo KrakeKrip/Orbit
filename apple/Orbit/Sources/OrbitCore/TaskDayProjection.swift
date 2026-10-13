@@ -108,15 +108,17 @@ public enum TaskDayProjector {
                         continuesIntoNextDay: false
                     ))
                 } else {
-                    // End after midnight: positive part on the start day only;
-                    // exact midnight yields no zero-length next-day segment.
+                    // End lands after the start day. With duration ≤ 1440 this
+                    // is the very next day; the flag is true only when a
+                    // positive part actually exists there — an end exactly at
+                    // midnight (00:00) has none.
                     segments.append(TaskDayIntervalSegment(
                         taskID: task.id,
                         day: day,
                         startMinute: startMinute,
                         endMinute: 1440,
                         continuesFromPreviousDay: false,
-                        continuesIntoNextDay: true
+                        continuesIntoNextDay: endMinutes(of: end.time) > 0
                     ))
                 }
             } else if plannedDate < day, hasInterval, isCompletePair,

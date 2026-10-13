@@ -64,3 +64,44 @@ TaskDayProjector.project(day: String?, in tasks: [OrbitTask]) -> TaskDayProjecti
 
 - Ветка `task/NATIVE-007A`; starting SHA `8b98ed88a4856c59846ad5056a7326a3d0405f3b`; один scoped commit (helper + тест + README + отчёт); полный latest SHA в чате.
 - `git diff --check` чисто; merge/push/amend/rebase/reset/stash/deploy не выполнялись; main/чужие worktrees/root docs/CRM/3000/hooks/xcode-select не менялись. 007B/3дня/Месяц/macOS-R1 не начинались.
+
+---
+
+# Коррекция NATIVE-007A-R1 — midnight flag и детерминированный sort test
+
+## Статус
+
+READY_FOR_REVIEW (только R1 [P2] + R2 [P2] из reports/NATIVE-007A.md; остальное не переписывалось). Starting correction SHA `de64a83364b310d82fa251e3a1ca032de8af2137`, дерево чистое до правок.
+
+## Изменения
+
+1. **R1** `apple/Orbit/Sources/OrbitCore/TaskDayProjection.swift` (минимально, ветка стартового дня): `continuesIntoNextDay` теперь `endMinutes(of: end.time) > 0` вместо безусловного `true`. Геометрия сегментов/next-day selection/accepted `TaskTimeInterval.end`/zero-segment exclusion не переделывались. 23:30/30 и 00:00/1440 (end ровно 00:00) → flag false; 23:30/90 и 09:00/1440 → flag true; `continuesFromPreviousDay` на следующем дне не затронут.
+2. **R2** `apple/Orbit/Tests/OrbitCoreTests/TaskDayProjectionTests.swift`:
+   - `exactMidnight`: assert `continuesIntoNextDay == true` заменён на **false** (старый assert был ошибочен);
+   - `fullDayDuration`: добавлен assert `continuesIntoNextDay == false` для full-day 00:00/1440;
+   - `overlapAndSort`: оставлена проверка end-priority ([[540,555],[540,600],[570,630]]) без ложного UUID-assertion на разных ends;
+   - **новый тест** `uuidTieDeterministic`: настоящий tie — SAME start/end (10:00/30), фиксированные UUID 00000000-…BBBB и FFFFFFFF-…AAAA, входной порядок обратный ожидаемому; assert порядок [BBBB, FFFF…AAAA] и стабильность повторного чтения.
+
+Продуктовый comparator не менялся (он корректен: start → end → UUID). Модель/store/UI/accepted helpers — не тронуты.
+
+## Проверки
+
+| Проверка | Результат |
+| --- | --- |
+| `swift test --filter TaskDayProjection` (DEVELOPER_DIR) | exit 0 — **11/11 в suite** (10 прежних с исправленными asserts + новый UUID-tie), warnings: 0 |
+| Диагностические прогоны | один падающий прогон в процессе (tuple `(Int,Int)?` не Equatable + makeTask без `date:`) — ошибки компиляции тестов, исправлены до финального прогона; продуктовых диагностических прогонов не было |
+| `xcodebuild -scheme OrbitIOS -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/orbit-r1a-dd CODE_SIGNING_ALLOWED=NO build` | exit 0 — BUILD SUCCEEDED; DerivedData удалён |
+
+## Доказательство из тестов
+
+- Exact flags: `exactMidnight` — 1410…1440 + `continuesIntoNextDay == false`, день 14 пуст; `fullDayDuration` — 0…1440 + `continuesIntoNextDay == false`; `overnightBothDays` (без изменений) — 23:30/90: 1410…1440 true + день 14: 0…60 `fromPrevious=true`; 09:00/1440: 540…1440 true + день 14: 0…540.
+- Deterministic equal-start/end IDs: `uuidTieDeterministic` — фиксированные FFFF…AAAA/0000…BBBB, вход [later, early], результат сегментов [idEarly(BBBB), idLate(FFFF)], повтор стабилен.
+
+## Ограничения / не проверено
+
+- GUI/симулятор по-прежнему отсутствует по TASK (UI сетки — NATIVE-007B); «календарная сетка реализована» не заявляется.
+- Core 66/56 ранее независимо проверялись — не повторялись; web/legacy/DB не запускались; real iPhone не проверен.
+
+## Git
+
+Новый обычный scoped commit (TaskDayProjection.swift + TaskDayProjectionTests.swift + R1-секция отчёта); полный latest SHA в чате. Без merge/push/amend/rebase/reset/stash/deploy; 007B/3дня/Месяц/macOS-R1 не начинались; main/чужие worktrees/CRM/3000/hooks/xcode-select/signing не тронуты.

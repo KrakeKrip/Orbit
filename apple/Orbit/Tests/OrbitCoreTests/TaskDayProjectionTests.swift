@@ -81,7 +81,8 @@ struct TaskDayProjectionTests {
         #expect(day13.timedSegments.count == 1)
         #expect(day13.timedSegments[0].startMinute == 1410)
         #expect(day13.timedSegments[0].endMinute == 1440)
-        #expect(day13.timedSegments[0].continuesIntoNextDay == true)
+        // End exactly at midnight: no positive coverage on the next day.
+        #expect(day13.timedSegments[0].continuesIntoNextDay == false)
 
         let day14 = TaskDayProjector.project(day: "2026-10-14", in: [task])
         #expect(day14.timedSegments.isEmpty)
@@ -95,6 +96,8 @@ struct TaskDayProjectionTests {
         #expect(startDay.timedSegments.count == 1)
         #expect(startDay.timedSegments[0].startMinute == 0)
         #expect(startDay.timedSegments[0].endMinute == 1440)
+        // Exact-midnight end: no continuation flag on the full segment.
+        #expect(startDay.timedSegments[0].continuesIntoNextDay == false)
         #expect(TaskDayProjector.project(day: "2026-10-14", in: [fromMidnight]).timedSegments.isEmpty)
 
         let fromMorning = makeTask("Сутки с утра", date: "2026-10-13", time: "09:00", duration: 1440)
@@ -161,12 +164,27 @@ struct TaskDayProjectionTests {
         #expect(projection.timedSegments.count == 3)
         let minutes = projection.timedSegments.map { [$0.startMinute, $0.endMinute] }
         #expect(minutes == [[540, 555], [540, 600], [570, 630]])
-        // Explicit tie check: two segments start at 540; the shorter end first,
-        // equal ends would fall back to UUID string order.
-        let tie = projection.timedSegments.filter { $0.startMinute == 540 }
-        #expect(tie.count == 2)
-        let uuidOrdered = tie.map(\.taskID.uuidString)
-        #expect(uuidOrdered == uuidOrdered.sorted())
+    }
+
+    @Test("equal start and end fall back to UUID string order regardless of input order")
+    @MainActor
+    func uuidTieDeterministic() {
+        // Fixed, deliberately non-sorted UUIDs; input order is reversed.
+        let idLate = UUID(uuidString: "FFFFFFFF-0000-0000-0000-00000000AAAA")!
+        let idEarly = UUID(uuidString: "00000000-0000-0000-0000-00000000BBBB")!
+        let late = OrbitTask(id: idLate, title: "Позже UUID", createdAt: Date(timeIntervalSince1970: 1_760_000_000))
+        late.setPlannedDate("2026-10-13")
+        late.setPlannedInterval(plannedTime: "10:00", durationMinutes: 30)
+        let early = OrbitTask(id: idEarly, title: "Раньше UUID", createdAt: Date(timeIntervalSince1970: 1_760_000_005))
+        early.setPlannedDate("2026-10-13")
+        early.setPlannedInterval(plannedTime: "10:00", durationMinutes: 30)
+
+        let projection = TaskDayProjector.project(day: "2026-10-13", in: [late, early])
+        #expect(projection.timedSegments.count == 2)
+        // Same start and end → tie broken by UUID string: 0000… before FFFF….
+        #expect(projection.timedSegments.map(\.taskID) == [idEarly, idLate])
+        // Repeated read is stable.
+        #expect(TaskDayProjector.project(day: "2026-10-13", in: [late, early]).timedSegments.map(\.taskID) == [idEarly, idLate])
     }
 
     @Test("repeated reads give stable segments and leave tasks unchanged")
