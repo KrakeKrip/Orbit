@@ -29,15 +29,21 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   state «На сегодня задач нет» с действием «Добавить во Входящих»
   (переключает на живую вкладку, не создаёт задачу). День пересчитывается
   на appear/active и не реже раза в минуту; без сетки/overdue/quick-add.
-- `OrbitIOS/CalendarDayScreen.swift` + `OrbitIOS/DayTimelineView.swift` —
-  вкладка «Календарь» (NATIVE-007B/007C): выбранный civil день (local today по
-  умолчанию), Prev/Next ±1 день с guard 1900–2199, «Сегодня», compact
-  DatePicker; untimed-задачи отдельной **collapsible областью «Без времени»**
-  (NATIVE-007C: default до 3 строк натуральной высоты + «Ещё N», раскрытие в
-  adaptive bounded scroll — viewport ~⅓ измеренной высоты content area с
-  резервом date controls/toggle/сетки, короткие списки не оставляют пустой
-  области, «Свернуть», сброс только untimed-скролла при смене дня)
-  (те же InboxRowView/actions);
+- `OrbitIOS/CalendarDayScreen.swift` + `OrbitIOS/DayTimelineView.swift` +
+  `OrbitIOS/CompactCalendarTaskRow.swift` — вкладка «Календарь»
+  (NATIVE-007B/007C/007C-R2): без крупного заголовка, под safe area сразу
+  компактные date controls — Prev/Next ±1 день с guard 1900–2199, «Сегодня»,
+  compact DatePicker с view-local ru_RU locale (системная locale не
+  меняется); untimed-задачи отдельной **collapsible областью «Без времени»**
+  из компактных chips (NATIVE-007C-R2: тонированная rounded capsule ~32pt,
+  маленький completion-круг + однострочный title с tail truncation (полный
+  title в AX), без повторной даты и постоянных clock/calendar иконок; tap —
+  существующий date sheet, context menu — дата/время/complete через
+  существующие callbacks; hit-row ≥44pt) (NATIVE-007C: default до 3 chips +
+  «Ещё N», раскрытие в adaptive bounded scroll — viewport ~⅓ измеренной
+  высоты content area с резервом date controls/toggle/сетки, короткие
+  списки не оставляют пустой области, «Свернуть», сброс только
+  untimed-скролла при смене дня);
   ниже — сетка 00:00–24:00 (64pt/час, initial scroll
   к 08:00) с timed-блоками из `TaskDayProjector.project`: side-by-side
   overlap через локальный greedy lane layout (touching segments не

@@ -2,10 +2,12 @@ import SwiftUI
 import OrbitCore
 
 /// The «Календарь» day view: one selected civil day shown as a 00:00–24:00
-/// timeline (via `TaskDayProjector`) with untimed tasks listed separately.
-/// Read-only slice over the shared model — tap opens the existing interval
-/// editor for the source task, context menu reuses existing complete/reopen
-/// and date operations; creation stays in the Inbox composer.
+/// timeline (via `TaskDayProjector`) with untimed compact chips listed
+/// separately (user reference IMG_1210 — no large navigation title, the
+/// compact date controls sit directly under the safe area).
+/// Read-only slice over the shared model — taps and the context menu reuse
+/// the existing complete/reopen and date/interval editors for the source
+/// task; creation stays in the Inbox composer.
 struct CalendarDayScreen: View {
     let model: IOSInboxModel
 
@@ -34,10 +36,10 @@ struct CalendarDayScreen: View {
 
     private static let collapsedUntimedLimit = 3
 
-    /// Rough height of one collapsed row (44pt controls + vertical padding).
+    /// Rough height of one compact untimed chip row (44pt interactive row).
     /// Only a sizing estimate for the expanded viewport floor; real rows
     /// always render at their natural, Dynamic-Type-aware height.
-    private static let estimatedCompactRowHeight: CGFloat = 56
+    private static let estimatedCompactRowHeight: CGFloat = 44
     /// Reserves subtracted from the measured content height before the
     /// expanded untimed viewport may take its ~⅓ share.
     private static let dayControlsReserve: CGFloat = 64
@@ -65,8 +67,6 @@ struct CalendarDayScreen: View {
                     )
                 }
             }
-            .navigationTitle("Календарь")
-            .navigationBarTitleDisplayMode(.large)
             .background(Color(.systemBackground))
             .background(
                 // Adaptive sizing source: the real height of this content area
@@ -112,54 +112,83 @@ struct CalendarDayScreen: View {
 
     // MARK: - Day controls
 
+    /// Compact header right under the safe area. At accessibility text sizes
+    /// the single row no longer fits the screen width; `ViewThatFits` then
+    /// moves «Сегодня» to its own line so nothing overflows and shifts the
+    /// rest of the content sideways.
     private var dayControls: some View {
-        HStack(spacing: 12) {
-            Button {
-                if let candidate = shiftedDay(-1) { select(candidate) }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .medium))
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                prevDayButton
+                datePickerField
+                nextDayButton
+                Spacer(minLength: 0)
+                todayButton
             }
-            .buttonStyle(.plain)
-            .disabled(shiftedDay(-1) == nil)
-            .accessibilityLabel("Предыдущий день")
-
-            DatePicker(
-                "Дата",
-                selection: $pickerDate,
-                in: Self.rangeLowerBound...Self.rangeUpperBound,
-                displayedComponents: [.date]
-            )
-            .labelsHidden()
-            .onChange(of: pickerDate) { _, newDate in
-                select(TaskPlannedDate.civilDateString(from: newDate, calendar: gregorianNoon))
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 12) {
+                    prevDayButton
+                    datePickerField
+                    nextDayButton
+                }
+                todayButton
             }
-
-            Button {
-                if let candidate = shiftedDay(1) { select(candidate) }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 17, weight: .medium))
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(shiftedDay(1) == nil)
-            .accessibilityLabel("Следующий день")
-
-            Spacer(minLength: 0)
-
-            Button("Сегодня") {
-                select(TaskDaySelection.currentDay())
-            }
-            .buttonStyle(.bordered)
-            .tint(.orbitAccent)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(.bar)
+    }
+
+    private var prevDayButton: some View {
+        Button {
+            if let candidate = shiftedDay(-1) { select(candidate) }
+        } label: {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 17, weight: .medium))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(shiftedDay(-1) == nil)
+        .accessibilityLabel("Предыдущий день")
+    }
+
+    private var nextDayButton: some View {
+        Button {
+            if let candidate = shiftedDay(1) { select(candidate) }
+        } label: {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 17, weight: .medium))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(shiftedDay(1) == nil)
+        .accessibilityLabel("Следующий день")
+    }
+
+    private var datePickerField: some View {
+        DatePicker(
+            "Дата",
+            selection: $pickerDate,
+            in: Self.rangeLowerBound...Self.rangeUpperBound,
+            displayedComponents: [.date]
+        )
+        .labelsHidden()
+        // View-local Russian date only for this control («14 окт. 2026 г.»
+        // instead of «Oct»); the device/system locale is never changed.
+        .environment(\.locale, Locale(identifier: "ru_RU"))
+        .onChange(of: pickerDate) { _, newDate in
+            select(TaskPlannedDate.civilDateString(from: newDate, calendar: gregorianNoon))
+        }
+    }
+
+    private var todayButton: some View {
+        Button("Сегодня") {
+            select(TaskDaySelection.currentDay())
+        }
+        .buttonStyle(.bordered)
+        .tint(.orbitAccent)
     }
 
     /// ±1 civil day anchored at noon, valid only inside 1900–2199.
@@ -180,15 +209,17 @@ struct CalendarDayScreen: View {
         pickerDate = TaskPlannedDate.date(fromCivilDateString: day, calendar: gregorianNoon) ?? pickerDate
     }
 
-    // MARK: - Untimed area (collapsible so many tasks never push the grid)
+    // MARK: - Untimed area (compact chips, collapsible so many tasks never
+    // push the grid)
 
-    /// Default collapsed: up to 3 untimed rows at their natural height — no
-    /// ScrollView, no reserved empty rows, no blind clipping (multiline and
-    /// Dynamic Type rows stay fully readable). «Ещё N» expands into a bounded,
-    /// independently scrollable viewport capped near ⅓ of the measured content
-    /// height; the toggle is a sibling below the rows, so its 44pt budget is
-    /// laid out exactly once. Expanding/collapsing never writes, never
-    /// recreates the timeline, and never resets the grid scroll position.
+    /// Default collapsed: up to 3 untimed chips at their natural height — no
+    /// ScrollView, no reserved empty rows, no blind clipping (Dynamic Type
+    /// rows grow instead of truncating their controls). «Ещё N» expands into
+    /// a bounded, independently scrollable viewport capped near ⅓ of the
+    /// measured content height; the toggle is a sibling below the chips, so
+    /// its 44pt budget is laid out exactly once. Expanding/collapsing never
+    /// writes, never recreates the timeline, and never resets the grid
+    /// scroll position.
     private var untimedSection: some View {
         let ids = projection.untimedTaskIDs
         let overLimit = ids.count > Self.collapsedUntimedLimit
@@ -212,7 +243,7 @@ struct CalendarDayScreen: View {
                 if untimedExpanded {
                     expandedUntimedRegion(ids: ids)
                 } else {
-                    VStack(spacing: 0) {
+                    VStack(spacing: 6) {
                         ForEach(ids.prefix(Self.collapsedUntimedLimit), id: \.self) { id in
                             untimedRow(id)
                         }
@@ -231,7 +262,7 @@ struct CalendarDayScreen: View {
     private func untimedRow(_ id: UUID) -> some View {
         Group {
             if let task = untimedTask(withID: id) {
-                InboxRowView(task: task, model: model) {
+                CompactCalendarTaskRow(task: task, model: model) {
                     presentation = .date(task)
                 } onEditInterval: {
                     presentation = .interval(task)
@@ -240,13 +271,13 @@ struct CalendarDayScreen: View {
         }
     }
 
-    /// Bounded expanded region: every untimed row of the day, scrolling
+    /// Bounded expanded region: every untimed chip of the day, scrolling
     /// internally only when they exceed the adaptive viewport (below).
     /// `.id(selectedDay)` gives this region alone a fresh scroll offset on a
     /// day switch; the timeline is a separate subtree and never remounts.
     private func expandedUntimedRegion(ids: [UUID]) -> some View {
         ScrollView {
-            VStack(spacing: 0) {
+            VStack(spacing: 6) {
                 ForEach(ids, id: \.self) { id in
                     untimedRow(id)
                 }
