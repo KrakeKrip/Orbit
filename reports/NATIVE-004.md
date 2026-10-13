@@ -23,3 +23,7 @@
 ## Практические границы
 
 UI времени/длительности ещё отсутствует: NATIVE-005 отдельный небольшой TASK. GUI/реальный iPhone здесь не проверялись и не заявляются PASS. Runtime save-failure/rollback не воспроизводился; source содержит явный rollback, invalid-before-save тесты не доказывают эту runtime ветку. Новые fixtures/calendar checks не требуют web/server gates; web, CRM, Colima, localhost:3000 и защитные hooks не менялись. Push/deploy не выполнялись.
+
+## Локальная интеграция
+
+Main merge `bd4984eba8a9e23b748bf017499e7bd3b1f41952` — обычный no-ff, без конфликтов. `git diff --exit-code task/NATIVE-004 -- apple/Orbit apple/OrbitIOS`: exit 0, native sources идентичны независимо проверенной ветке. Тесты/build выполнены в task worktree до merge; одинаковые исходники повторно без причины не прогонялись. NATIVE-004 DONE. NATIVE-005 — следующий плановый editor, пока не назначен. Push/deploy не выполнялись.
