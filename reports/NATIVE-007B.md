@@ -50,3 +50,16 @@ DayTimelineView.swift:112–115 всё ещё растягивает one-minute 
 Следующая ОДНА коррекция renderer: вернуть визуальные title/range/continuation для обычных блоков; exact positive paintedHeight без растяжки; добавить доступный native Menu «Задачи с временем» для tiny/dense segments, с полными task names/range и существующими callbacks. Menu >=44pt и только реальные сегменты выбранного дня; никаких новых store/details/controller. Это конкретный способ выбора, предусмотренный исходным R3, вместо повторных обещаний тапнуть2pt. Scope/checks в tasks/NATIVE-007B-R1b.md.
 
 Runtime tap/context/late-hour GUI остаются UNVERIFIED; не считаются новым доказанным callback defect. Этот review новый Simulator не запускал: source и предоставленный raster достаточны для оставшихся rendering findings. R1/R2 повторять/переписывать не нужно, core/data не менять. NATIVE-007B всё ещё не принят/не merged.
+
+
+## Итоговое review R1b — ACCEPTED, 2026-10-14
+
+Product ba3b3e911c20d73b1e97ac85960b0adab83532ea, correction base16fa7eb. Scope ровно DayTimelineView.swift + executor report, cumulative diff --check чист, дерево чистое. Независимый xcodebuild generic iOS Simulator с CODE_SIGNING_ALLOWED=NO и own DerivedData — BUILD SUCCEEDED, exit0. Core/model/store/projector не менялись, новые core/web/legacy suites не запускались.
+
+R1/R2 bounded untimed/fitting закрыты ранее. R1b: normal blocks имеют visible title/range/positive continuation, внешний frame+clip ограничивает paint; height=(end-start)/60*64, без floor, adjacent1min=1.066667pt без overlap. Menu использует реальные source UUID выбранного дня, native submenus и existing callbacks; disabled пустой. Executor screenshot09 лично просмотрен: реальные пункты/подменю и captions на сетке видимы. Menu→tiny editor подтверждён executor AX evidence, повторного собственного GUI этого раунда не было; исходные own GUI/layout probes есть выше.
+
+Ограничения не скрыты: actual block tap/context long-press/вечерний pixel/real iPhone ещё UNVERIFIED; Cancel в latest подробном отчёте явно не проверялся отдельно, несмотря на более сильную формулировку чата. SQLite unchanged заявлен исполнителем. Старый screenshot02 не доказательство latest renderer. Указание swift50/DayTimelineSelection не является текущим independent full core gate (core unchanged); current helper TaskDaySelection.
+
+Неблокирующая неточность: laneGutter вычитается из width, но blockX шагает на width, поэтому между соседними frames нет гарантированного2pt gutter (видны скругления). Gutter optional в R1b; fit сохраняется: W402,N8→width40,right376<402. Не выдаём новую коррекцию ради косметики: плавная overlap-компоновка будет отдельным утверждённым заданием. Tiny/dense labels могут переноситься/обрезаться; full native menu остаётся доступным.
+
+NATIVE-007B принят в bounded Day scope, не весь календарь/все gestures. Следующий только NATIVE-007C: раскрываемая область «Без времени», как согласовано пользователем. Без push/deploy.
