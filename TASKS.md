@@ -13,6 +13,8 @@
 | NATIVE-007A | DONE | read-only проекция интервалов на сутки, включая переход через полночь |
 | NATIVE-007B | DONE | календарный День с временной сеткой на принятой проекции |
 | NATIVE-007C | NEEDS_FIXES | раскрываемая область «Без времени»: 3 строки / больше / внутренний scroll |
+| NATIVE-NAV-001 | TODO (следующий после007C) | Today Список/Календарь, убрать самостоятельную Calendar tab |
+| NATIVE-NAV-002 | TODO (план) | реальный раздел Предстоящее с List/Calendar над shared tasks |
 | NATIVE-007D | TODO (план) | перенос из «Без времени» в сетку, отдельный scope перед выдачей |
 | NATIVE-007E | TODO (план) | изменение длительности жестом |
 | NATIVE-007F | TODO (план) | плавная компоновка пересекающихся интервалов |
@@ -65,3 +67,5 @@ Review2026-10-14: NATIVE-007C71b4c38 independent iOS build PASS; fixed260/double
 План2026-10-14 по прямому решению пользователя: NATIVE-MIN5 — минимум новой/изменяемой duration5минут, legacy1–4 не перезаписывать/не скрывать. Отдельный небольшой core/editor TASK после принятия007C, перед drag; подготовленный scope /Users/atlhnv/Codex/orbit-outputs/NATIVE-MIN5.md, branch/worktree ещё не назначены. R3 WIP не расширяется.
 
 Cumulative review2026-10-14: NATIVE-007C9cefc4d independentiOSbuild/diffcheck PASS; compactcards/menu/sourceidentity reviewed. Одна tinyFINAL в CalendarDayScreen: conditional directions upper↑↓ lower↓↑, не180rotation symmetricpair; boundedemptygutter. Tasks/NATIVE-007C-FINAL.md в taskworktree, correctionstartc8b6f8cb87a8376671f55d595c502c158863ebef. No merge/min5branchuntilacceptance; последующийTASK=NATIVE-MIN5.
+
+Приоритет2026-10-14 уточнён пользователем: отдельный Calendar tab запрещён, Today и Upcoming должны иметь List/Calendar views. После закрытия007C→NAV001→NAV002→MIN5→drag/resize/overlap. Подробный bounded план /Users/atlhnv/Codex/orbit-outputs/NATIVE-NAV-plan.md; новые branches пока не выданы. Раньше объявленная очередь MIN5 immediately next заменена этим прямым уточнением.007C final build/review остаются про renderer, не acceptance неправильной продуктовой навигации.

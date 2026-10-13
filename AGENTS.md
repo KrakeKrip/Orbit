@@ -1,6 +1,6 @@
-## Актуальный статус 2026-10-13
+## Актуальный статус 2026-10-14
 
-NATIVE-007B DONE. NATIVE-007C cumulativeR1/R2/R3 reviewed product9cefc4d: independent iOS build PASS, final tiny correction стрелок. Назначен только tasks/NATIVE-007C-FINAL.md в branch task/NATIVE-007C, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007C, startc8b6f8cb87a8376671f55d595c502c158863ebef. ScopeCalendarDayScreen+executorreport: две conditionalchevrons вместо symmetric180rotation, boundedemptygutter; no redraw/header/core changes. Reportreports/NATIVE-007C.md, no merge/nexttask yet. NATIVE-MIN5 prepared отдельно после acceptance, затем drag/resize/overlapanimation;3days/Month/AI/macOS/web/sync paused. Отчёт в файл, чат кратко.
+NATIVE-007B DONE. NATIVE-007C cumulativeR1/R2/R3 reviewed product9cefc4d: independent iOS build PASS, final tiny correction стрелок. Назначен только tasks/NATIVE-007C-FINAL.md в branch task/NATIVE-007C, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007C, startc8b6f8cb87a8376671f55d595c502c158863ebef. ScopeCalendarDayScreen+executorreport: две conditionalchevrons вместо symmetric180rotation, boundedemptygutter; no redraw/header/core changes. Reportreports/NATIVE-007C.md, no merge/nexttask yet. Прямое уточнение2026-10-14: Calendar bottom tab удалить; Today/Upcoming каждый List/Calendar. После acceptance007C следующийNAV001, затемNAV002, затемMIN5/drag/resize/overlapanimation;3days/Month/AI/macOS/web/sync paused. Отчёт в файл, чат кратко.
 
 # Orbit — правила координации
 
