@@ -10,14 +10,27 @@ OrbitCore написан без AppKit/HTTP и пригоден для буду�
 ## Структура
 
 - `Sources/OrbitCore` — SwiftData-модель `OrbitTask` (стабильный UUID, title,
-  createdAt, completedAt), валидация заголовка (trim, 1…500 Unicode scalars),
-  disk store с явным save/rollback, централизованные пути хранения и разбор
-  `--store-path`. Без AppKit/HTTP.
+  createdAt, completedAt, nullable plannedDate/plannedTime/durationMinutes),
+  валидация заголовка (trim, 1…500 Unicode scalars), disk store с явным
+  save/rollback, централизованные пути хранения и разбор `--store-path`.
+  Без AppKit/HTTP.
 - `Sources/OrbitMac` — SwiftUI app entry и единственный экран Inbox
   (добавление по Enter/кнопке, секции «Открытые»/«Завершённые», native
   checkbox-контроль завершения, честные ошибки без подмены хранилища).
 - `Tests/OrbitCoreTests` — Swift Testing: валидация, операции store, disk
   reopen regression, негативное открытие, разбор аргументов запуска.
+
+## Временной интервал задачи (NATIVE-004, core only)
+
+`plannedTime` — строгий ASCII `HH:mm` (00:00–23:59), `durationMinutes` — целое
+1…1440; оба поля nullable и существуют только парой (обе nil или обе заданы)
+и только у задачи с `plannedDate`. Store-операция `setPlannedInterval` валидирует
+весь кандидат до мутации (пара/формат/границы/наличие даты/derived end) и
+сохраняет явно с rollback; `setPlannedDate(nil)` очищает интервал тем же save,
+перенос даты сохраняет валидную пару, а вариант с выходом derived end за
+Gregorian 1900–2199 отвергается. Derived end (может переходить через полночь)
+не хранится — считает pure-хелпер `TaskTimeInterval.end` целочисленной civil
+арифметикой без Calendar/TimeZone/DST. UI-редактор — отдельный будущий TASK.
 
 ## Требования
 
