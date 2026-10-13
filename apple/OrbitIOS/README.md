@@ -1,4 +1,4 @@
-# Orbit — iOS Inbox (NATIVE-002)
+# Orbit — iOS Inbox (NATIVE-002/003)
 
 Один экран «Входящие» для iPhone (Todoist-настроение: крупный системный заголовок,
 компактные строки с круглым контролем завершения слева, спокойный системный фон,
@@ -19,12 +19,28 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   macOS CLI resolver (`OrbitStoreLocation.resolveStoreURL`) на iOS не вызывается,
   launch-override не принимается.
 - `OrbitIOS/IOSInboxModel.swift` — `@MainActor @Observable` состояние экрана:
-  операции через OrbitCore (валидация/список/complete/reopen), успех только после
-  явного `save()`, при ошибке draft сохраняется.
+  операции через OrbitCore (валидация/список/complete/reopen/plannedDate),
+  успех только после явного `save()`, при ошибке draft сохраняется.
 - `OrbitIOS/InboxScreen.swift` — экран: NavigationStack large title «Входящие»,
   секции «Открытые»/«Завершённые», круглый completion-контроль ≥44pt с a11y
-  label «действие: задача», перенос длинных названий, композер в нижнем safe
-  area (клавиатура его поднимает), inline-ошибка, честный empty state.
+  label «действие: задача», краткая подпись назначенной даты, calendar-действие
+  в строке, перенос длинных названий, композер в нижнем safe area (клавиатура
+  его поднимает), inline-ошибка, честный empty state.
+- `OrbitIOS/TaskDateSheet.swift` — маленький редактор даты (NATIVE-003):
+  native wheel `DatePicker`, draft по умолчанию — сегодняшний local civil день,
+  явные «Сохранить»/«Отмена» (открытие/отмена ничего не пишут), «Убрать дату»
+  для назначенной; отказ показывает ошибку и оставляет редактор для retry.
+
+## Дата задачи (NATIVE-003)
+
+`plannedDate` — nullable civil строка `YYYY-MM-DD` (Gregorian 1900–2199,
+валидация `TaskPlannedDate`, store-операция `setPlannedDate` с явным save и
+rollback, невалидное значение отвергается до мутации). Дата не превращается в
+UTC instant и не зависит от timezone; `Date` — только UI adapter `DatePicker`.
+Назначение даты не скрывает задачу и не меняет порядок списка (Today/календарь
+— будущие TASK). Старые stores обновляются лёгкой миграцией optional-поля:
+прежние строки, UUID и completion сохраняются, plannedDate=nil — проверено
+upgrade-прогоном на store, созданном принятым кодом NATIVE-002.
 
 ## Требования
 

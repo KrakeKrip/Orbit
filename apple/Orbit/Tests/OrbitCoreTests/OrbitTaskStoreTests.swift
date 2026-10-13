@@ -170,4 +170,116 @@ struct OrbitTaskStoreTests {
         #expect(!FileManager.default.fileExists(atPath: storeURL.path))
         #expect(!FileManager.default.fileExists(atPath: blocker.appendingPathComponent("nested").path))
     }
+
+    @Test("new tasks are created without a planned date")
+    @MainActor
+    func createdWithoutPlannedDate() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "Без даты")
+        #expect(task.plannedDate == nil)
+    }
+
+    @Test("setPlannedDate assigns, changes and clears with explicit save")
+    @MainActor
+    func assignChangeClear() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let createdAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let task = try store.addTask(title: "Задача с датой", now: createdAt)
+
+        try store.setPlannedDate("2026-10-20", for: task.id)
+        var stored = try store.tasks()
+        #expect(stored.count == 1)
+        #expect(stored.first?.plannedDate == "2026-10-20")
+        #expect(stored.first?.isCompleted == false)
+        #expect(stored.first?.title == "Задача с датой")
+
+        // Changing to another valid value overwrites the previous one.
+        try store.setPlannedDate("2026-11-01", for: task.id)
+        stored = try store.tasks()
+        #expect(stored.first?.plannedDate == "2026-11-01")
+
+        // Repeating the same value is safe and does not duplicate the task.
+        try store.setPlannedDate("2026-11-01", for: task.id)
+        stored = try store.tasks()
+        #expect(stored.count == 1)
+        #expect(stored.first?.plannedDate == "2026-11-01")
+
+        // Clearing returns the field to nil.
+        try store.setPlannedDate(nil, for: task.id)
+        stored = try store.tasks()
+        #expect(stored.first?.plannedDate == nil)
+    }
+
+    @Test("invalid planned date is rejected before mutation and keeps the old value")
+    @MainActor
+    func invalidDateRejected() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "Задача")
+        try store.setPlannedDate("2026-10-20", for: task.id)
+
+        #expect(throws: TaskPlannedDateError.invalid("2026-13-40")) {
+            try store.setPlannedDate("2026-13-40", for: task.id)
+        }
+        #expect(throws: TaskPlannedDateError.invalid("not-a-date")) {
+            try store.setPlannedDate("not-a-date", for: task.id)
+        }
+        // The previously assigned value survives invalid attempts.
+        let stored = try store.tasks()
+        #expect(stored.first?.plannedDate == "2026-10-20")
+        #expect(stored.count == 1)
+    }
+
+    @Test("setPlannedDate for unknown id throws taskNotFound")
+    @MainActor
+    func plannedDateUnknownId() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let missingId = UUID()
+        #expect(throws: OrbitStoreError.taskNotFound(id: missingId)) {
+            try store.setPlannedDate("2026-10-20", for: missingId)
+        }
+    }
+
+    @Test("disk reopen keeps the planned date alongside older fields")
+    @MainActor
+    func plannedDateDiskReopen() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let storeURL = dir.appendingPathComponent("Orbit.store")
+
+        var firstStore: OrbitTaskStore? = try OrbitTaskStore(storeURL: storeURL)
+        let completedAt = Date(timeIntervalSince1970: 1_760_000_100)
+        let dated = try firstStore?.addTask(title: "С датой", now: Date(timeIntervalSince1970: 1_760_000_000))
+        let plain = try firstStore?.addTask(title: "Без даты", now: Date(timeIntervalSince1970: 1_760_000_005))
+        try firstStore?.setPlannedDate("2026-12-31", for: dated?.id ?? UUID())
+        try firstStore?.setCompleted(true, for: plain?.id ?? UUID(), at: completedAt)
+        firstStore = nil
+
+        let reopened = try OrbitTaskStore(storeURL: storeURL)
+        let all = try reopened.tasks()
+        #expect(all.count == 2)
+        let reopenedDated = all.first { $0.id == dated?.id }
+        let reopenedPlain = all.first { $0.id == plain?.id }
+        #expect(reopenedDated?.plannedDate == "2026-12-31")
+        #expect(reopenedDated?.isCompleted == false)
+        #expect(reopenedPlain?.plannedDate == nil)
+        #expect(reopenedPlain?.isCompleted == true)
+
+        // Assigning a date does not hide the task or reorder the list.
+        try reopened.setPlannedDate("2027-01-05", for: plain?.id ?? UUID())
+        let afterAssign = try reopened.tasks()
+        #expect(afterAssign.count == 2)
+        #expect(afterAssign.map(\.id) == [dated?.id, plain?.id].compactMap { $0 })
+    }
 }

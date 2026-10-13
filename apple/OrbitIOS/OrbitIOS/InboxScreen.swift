@@ -8,9 +8,10 @@ extension Color {
 }
 
 /// The one iOS Inbox screen: large title, compact rows with round completion
-/// circles, bottom composer above the keyboard and safe area.
+/// circles and a date action, bottom composer above the keyboard and safe area.
 struct InboxScreen: View {
     @State private var model: IOSInboxModel
+    @State private var dateSheetTask: OrbitTask?
     @FocusState private var titleFieldFocused: Bool
 
     init(model: IOSInboxModel) {
@@ -38,6 +39,9 @@ struct InboxScreen: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 composer
             }
+            .sheet(item: $dateSheetTask) { task in
+                TaskDateSheet(task: task, model: model)
+            }
         }
     }
 
@@ -46,14 +50,18 @@ struct InboxScreen: View {
             if !model.openTasks.isEmpty {
                 Section("Открытые") {
                     ForEach(model.openTasks) { task in
-                        InboxRowView(task: task, model: model)
+                        InboxRowView(task: task, model: model) {
+                            dateSheetTask = task
+                        }
                     }
                 }
             }
             if !model.completedTasks.isEmpty {
                 Section("Завершённые") {
                     ForEach(model.completedTasks) { task in
-                        InboxRowView(task: task, model: model)
+                        InboxRowView(task: task, model: model) {
+                            dateSheetTask = task
+                        }
                     }
                 }
             }
@@ -124,11 +132,27 @@ struct InboxScreen: View {
     }
 }
 
-/// One row: round completion control on the left, readable title on the right.
-/// The title wraps instead of being truncated; the control hit area is ≥ 44pt.
+/// One row: round completion control on the left, readable title (with an
+/// optional short planned-date label) and a calendar action on the right.
+/// Titles wrap instead of being truncated; control hit areas are ≥ 44pt.
 struct InboxRowView: View {
     let task: OrbitTask
     let model: IOSInboxModel
+    let onEditDate: () -> Void
+
+    private static let dateLabelFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
+    static func dateLabel(_ civilDate: String) -> String {
+        guard let date = TaskPlannedDate.date(fromCivilDateString: civilDate) else {
+            return civilDate
+        }
+        return dateLabelFormatter.string(from: date)
+    }
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
@@ -138,12 +162,28 @@ struct InboxRowView: View {
             .accessibilityLabel(
                 task.isCompleted ? "Снова открыть: \(task.title)" : "Отметить выполненной: \(task.title)"
             )
-            Text(task.title)
-                .font(.body)
-                .foregroundStyle(task.isCompleted ? Color.secondary : Color.primary)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(task.title)
+                    .font(.body)
+                    .foregroundStyle(task.isCompleted ? Color.secondary : Color.primary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let plannedDate = task.plannedDate {
+                    Text(Self.dateLabel(plannedDate))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Spacer(minLength: 0)
+            Button(action: onEditDate) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Color(.secondaryLabel))
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Дата задачи: \(task.title)")
         }
         .padding(.vertical, 6)
         .alignmentGuide(.listRowSeparatorLeading) { dimensions in

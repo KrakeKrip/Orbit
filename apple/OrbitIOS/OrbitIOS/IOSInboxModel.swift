@@ -33,6 +33,15 @@ enum IOSInboxFormatting {
         "Не удалось сохранить изменение. \(storageMessage(error))"
     }
 
+    static func plannedDateMessage(_ error: Error) -> String {
+        switch error {
+        case TaskPlannedDateError.invalid:
+            return "Дата должна быть в формате ГГГГ-ММ-ДД (год 1900–2199)."
+        default:
+            return "Не удалось сохранить дату. \(storageMessage(error))"
+        }
+    }
+
     static func openMessage(_ error: Error) -> String {
         "Не удалось открыть хранилище. Данные не изменены. \(error.localizedDescription)"
     }
@@ -93,6 +102,20 @@ final class IOSInboxModel {
         } catch {
             writeError = IOSInboxFormatting.completionMessage(error)
             reload()
+        }
+    }
+
+    /// Assigns, changes or clears (`nil`) the planned date. Returns nil on
+    /// success (the list is reloaded from persisted truth); otherwise returns
+    /// a user-facing message for the date editor, which stays open for retry.
+    func setPlannedDate(_ value: String?, for task: OrbitTask) -> String? {
+        do {
+            try store.setPlannedDate(value, for: task.id)
+            reload()
+            return nil
+        } catch {
+            reload()
+            return IOSInboxFormatting.plannedDateMessage(error)
         }
     }
 }
