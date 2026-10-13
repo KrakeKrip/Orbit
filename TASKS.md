@@ -11,7 +11,12 @@
 | NATIVE-005 | DONE | iOS interval editor, R1 title закрыт, build/GUI evidence; локальный merge6d12ae2 |
 | NATIVE-006 | DONE | Today list + две настоящие вкладки, R1 видимые write errors; merge8b36067 |
 | NATIVE-007A | DONE | read-only проекция интервалов на сутки, включая переход через полночь |
-| NATIVE-007B | NEEDS_FIXES (R1b) | календарный День с временной сеткой на принятой проекции |
+| NATIVE-007B | DONE | календарный День с временной сеткой на принятой проекции |
+| NATIVE-007C | TODO (назначен) | раскрываемая область «Без времени»: 3 строки / больше / внутренний scroll |
+| NATIVE-007D | TODO (план) | перенос из «Без времени» в сетку, отдельный scope перед выдачей |
+| NATIVE-007E | TODO (план) | изменение длительности жестом |
+| NATIVE-007F | TODO (план) | плавная компоновка пересекающихся интервалов |
+| NATIVE-007G | TODO (план) | спокойные пустые состояния с орбитой и русской датой |
 | NATIVE-008 | TODO (план, не назначен) | 3 дня на общей шкале времени |
 | NATIVE-009 | TODO (план, не назначен) | календарный Месяц |
 
@@ -48,3 +53,5 @@ Review2026-10-13: NATIVE-007A1e53a77 independently core66 PASS, но точна�
 Review2026-10-13: NATIVE-007B5d9bcb5 independent iOS build PASS, но own GUI12untimed теряет сетку/date controls; width probe8lanes536pt на402viewport; short visual height != duration. Один tasks/NATIVE-007B-R1.md на2UIfiles, correction start4aa3b893e69b78466058c58fcfe818fb600ea0e8. Tap/context/evening GUI UNVERIFIED, без merge/next TASK.
 
 Повторное review2026-10-13: productfa7e520 независимо iOS build PASS; R1 untimed/R2 fitting закрыты. R3 floor2pt оставляет overlap0.933pt для1minute; исчезли все visible labels/continuation. Один tasks/NATIVE-007B-R1b.md: DayTimelineView+отчёт, start16fa7eb71e712bb4540288e0997faa767e7f753c. Readable labels/exact paint/native menu, без merge/next TASK.
+
+Итог2026-10-14: NATIVE-007B принят, productba3b3e9, main merge5e5274964465142093471535d7618ddda34d07fb. Independent latest iOS build PASS, main apple/ identity с tested branch PASS; latest GUI screenshot/executor evidence reviewed, own latest GUI не повторялся, real-device/context-menu/late pixel ограничения сохранены. Назначен только007C, source base5e52749. Последовательность пользовательских улучшений: untimed collapse → drag → resize → overlap animation; empty-state redesign сохранён отдельным планом.3days/Month/AI не начинать.
