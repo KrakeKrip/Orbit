@@ -8,10 +8,11 @@ import OrbitCore
 /// Painted block height is the exact interval duration
 /// (`(end − start) / 60 × hourHeight`, e.g. one minute ≈ 1.07pt at 64pt/hour)
 /// — no stretching to a fake block size. Tap and long-press (context menu)
-/// act on the painted stripe itself. For tiny/dense intervals the compact
-/// native Menu «Задачи с временем» above the grid is the accessible
-/// selection path: it lists only the real segments of the selected day with
-/// the existing callbacks (interval editor, date editor, complete/reopen).
+/// act on the painted stripe itself. For tiny/dense intervals the native
+/// «⋯» → «Задачи дня» menu next to the date controls in `CalendarDayScreen`
+/// is the accessible selection path: it lists only the real segments of the
+/// selected day with the existing callbacks (interval editor, date editor,
+/// complete/reopen).
 /// Full title/range stay in the accessibility labels. No resize/drag, no
 /// stored layout, no new core API.
 struct DayTimelineView: View {
@@ -31,70 +32,21 @@ struct DayTimelineView: View {
     private static let laneGutter: CGFloat = 2
 
     var body: some View {
-        VStack(spacing: 0) {
-            intervalMenu
-            GeometryReader { geometry in
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        ZStack(alignment: .topLeading) {
-                            ruler
-                            blocks(containerWidth: geometry.size.width)
-                        }
-                        .frame(width: geometry.size.width, height: 24 * hourHeight + 24)
-                        .background(Color(.systemBackground))
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                ScrollView {
+                    ZStack(alignment: .topLeading) {
+                        ruler
+                        blocks(containerWidth: geometry.size.width)
                     }
-                    .onAppear {
-                        proxy.scrollTo("hour-8", anchor: .top)
-                    }
+                    .frame(width: geometry.size.width, height: 24 * hourHeight + 24)
+                    .background(Color(.systemBackground))
+                }
+                .onAppear {
+                    proxy.scrollTo("hour-8", anchor: .top)
                 }
             }
         }
-    }
-
-    // MARK: - Compact menu for tiny/dense segments
-
-    /// Accessible 44pt+ native path to every timed segment of the selected
-    /// day. With no timed segments the menu contains no actions and is
-    /// disabled; the grid itself stays the primary surface.
-    private var intervalMenu: some View {
-        HStack {
-            Menu {
-                ForEach(segments, id: \.taskID) { segment in
-                    if let task = task(segment.taskID) {
-                        Menu("\(menuTitle(segment))") {
-                            Button("Редактировать время…") { onEditInterval(task) }
-                            Button("Дата задачи…") { onEditDate(task) }
-                            Button(task.isCompleted ? "Снова открыть" : "Завершить") {
-                                if task.isCompleted {
-                                    onReopen(task)
-                                } else {
-                                    onComplete(task)
-                                }
-                            }
-                        }
-                    }
-                }
-            } label: {
-                Label("Задачи с временем", systemImage: "clock.badge")
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .disabled(segments.isEmpty)
-            .accessibilityIdentifier("day-interval-menu")
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 4)
-        .background(.bar)
-    }
-
-    private func menuTitle(_ segment: TaskDayIntervalSegment) -> String {
-        guard let task = task(segment.taskID) else { return "Задача" }
-        let endTime = segment.endMinute == 1440 ? "24:00" : clockString(segment.endMinute)
-        var range = "\(clockString(segment.startMinute))–\(endTime)"
-        if segment.continuesFromPreviousDay { range += " ↑" }
-        if segment.continuesIntoNextDay { range += " ↓" }
-        return "\(task.title) · \(range)"
     }
 
     // MARK: - Hour ruler
@@ -219,7 +171,7 @@ struct DayTimelineView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(task.title), \(range)")
-        .accessibilityHint("Открывает редактор времени задачи; меню «Задачи с временем» — полный список")
+        .accessibilityHint("Открывает редактор времени задачи; меню «Задачи дня» в шапке — полный список")
         .accessibilityAddTraits(task.isCompleted ? [.isSelected] : [])
     }
 
