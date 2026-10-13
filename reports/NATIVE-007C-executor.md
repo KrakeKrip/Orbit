@@ -298,3 +298,61 @@ READY_FOR_REVIEW (второй scoped R3-коммит поверх первог�
 ## Git
 
 - Ветка `task/NATIVE-007C`; start `ea4dfd30842723f66e2bd6b93bba493488207773`; полный SHA итогового коммита — в чате.
+
+---
+
+# NATIVE-007C-FINAL — разные направления стрелок раскрытия (review R4 + gutter-гигиена)
+
+## Статус
+
+READY_FOR_REVIEW (tiny fix поверх рафинмента R3; Codex review по-прежнему кумулятивный).
+
+## Исходное состояние
+
+- Worktree `/Users/atlhnv/Codex/orbit-worktrees/NATIVE-007C`; ветка `task/NATIVE-007C`; **correction start = coordinator HEAD `c8b6f8cb87a8376671f55d595c502c158863ebef`** (`git rev-parse HEAD` совпал, root/branch сверены); `git status --porcelain` перед началом пустой.
+- Прочитаны `tasks/NATIVE-007C-FINAL.md`, `reports/NATIVE-007C.md` (cumulative review с R4) и свой отчёт.
+
+## Изменённые файлы (только разрешённый scope)
+
+| Файл | Изменение |
+| --- | --- |
+| `apple/OrbitIOS/OrbitIOS/CalendarDayScreen.swift` | 1) `untimedToggleButton`: вместо `Image("chevron.up.chevron.down") + rotationEffect(180°)` — `VStack(spacing: 2)` из ДВУХ отдельных SF Image: collapsed upper `chevron.up` / lower `chevron.down`; expanded upper `chevron.down` / lower `chevron.up` (симметричный pair при повороте не менялся — теперь направление реально меняется, rotation убран). Left gutter (56), 44×44 hit + contentShape, AX identifier `untimed-toggle`, labels «Показать ещё N / Свернуть без времени», callback (toggle + `expandedContentHeight = nil`) — без изменений. 2) `untimedSection` при ≤3 задач: пустой gutter-placeholder `Color.clear` получил `.frame(height: 0)` — больше не vertically-flexible и не может забирать surplus-высоту; ширина колонки 56 сохранена для выравнивания карточек. Doc-комментарий toggle обновлён. |
+| `reports/NATIVE-007C-executor.md` | эта FINAL-секция |
+
+Не менялись: CompactCalendarTaskRow, DayTimelineView (grid/ruler/paint/lanes), header, ellipsis-меню, editors, core/store/projector, README, tests, Xcode project — ровно по scope.
+
+## Команды и результаты
+
+| Команда | Результат |
+| --- | --- |
+| `xcodebuild … -derivedDataPath /tmp/orbit-n7c-final-dd CODE_SIGNING_ALLOWED=NO build` (DEVELOPER_DIR) | exit 0, **BUILD SUCCEEDED** |
+| Core/web/full/legacy, новые тесты | НЕ повторялись / не создавались (по TASK) |
+| Fixture | заново: генератор на OrbitCore, today=2026-10-14: 12 untimed + 3 timed (09:00/60, 11:05/5, 11:07/4) на today; **ровно 1 untimed «Одна на завтра» на 15 Oct** (для проверки ≤3-gutter); 1 undated; 17 задач; store в песочницу до первого launch; генератор удалён |
+| Simulator | свой `orbit-n7c-final-gui` iPhone 17 Pro / iOS 27.0 UDID 6CC8B775-F86D-4EEA-9AD0-46F55327B8B5 — создан/deleted мной |
+| Ввод | Device Hub, AX/координаты; во время прогона приложение один раз само перезапустилось (UI-состояние сбросилось на вкладку «Сегодня», store цел) — после возврата на «Календарь» проверки повторены; для надёжности клик по chevron выполнен координатно и подтверждён immediate-AX |
+
+## GUI evidence (`/Users/atlhnv/Codex/orbit-outputs/NATIVE-007C/r3/`)
+
+1. `11-final-toggle-collapsed.png` — collapsed: иконка toggle = upper **↑** / lower **↓** (кроп-проверка `/tmp` удалялась, направления видны на полном кадре), 3 компактные карточки, «Ещё 9» под ними.
+2. `12-final-toggle-expanded.png` — после одного клика по chevron: expanded-регион (9 видимых карточек, AX — все 12, AX-label toggle = «Свернуть без времени» в обеих зеркальных копиях), иконка = upper **↓** / lower **↑** — направления изменились, whole-rotation больше не используется.
+3. `13-final-one-task-day.png` — 15 Oct, ровно одна задача: одна карточка, БЕЗ toggle и подписи, БЕЗ гигантской пустой области — сетка начинается сразу под карточкой (fixed-height placeholder работает; day-switch по-прежнему сворачивает область).
+
+**sqlite readonly до/после** (`store-before-final.txt`/`store-after-final.txt`): 17 строк идентичны fixture — toggle/expand/collapse/смена дня не пишут store.
+
+## UNVERIFIED (честно)
+
+- Переключение иконки проверено на двух свежих simctl-кадрах (collapsed/expanded) + AX-label; анимации перехода (optional по TASK) нет и не требовалась.
+- Внутренний scroll expanded-региона, grid-offset на прокрученной сетке, long-press context menu — как прежде UNVERIFIED (pan/long-press зеркалом не доставляются; соответствующий source не менялся).
+- Причина единичного перезапуска приложения во время прогона не установлена (не воспроизводился повторно); на итоговые evidence не влияет — оба кадра сняты после стабилизации.
+- Реальный iPhone, тёмная тема, RTL, VoiceOver, Dynamic Type в этом tiny-проходе не проверялись.
+
+## Ограничения / гигиена
+
+- Один scoped commit поверх `c8b6f8c`; `git diff --check` чисто; без merge/push/amend/rebase/reset/stash/deploy.
+- main/чужие worktrees/CRM/порт 3000/hooks/xcode-select/signing/Apple ID/system settings не трогались.
+- Cleanup: свой simulator удалён, `/tmp/orbit-n7c-final-*` и временные кропы удалены, Device Hub закрыт; предыдущие outputs не тронуты.
+- Stop: Codex review; NATIVE-MIN5/drag/resize/3-дня/Месяц/AI не начинались.
+
+## Git
+
+- Ветка `task/NATIVE-007C`; FINAL start `c8b6f8cb87a8376671f55d595c502c158863ebef`; полный SHA итогового коммита — в чате.

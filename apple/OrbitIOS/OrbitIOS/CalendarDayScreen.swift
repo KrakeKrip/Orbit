@@ -311,7 +311,11 @@ struct CalendarDayScreen: View {
                         if overLimit {
                             untimedToggleButton(count: ids.count)
                         } else {
+                            // Empty gutter placeholder: fixed zero height, so
+                            // it never claims surplus vertical space at ≤3
+                            // tasks (the column width stays for alignment).
                             Color.clear
+                                .frame(height: 0)
                         }
                     }
                     .frame(width: Self.untimedGridLeading)
@@ -381,9 +385,12 @@ struct CalendarDayScreen: View {
 
     /// Paired-chevrons expand/collapse toggle in the left gutter (reference
     /// IMG_1219): one small native button above the hour-ruler column,
-    /// beside the first rows. Its 44×44 hit sits fully inside the gutter
-    /// column and never overlaps the card hit regions to its right. In the
-    /// expanded state the same chevrons collapse; state never writes.
+    /// beside the first rows. The two chevrons are separate SF images whose
+    /// directions swap with the state — collapsed upper-up/lower-down,
+    /// expanded upper-down/lower-up — without whole-pair rotation (the
+    /// combined `chevron.up.chevron.down` glyph is symmetric and would look
+    /// unchanged). Its 44×44 hit sits fully inside the gutter column and
+    /// never overlaps the card hit regions to its right; state never writes.
     private func untimedToggleButton(count: Int) -> some View {
         Button {
             untimedExpanded.toggle()
@@ -391,12 +398,14 @@ struct CalendarDayScreen: View {
                 expandedContentHeight = nil
             }
         } label: {
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color.orbitAccent)
-                .rotationEffect(.degrees(untimedExpanded ? 180 : 0))
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
+            VStack(spacing: 2) {
+                Image(systemName: untimedExpanded ? "chevron.down" : "chevron.up")
+                Image(systemName: untimedExpanded ? "chevron.up" : "chevron.down")
+            }
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(Color.orbitAccent)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("untimed-toggle")
