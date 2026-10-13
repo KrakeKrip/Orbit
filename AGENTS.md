@@ -1,10 +1,10 @@
 ## Актуальный статус 2026-10-13
 
-NATIVE-005 принят после R1 и локально integrated6d12ae2; review reports/NATIVE-005.md. Назначен только tasks/NATIVE-006.md, task/NATIVE-006, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-006: Today list, native две реальные вкладки Сегодня/Входящие, маленький pure read helper; три product files. Calendar grid/Today quick-add/store/schema/new editors вне scope. NATIVE-001 macOS-R1/web/sync PAUSED. Старые assignments не выполнять, отчёт в файл/чат короткий.
+NATIVE-006 NEEDS_FIXES: R1 — Today не показывает существующий model.writeError при отказе complete/reopen. Назначен только tasks/NATIVE-006-R1.md в task/NATIVE-006, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-006, correction start6610a5accaf1024eeb3bc6c85de14d1081c256c5. Scope TodayScreen + отчёт, разрешена маленькая warning cleanup. Review reports/NATIVE-006.md в task worktree; независимые core56/iOS build PASS. NATIVE-007 не назначен, merge не выполнен. NATIVE-005 DONE; macOS-R1/web/sync PAUSED. Формат отчёта в файл/короткого чата сохраняется.
 
 # Orbit — правила координации
 
-Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; NATIVE-005 завершён; назначен только tasks/NATIVE-006.md в отдельном worktree. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
+Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; NATIVE-005 завершён; назначена только коррекция tasks/NATIVE-006-R1.md в worktree NATIVE-006. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований

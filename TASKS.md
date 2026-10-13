@@ -9,7 +9,7 @@
 | NATIVE-003 | DONE | назначить/изменить/убрать дату task в iOS Inbox, disk persistence и сохранность старых stores |
 | NATIVE-004 | DONE | shared core интервала: core50/iOS build/legacy upgrade/7200 civil oracle PASS; UI отдельно |
 | NATIVE-005 | DONE | iOS interval editor, R1 title закрыт, build/GUI evidence; локальный merge6d12ae2 |
-| NATIVE-006 | ASSIGNED | Сегодня: local day list + две реальные вкладки, без сетки/нового quick-add |
+| NATIVE-006 | NEEDS_FIXES (R1) | Сегодня: local day list + две реальные вкладки, без сетки/нового quick-add |
 | NATIVE-007 | TODO (план, не назначен) | календарный День с временной сеткой |
 | NATIVE-008 | TODO (план, не назначен) | 3 дня на общей шкале времени |
 | NATIVE-009 | TODO (план, не назначен) | календарный Месяц |
@@ -31,3 +31,5 @@ Review2026-10-13: NATIVE-005 aa22fdc — одна R1: название зада�
 Итог2026-10-13: NATIVE-005 DONE после R1, source961cc2d; main merge6d12ae26e3c145ccd9041efde7bf6dc443447e1f. Независимые iOS build/экранный ввод времени/invalid rejection PASS; title screenshot/source проверены. Реальный iPhone не проверен. Следующий NATIVE-006 — небольшой Today list; календарь позже.
 
 Назначение2026-10-13: NATIVE-006 Today list, source base800b189adc9442d980cb8fb5080aa5e42efa0ff7. Only plannedDate==local today, open/completed sections; две реальные native вкладки, один store/model. Quick-add остаётся в Inbox, календарные режимы не назначены.
+
+Review2026-10-13: NATIVE-006917f960 независимо core56/iOS build PASS. Один R1: writeError не отображается на Today; tasks/NATIVE-006-R1.md назначен только в task worktree, correction start6610a5accaf1024eeb3bc6c85de14d1081c256c5. Без merge, NATIVE-007 не выдан.
