@@ -12,8 +12,8 @@
 | NATIVE-006 | DONE | Today list + две настоящие вкладки, R1 видимые write errors; merge8b36067 |
 | NATIVE-007A | DONE | read-only проекция интервалов на сутки, включая переход через полночь |
 | NATIVE-007B | DONE | календарный День с временной сеткой на принятой проекции |
-| NATIVE-007C | NEEDS_FIXES | раскрываемая область «Без времени»: 3 строки / больше / внутренний scroll |
-| NATIVE-NAV-001 | TODO (следующий после007C) | Today Список/Календарь, убрать самостоятельную Calendar tab |
+| NATIVE-007C | DONE | раскрываемая область «Без времени»: 3 строки / больше / внутренний scroll |
+| NATIVE-NAV-001 | TODO (назначен) | Today Список/Календарь, убрать самостоятельную Calendar tab |
 | NATIVE-NAV-002 | TODO (план) | реальный раздел Предстоящее с List/Calendar над shared tasks |
 | NATIVE-007D | TODO (план) | перенос из «Без времени» в сетку, отдельный scope перед выдачей |
 | NATIVE-007E | TODO (план) | изменение длительности жестом |
@@ -69,3 +69,5 @@ Review2026-10-14: NATIVE-007C71b4c38 independent iOS build PASS; fixed260/double
 Cumulative review2026-10-14: NATIVE-007C9cefc4d independentiOSbuild/diffcheck PASS; compactcards/menu/sourceidentity reviewed. Одна tinyFINAL в CalendarDayScreen: conditional directions upper↑↓ lower↓↑, не180rotation symmetricpair; boundedemptygutter. Tasks/NATIVE-007C-FINAL.md в taskworktree, correctionstartc8b6f8cb87a8376671f55d595c502c158863ebef. No merge/min5branchuntilacceptance; последующийTASK=NATIVE-MIN5.
 
 Приоритет2026-10-14 уточнён пользователем: отдельный Calendar tab запрещён, Today и Upcoming должны иметь List/Calendar views. После закрытия007C→NAV001→NAV002→MIN5→drag/resize/overlap. Подробный bounded план /Users/atlhnv/Codex/orbit-outputs/NATIVE-NAV-plan.md; новые branches пока не выданы. Раньше объявленная очередь MIN5 immediately next заменена этим прямым уточнением.007C final build/review остаются про renderer, не acceptance неправильной продуктовой навигации.
+
+Итог2026-10-14:007C acceptedfinalfe8e58d/mainmergeb5608d1eaace8f4d8793c5eff36ed4caa1bc0e23, independentiOSbuildPASS, mainapple/identitytestedbranchPASS. Reportedrestart→deviceQA, pan/longpress/realdeviceнеподтверждены. Следующий назначенNAV001Todaymodes/removeCalendartab, sourcebaseb5608d1;NAV002realUpcomingпотом, неrenameCalendar. Минимум5/dragневыданы.
