@@ -1,0 +1,7 @@
+# Xcode user state and iOS build artifacts (never commit)
+xcuserdata/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+.DS_Store

@@ -43,3 +43,13 @@ Draft очищается только после успешной записи; 
 ## Передача
 
 Обычный scoped commit. Подробный reports/NATIVE-002-executor.md: start/latest SHA, files, команды/exits, реальные GUI/persistence evidence, screenshots, ограничения. В чат4–5 коротких строк: статус, полный SHA, итог/checks, путь отчёта. Остановиться до Codex review и оценки пользователем экрана. NATIVE-003/macOS-R1 не выполнять. Без merge/push/amend/rebase/reset/stash/deploy, main/другие worktrees/CRM/3000/hooks не трогать.
+
+## Разрешённая минимальная коррекция совместимости, 2026-10-13
+
+После BLOCKED executor bc275999edd09663f2fe7ea3681d95396d206868 Codex независимо подтвердил iOS compile error в OrbitStoreLocation.swift:9. Разрешён дополнительный product файл apple/Orbit/Sources/OrbitCore/OrbitStoreLocation.swift: заменить только fallback fileManager.homeDirectoryForCurrentUser на URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true), сохранив appendingPathComponent и первичный Application Support lookup. Это вариант №1 executor report; API доступен iOS/macOS, временная неизменяющая repo typecheck-проба под arm64 iOS17 Simulator exit0.
+
+Не менять CLI parsing/default policy/macOS R1, модели/store/schema, архитектуру пакета и поведение iOS store. Не добавлять force unwrap, новые зависимости/targets или большой refactor. Существующих20 macOS unit + реальная iOS build достаточно для этой API-замены. Затем закончить уже назначенные Simulator GUI/screenshots/persistence checks и обновить executor report/README (статус BLOCKED снять только по фактическим результатам). Сохранить историю обычным новым scoped commit, без amend/rebase. Starting correction SHA — текущий coordinator assignment HEAD, записать перед правками. Остальные границы TASK действуют.
+
+## Review2026-10-13
+
+Product0a351a2: TECHNICAL_REVIEW_PASS / WAITING_FOR_VISUAL_APPROVAL. reports/NATIVE-002.md содержит независимые checks и ограничения. Следующий TASK/merge не выполнялись; пользователь оценивает один iOS экран. NATIVE-001-R1 остаётся приостановленным.
