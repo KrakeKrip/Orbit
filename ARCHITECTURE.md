@@ -1,3 +1,5 @@
+Приоритет2026-10-13: iOS target NATIVE-002 разрешён пользователем до завершения macOS R1. Reuse закоммиченного OrbitCore; отдельный небольшой iOS View, без переноса macOS UI. R1 CLI parser в iOS не вызывается; stores независимы. Историческое условие «после приёмки NATIVE-001» ниже заменено актуальным решением.
+
 # Orbit — активная native архитектура
 
 2026-10-12: пользователь выбрал native/local-first. Прежняя web архитектура сохранена в docs/web-baseline-2026-10-12/ARCHITECTURE.md; Next.js/PostgreSQL/Better Auth код не удалён и не переписывается. Он не нужен для запуска native прототипа.

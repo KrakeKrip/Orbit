@@ -1,3 +1,7 @@
+## Актуальный приоритет 2026-10-13
+
+По прямому решению пользователя выдан только tasks/NATIVE-002.md в task/NATIVE-002, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-002. iOS Inbox первым, macOS дизайн позже. NATIVE-001-R1 приостановлен, NATIVE-001 не DONE/не merged. База bd22a87 — явно разрешённый промежуточный native core, не полная приёмка macOS. Ниже старые назначения NATIVE-001 и условия ожидания NATIVE-002 заменены этим абзацем и актуальным TASK. Роли, безопасность и формат отчёта остаются в силе.
+
 # Orbit — правила координации
 
 Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. Назначен только tasks/NATIVE-001.md, ветка task/NATIVE-001, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-001. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
