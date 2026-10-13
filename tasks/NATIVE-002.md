@@ -49,3 +49,7 @@ Draft очищается только после успешной записи; 
 После BLOCKED executor bc275999edd09663f2fe7ea3681d95396d206868 Codex независимо подтвердил iOS compile error в OrbitStoreLocation.swift:9. Разрешён дополнительный product файл apple/Orbit/Sources/OrbitCore/OrbitStoreLocation.swift: заменить только fallback fileManager.homeDirectoryForCurrentUser на URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true), сохранив appendingPathComponent и первичный Application Support lookup. Это вариант №1 executor report; API доступен iOS/macOS, временная неизменяющая repo typecheck-проба под arm64 iOS17 Simulator exit0.
 
 Не менять CLI parsing/default policy/macOS R1, модели/store/schema, архитектуру пакета и поведение iOS store. Не добавлять force unwrap, новые зависимости/targets или большой refactor. Существующих20 macOS unit + реальная iOS build достаточно для этой API-замены. Затем закончить уже назначенные Simulator GUI/screenshots/persistence checks и обновить executor report/README (статус BLOCKED снять только по фактическим результатам). Сохранить историю обычным новым scoped commit, без amend/rebase. Starting correction SHA — текущий coordinator assignment HEAD, записать перед правками. Остальные границы TASK действуют.
+
+## Review2026-10-13
+
+Product0a351a2: TECHNICAL_REVIEW_PASS / WAITING_FOR_VISUAL_APPROVAL. reports/NATIVE-002.md содержит независимые checks и ограничения. Следующий TASK/merge не выполнялись; пользователь оценивает один iOS экран. NATIVE-001-R1 остаётся приостановленным.
