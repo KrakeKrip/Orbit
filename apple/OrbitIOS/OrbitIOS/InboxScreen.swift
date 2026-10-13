@@ -7,11 +7,26 @@ extension Color {
     static let orbitAccent = Color(red: 0.906, green: 0.345, blue: 0.286)
 }
 
+/// Which editor sheet is presented; identified by kind + task UUID so only
+/// one date or interval editor exists at a time and each presentation
+/// re-initializes its draft from persisted values.
+enum InboxSheetPresentation: Identifiable {
+    case date(OrbitTask)
+    case interval(OrbitTask)
+
+    var id: String {
+        switch self {
+        case .date(let task): "date-\(task.id.uuidString)"
+        case .interval(let task): "interval-\(task.id.uuidString)"
+        }
+    }
+}
+
 /// The one iOS Inbox screen: large title, compact rows with round completion
-/// circles and a date action, bottom composer above the keyboard and safe area.
+/// circles and date/time actions, bottom composer above the keyboard and safe area.
 struct InboxScreen: View {
     @State private var model: IOSInboxModel
-    @State private var dateSheetTask: OrbitTask?
+    @State private var presentation: InboxSheetPresentation?
     @FocusState private var titleFieldFocused: Bool
 
     init(model: IOSInboxModel) {
@@ -39,8 +54,13 @@ struct InboxScreen: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 composer
             }
-            .sheet(item: $dateSheetTask) { task in
-                TaskDateSheet(task: task, model: model)
+            .sheet(item: $presentation) { item in
+                switch item {
+                case .date(let task):
+                    TaskDateSheet(task: task, model: model)
+                case .interval(let task):
+                    TaskIntervalSheet(task: task, model: model)
+                }
             }
         }
     }
@@ -51,7 +71,9 @@ struct InboxScreen: View {
                 Section("Открытые") {
                     ForEach(model.openTasks) { task in
                         InboxRowView(task: task, model: model) {
-                            dateSheetTask = task
+                            presentation = .date(task)
+                        } onEditInterval: {
+                            presentation = .interval(task)
                         }
                     }
                 }
@@ -60,7 +82,9 @@ struct InboxScreen: View {
                 Section("Завершённые") {
                     ForEach(model.completedTasks) { task in
                         InboxRowView(task: task, model: model) {
-                            dateSheetTask = task
+                            presentation = .date(task)
+                        } onEditInterval: {
+                            presentation = .interval(task)
                         }
                     }
                 }
@@ -133,12 +157,14 @@ struct InboxScreen: View {
 }
 
 /// One row: round completion control on the left, readable title (with an
-/// optional short planned-date label) and a calendar action on the right.
-/// Titles wrap instead of being truncated; control hit areas are ≥ 44pt.
+/// optional planned-date label and time-interval range) and date/time actions
+/// on the right. Titles wrap instead of being truncated; control hit areas
+/// are ≥ 44pt. The clock action exists only for dated tasks.
 struct InboxRowView: View {
     let task: OrbitTask
     let model: IOSInboxModel
     let onEditDate: () -> Void
+    let onEditInterval: () -> Void
 
     private static let dateLabelFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -152,6 +178,21 @@ struct InboxRowView: View {
             return civilDate
         }
         return dateLabelFormatter.string(from: date)
+    }
+
+    /// Derived "start–end" wall-clock range; a midnight crossing is marked
+    /// with "(+1 день)". The end comes from `TaskTimeInterval.end` and is
+    /// never stored.
+    static func intervalLabel(_ task: OrbitTask) -> String? {
+        guard let date = task.plannedDate,
+            let time = task.plannedTime,
+            let duration = task.durationMinutes,
+            let end = TaskTimeInterval.end(plannedDate: date, plannedTime: time, durationMinutes: duration)
+        else { return nil }
+        if end.date == date {
+            return "\(time)–\(end.time)"
+        }
+        return "\(time)–\(end.time) (+1 день)"
     }
 
     var body: some View {
@@ -173,8 +214,24 @@ struct InboxRowView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
+                if let interval = Self.intervalLabel(task) {
+                    Text(interval)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             Spacer(minLength: 0)
+            if task.plannedDate != nil {
+                Button(action: onEditInterval) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(Color(.secondaryLabel))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Время задачи: \(task.title)")
+            }
             Button(action: onEditDate) {
                 Image(systemName: "calendar")
                     .font(.system(size: 17, weight: .medium))
