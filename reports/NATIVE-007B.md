@@ -36,3 +36,17 @@ DayTimelineView.swift:130–135 задаёт не только hit area, но З
 Исправить или явно убрать недействующее initial scroll ID hour-08 (ruler id hour-8). Добавить реальную24:00 boundary подпись, не25-й полный час и не изменение scale. Model.reload на Calendar onAppear допустим при сохранении selectedDay. Эти пункты не требуют отдельных TASK.
 
 Scope/checks — tasks/NATIVE-007B-R1.md. Одна UI layout коррекция двух файлов, core/tests/mutations не менять.007B не принят/не merged;3days/Month/AI/следующий TASK не назначаются. Push/deploy отсутствуют.
+
+## Повторное review layout R1 — PARTIAL / NEEDS_FIXES
+
+2026-10-13, product SHA `fa7e52097182a33f8378e150057d33868b18d594`. Source diff в двух разрешённых UI файлах+report, tree/cumulative diff check PASS. Независимый iOS Simulator build: exit0,BUILD SUCCEEDED. Core unchanged, не повторялся. Screenshot06-r1-12untimed-calendar.png независимо просмотрен. R1 untimed bounded180pt и controls/grid теперь видны; R2 GeometryReader вместо UIScreen,1/2/6/8lanes помещаются — эти две находки закрыты в проверенном source/screenshot scope. Полный scroll всех12untimed и DynamicType GUI в этом раунде Codex не проверял.
+
+Но R3 ещё не закрыт и появилась visibility regression: DayTimelineView.swift:119–124 содержит только RoundedRectangle. Из block label удалены ВСЕ Text(title/range) и видимые continuation arrows, даже для обычного60minute широкого блока. На screenshot вместо задачи видна пустая красная полоса. AccessibilityLabel сохраняет строку, но это не визуальная подпись для обычного пользователя. Прежний TASK требует readable title/range/visible continuation cues.
+
+DayTimelineView.swift:112–115 всё ещё растягивает one-minute geometry до2pt. При64pt/hour1minute=1.066667pt, две adjacent задачи сдвинуты на1.066667pt, но каждая закрашивает2pt: overlap0.933333pt. Изменение floor20→2 уменьшает дефект, не устраняет его. Report «полосы не накрывают друг друга»/«painted height=реальная duration» не соответствует source. Тап/long-press на2pt полосе не является доступным44pt action, AX/source-only не доказывают обычный выбор каждой короткой задачи.
+
+Для viewport402 source сейчас даёт lane widths333/165/53/39 приN1/2/6/8, right389/386/374/368; fit PASS. Report38.5 при402 неточен. Карточки пока соприкасаются без отдельного gutter, что усугубляет чтение одинаковых интервалов; небольшой явный separator/gutter допустим в том же renderer, не новая layout архитектура.
+
+Следующая ОДНА коррекция renderer: вернуть визуальные title/range/continuation для обычных блоков; exact positive paintedHeight без растяжки; добавить доступный native Menu «Задачи с временем» для tiny/dense segments, с полными task names/range и существующими callbacks. Menu >=44pt и только реальные сегменты выбранного дня; никаких новых store/details/controller. Это конкретный способ выбора, предусмотренный исходным R3, вместо повторных обещаний тапнуть2pt. Scope/checks в tasks/NATIVE-007B-R1b.md.
+
+Runtime tap/context/late-hour GUI остаются UNVERIFIED; не считаются новым доказанным callback defect. Этот review новый Simulator не запускал: source и предоставленный raster достаточны для оставшихся rendering findings. R1/R2 повторять/переписывать не нужно, core/data не менять. NATIVE-007B всё ещё не принят/не merged.
