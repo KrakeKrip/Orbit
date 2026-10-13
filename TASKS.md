@@ -61,3 +61,5 @@ Review2026-10-14: NATIVE-007C71b4c38 independent iOS build PASS; fixed260/double
 Уточнение2026-10-14: пользователь просит компактный верх/chips по IMG_1210. R1 implementation46e755d ещё не принята; назначен один tasks/NATIVE-007C-R2.md поверх неё, start120e2cf28eb2ecc61d42998c4c3e506291ff48e5. Итоговый независимый review cumulative R1+R2. Без merge,007D не выдан.
 
 Уточнение2026-10-14: во время WIP R2 пользователь подтвердил ещё3UX пункта (плотность rows/circle внутри/menu около даты). Подготовлен NATIVE-007C-R3 в /Users/atlhnv/Codex/orbit-outputs/NATIVE-007C-R3.md. Сначала GLM завершает R2 обычным commit, затем clean tree и full SHA R2 — start R3. Scope3UI files, только compact rows/menu move, no grid/core rewrite. Итог cumulative review R1/R2/R3;007D не назначен. Незакоммиченные R2 файлы координатор не менял.
+
+План2026-10-14 по прямому решению пользователя: NATIVE-MIN5 — минимум новой/изменяемой duration5минут, legacy1–4 не перезаписывать/не скрывать. Отдельный небольшой core/editor TASK после принятия007C, перед drag; подготовленный scope /Users/atlhnv/Codex/orbit-outputs/NATIVE-MIN5.md, branch/worktree ещё не назначены. R3 WIP не расширяется.
