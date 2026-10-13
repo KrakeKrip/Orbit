@@ -11,6 +11,7 @@ struct OrbitIOSApp: App {
     private enum Tab: Hashable {
         case today
         case inbox
+        case calendar
     }
 
     @Environment(\.scenePhase) private var scenePhase
@@ -50,10 +51,16 @@ struct OrbitIOSApp: App {
                             Label("Входящие", systemImage: "tray")
                         }
                         .tag(Tab.inbox)
+                    CalendarDayScreen(model: model)
+                        .tabItem {
+                            Label("Календарь", systemImage: "calendar")
+                        }
+                        .tag(Tab.calendar)
                 }
+                .tint(.orbitAccent)
                 .onChange(of: scenePhase) { _, phase in
                     // Returning to the foreground re-reads the shared store so
-                    // both tabs reflect persisted truth.
+                    // all tabs reflect persisted truth.
                     if phase == .active {
                         model.reload()
                     }
