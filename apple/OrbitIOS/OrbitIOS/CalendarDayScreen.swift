@@ -56,6 +56,12 @@ struct CalendarDayScreen: View {
                     TaskIntervalSheet(task: task, model: model)
                 }
             }
+            .onAppear {
+                // Reactive model updates already refresh the rows; this reload
+                // keeps the day view in sync after external changes. The
+                // manually selected day is never reset here.
+                model.reload()
+            }
         }
     }
 
@@ -139,8 +145,12 @@ struct CalendarDayScreen: View {
         pickerDate = TaskPlannedDate.date(fromCivilDateString: day, calendar: gregorianNoon) ?? pickerDate
     }
 
-    // MARK: - Untimed area
+    // MARK: - Untimed area (bounded so 12+ tasks never push the grid away)
 
+    /// The untimed list is capped to a bounded, independently scrollable
+    /// region: with many untimed tasks the date controls and the day grid
+    /// stay visible, and every untimed task remains reachable by scrolling
+    /// inside this region. No store/cache/paging logic.
     private var untimedSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             if projection.untimedTaskIDs.isEmpty {
@@ -157,15 +167,20 @@ struct CalendarDayScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.top, 6)
-                ForEach(projection.untimedTaskIDs, id: \.self) { id in
-                    if let task = untimedTask(withID: id) {
-                        InboxRowView(task: task, model: model) {
-                            presentation = .date(task)
-                        } onEditInterval: {
-                            presentation = .interval(task)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(projection.untimedTaskIDs, id: \.self) { id in
+                            if let task = untimedTask(withID: id) {
+                                InboxRowView(task: task, model: model) {
+                                    presentation = .date(task)
+                                } onEditInterval: {
+                                    presentation = .interval(task)
+                                }
+                            }
                         }
                     }
                 }
+                .frame(maxHeight: 180)
             }
             Divider()
         }

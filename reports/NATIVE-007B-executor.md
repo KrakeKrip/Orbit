@@ -58,3 +58,45 @@ READY_FOR_REVIEW.
 
 - Ветка `task/NATIVE-007B`; starting SHA `12933032c243560f18b2c30f9dedb2d354c22187`; один scoped commit (3 product UI файла + README + отчёт); полный latest SHA в чате.
 - `git diff --check` чисто; fixture SQLite/WAL не коммитился; merge/push/amend/rebase/reset/stash/deploy не выполнялись; main/чужие worktrees/root docs/CRM/3000/hooks/xcode-select/Apple ID/signing/системные часы не менялись. NATIVE-007B GUI — единственный scope; 3дня/Месяц/quick-add не начинались.
+
+---
+
+# Коррекция NATIVE-007B-R1 — bounded layout календарного Дня
+
+## Статус
+
+READY_FOR_REVIEW (R1 [P1] + R2 [P2] + R3 [P2] + уборка из reports/NATIVE-007B.md; остальное не переписывалось). Starting correction SHA `4aa3b893e69b78466058c58fcfe818fb600ea0e8`, дерево чистое до правок.
+
+## Изменения (два разрешённых UI-файла)
+
+1. **R1** `CalendarDayScreen.swift`: untimed-область «Без времени» ограничена — при непустом списке строки обёрнуты в `ScrollView.frame(maxHeight: 180)`: 12+ untimed не вытесняют date controls/grid, все остаются доступны скроллом внутри региона; пустой случай — просто заголовок «Без времени — нет задач» без scroll area. Дополнительно (разрешено review): `onAppear { model.reload() }` на Календаре — selectedDay не сбрасывается.
+2. **R2** `DayTimelineView.swift`: ширины lane'ов считаются от реального контейнера — `GeometryReader` даёт container width; `laneWidth = (containerWidth − laneInset − laneTrailing) / laneCount − 3`, без UIScreen, без max-60 и без min-60: 6/8 lanes помещаются в viewport (fit), ничего не отсекается справа и не отбрасывается; half-open greedy assignment не менялся.
+3. **R3** `DayTimelineView.swift`: painted геометрия отделена от hit/selection — закрашенный прямоугольник имеет реальную высоту длительности (floor 2pt для видимости one-minute), не растягивается до 20pt; соседние 15-мин и 1-мин задачи рисуются своими реальными полосами и не накрывают друг друга. Тап/long-press (context menu «Завершить/Снова открыть», «Дата задачи…») действуют на полосе; полный title/range — в accessibilityLabel. Duration/plannedTime не менялись.
+4. **Уборка**: initial scroll id исправлен `hour-08` → `hour-8` (совпадает с ruler id); добавлена подпись границы «24:00» (лейбл на закрывающей линии, не 25-й час).
+
+## Проверки
+
+| Проверка | Результат |
+| --- | --- |
+| `xcodebuild -scheme OrbitIOS -sdk iphonesimulator -derivedDataPath /tmp/orbit-r1b-dd CODE_SIGNING_ALLOWED=NO build` | после восстановления случайно удалённого `private struct LaidOutSegment` — exit 0, BUILD SUCCEEDED; DerivedData удалён |
+| Fixture (временный генератор, удалён) | 25 задач: 12 untimed today + 8×09:00/60 (8-lane cluster) + adjacent 12:00/12:15 по 15min + adjacent 13:00/13:01 по 1min + exact midnight 23:30/30; `swift test --filter R1FixtureGenerator` exit 0 (25 задач, 12 untimed, проекция валидна) |
+| R1 GUI (свой Simulator, UDID 0A879A39-…, удалён) | Calendar: date controls ‹ 13 Oct 2026 › Сегодня полностью видимы; «Без времени» — bounded область (видны Без времени 1–3, остальные внутри scroll региона; AX экспонирует все 12); сетка с 8-lane кластером видна ниже. Скриншот `06-r1-12untimed-calendar.png` |
+| R2 GUI | 8-lane кластер 09:00–10:00 помещается в ширину: полоса блоков заканчивается в пределах экрана, lane-разделители видны (тонкие светлые линии), правого clipping нет. Тот же скриншот |
+| R3 GUI | adjacent 12:00–12:15/12:15–12:30 — две отдельные полосы реальной высоты (~16pt) без взаимного накрытия; 13:00/13:01 one-minute — тонкие полосы (~1–2pt) отдельными линиями на 13:00/13:01. Видимый кадр `07-r1-scrolled-grid.png` |
+| sqlite readonly после GUI | 25 строк без изменений (интервалы/даты как в fixture; случайные клики не записали ничего) |
+
+## Geometry/source proof (по TASK для 1/2/6/8 lanes и adjacent short)
+
+- Lanes 1/2/6/8: `laneWidth = (W − 56 − 10)/N − 3` от GeometryReader container; при W=402 (review viewport): N=1→333, N=2→165, N=6→52, N=8→38.5 — все положительные, суммарно ровно W−66 без выхода за контейнер (fit, не clip).
+- Adjacent short: painted высота = минуты/60×64 (15min→16pt, 1min→~1.07pt, floor 2pt) — соседние 12:00–12:15/12:15–12:30 не перекрываются (границы 720/735/745 минут дискретны); hit/контекст — на самой полосе, AX label полный.
+
+## Ограничения / UNVERIFIED (честно)
+
+- Блок-tap→editor и context menu (long-press) в GUI: UNVERIFIED — Device Hub AX-зеркало не экспонирует кастомные блоки сетки, координатный клик по ним невозможен (raster capture_surfaces_changed), CUA scroll не доставляется. Блок-кнопки используют тот же Button(action:)/contextMenu путь, что подтверждён на Today/Inbox строках и date/interval sheets.
+- Вечерние 23:00–24:00 в pixel-скриншот не попали (scroll limitation); 00:00–01:00 continuation и 24:00-label захвачены (скриншоты R1-сессии и основные).
+- Dynamic Type accessibility-large для новой компоновки не снимался (время сессии); системные шрифты используются повсеместно.
+- Core 66, legacy, web — не повторялись (core/schema не менялись).
+
+## Git
+
+Новый обычный scoped commit (CalendarDayScreen.swift + DayTimelineView.swift + R1-секция отчёта); полный latest SHA в чате. Без merge/push/amend/rebase/reset/stash/deploy; 007B не принят; 3дня/Месяц/AI/macOS-R1 не начинались; main/чужие worktrees/CRM/3000/hooks/xcode-select/system settings/signing не тронуты.

@@ -3,10 +3,16 @@ import OrbitCore
 
 /// The 00:00–24:00 day timeline for one selected civil day: hour rulers,
 /// timed blocks projected via `TaskDayProjector`, and a minimal local greedy
-/// lane layout so overlapping tasks stay visible side by side. Blocks are
-/// read-only visuals: tap opens the existing interval editor of the source
-/// task, context menu reuses existing complete/reopen and date operations.
-/// No resize/drag, no stored layout, no new core API.
+/// lane layout so overlapping tasks stay visible side by side. Lane widths
+/// derive from the real container width (fit, no right clipping).
+///
+/// Painted geometry reflects the real interval duration (minimum 2pt for
+/// visibility); tap and long-press (context menu) act on the painted stripe
+/// itself, so adjacent short tasks never cover each other's controls. Full
+/// title/range are always exposed via accessibility; tap opens the existing
+/// interval editor of the source task, context menu reuses existing
+/// complete/reopen and date operations. No resize/drag, no stored layout,
+/// no new core API.
 struct DayTimelineView: View {
     let segments: [TaskDayIntervalSegment]
     /// Resolves a projected task UUID to the live shared-model task object.
@@ -19,19 +25,25 @@ struct DayTimelineView: View {
     /// Uniform linear hour height.
     private let hourHeight: CGFloat = 64
     private static let laneInset: CGFloat = 56
+    private static let laneTrailing: CGFloat = 10
+    /// Painted visibility floor for one-minute intervals; the real duration
+    /// stays authoritative for layout neighbours (no 20pt stretching).
+    private static let minPaintedHeight: CGFloat = 2
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                ZStack(alignment: .topLeading) {
-                    ruler
-                    blocks
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                ScrollView {
+                    ZStack(alignment: .topLeading) {
+                        ruler
+                        blocks(containerWidth: geometry.size.width)
+                    }
+                    .frame(width: geometry.size.width, height: 24 * hourHeight + 24)
+                    .background(Color(.systemBackground))
                 }
-                .frame(height: 24 * hourHeight + 16)
-                .background(Color(.systemBackground))
-            }
-            .onAppear {
-                proxy.scrollTo("hour-08", anchor: .top)
+                .onAppear {
+                    proxy.scrollTo("hour-8", anchor: .top)
+                }
             }
         }
     }
@@ -54,13 +66,25 @@ struct DayTimelineView: View {
                 .frame(height: hourHeight, alignment: .top)
                 .id("hour-\(hour)")
             }
+            // 24:00 end boundary: a label on the closing line, not a 25th hour.
+            HStack(spacing: 8) {
+                Text("24:00")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, alignment: .leading)
+                Rectangle()
+                    .fill(Color(.systemGray5))
+                    .frame(height: 1)
+                Spacer(minLength: 0)
+            }
+            .frame(height: 12, alignment: .top)
         }
         .padding(.leading, 8)
     }
 
     // MARK: - Blocks
 
-    private var blocks: some View {
+    private func blocks(containerWidth: CGFloat) -> some View {
         let layout = laneLayout(for: segments)
         return ForEach(layout, id: \.segment.taskID) { item in
             if let task = task(item.segment.taskID) {
@@ -68,7 +92,8 @@ struct DayTimelineView: View {
                     for: item.segment,
                     task: task,
                     laneIndex: item.lane,
-                    laneCount: item.laneCount
+                    laneCount: item.laneCount,
+                    containerWidth: containerWidth
                 )
             }
         }
@@ -78,65 +103,29 @@ struct DayTimelineView: View {
         for segment: TaskDayIntervalSegment,
         task: OrbitTask,
         laneIndex: Int,
-        laneCount: Int
+        laneCount: Int,
+        containerWidth: CGFloat
     ) -> some View {
         let startOffset = CGFloat(segment.startMinute) / 60 * hourHeight
-        let blockHeight = CGFloat(segment.endMinute - segment.startMinute) / 60 * hourHeight
+        // Painted geometry = real duration; a tiny floor keeps one-minute
+        // intervals visible without stretching to a fake 20pt block.
+        let paintedHeight = max(
+            CGFloat(segment.endMinute - segment.startMinute) / 60 * hourHeight,
+            Self.minPaintedHeight
+        )
         let endTimeText = segment.endMinute == 1440 ? "24:00" : clockString(segment.endMinute)
-        let range = "\(clockString(segment.startMinute))–\(endTimeText)"
-        let flags = continuationMarkers(segment)
+        let range = "\(clockString(segment.startMinute))–\(endTimeText)\(continuationMarkers(segment))"
 
         return Button(action: { onEditInterval(task) }) {
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 1.5)
                     .fill(task.isCompleted ? Color(.systemGray4) : Color.orbitAccent.opacity(0.85))
-                if segment.continuesFromPreviousDay {
-                    VStack {
-                        Image(systemName: "arrow.up.to.line")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            .padding(.trailing, 4)
-                        Spacer(minLength: 0)
-                    }
-                }
-                if segment.continuesIntoNextDay {
-                    VStack {
-                        Spacer(minLength: 0)
-                        Image(systemName: "arrow.down.to.line")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            .padding(.trailing, 4)
-                    }
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    if blockHeight >= 30 {
-                        Text(task.title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                    }
-                    if blockHeight >= 46 {
-                        Text("\(range)\(flags)")
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.95))
-                    }
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .frame(height: max(blockHeight, 20))
+            .frame(height: paintedHeight)
         }
         .buttonStyle(.plain)
-        .frame(
-            width: laneWidth(laneCount: laneCount),
-            height: max(blockHeight, 20),
-            alignment: .top
-        )
-        .offset(x: blockX(laneIndex: laneIndex, laneCount: laneCount), y: startOffset)
-        .contentShape(Rectangle())
+        .frame(width: laneWidth(laneCount: laneCount, containerWidth: containerWidth), alignment: .leading)
+        .offset(x: blockX(laneIndex: laneIndex, laneCount: laneCount, containerWidth: containerWidth), y: startOffset)
         .contextMenu {
             Button(task.isCompleted ? "Снова открыть" : "Завершить") {
                 if task.isCompleted {
@@ -148,18 +137,18 @@ struct DayTimelineView: View {
             Button("Дата задачи…") { onEditDate(task) }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(task.title), \(range)\(flags)")
-        .accessibilityHint("Открывает редактор времени задачи")
+        .accessibilityLabel("\(task.title), \(range)")
+        .accessibilityHint("Открывает редактор времени задачи; удержание — завершить/дата")
         .accessibilityAddTraits(task.isCompleted ? [.isSelected] : [])
     }
 
-    private func blockX(laneIndex: Int, laneCount: Int) -> CGFloat {
-        Self.laneInset + CGFloat(laneIndex) * laneWidth(laneCount: laneCount)
+    private func laneWidth(laneCount: Int, containerWidth: CGFloat) -> CGFloat {
+        let available = containerWidth - Self.laneInset - Self.laneTrailing
+        return max(2, available / CGFloat(max(laneCount, 1)) - 3)
     }
 
-    private func laneWidth(laneCount: Int) -> CGFloat {
-        let available = UIScreen.main.bounds.width - Self.laneInset - 12
-        return max(60, available / CGFloat(max(laneCount, 1)) - 4)
+    private func blockX(laneIndex: Int, laneCount: Int, containerWidth: CGFloat) -> CGFloat {
+        Self.laneInset + CGFloat(laneIndex) * laneWidth(laneCount: laneCount, containerWidth: containerWidth)
     }
 
     private func clockString(_ minute: Int) -> String {
@@ -181,11 +170,6 @@ struct DayTimelineView: View {
         let laneCount: Int
     }
 
-    /// Minimal greedy lane assignment over the accepted projection order.
-    /// Half-open intersection: touching segments (`end == next.start`) do not
-    /// conflict. Clusters are maximal bursts of transitively overlapping
-    /// segments; each cluster gets `laneCount = maximum simultaneous lanes`
-    /// and every segment in it is widened to that count. Nothing is stored.
     private func laneLayout(for segments: [TaskDayIntervalSegment]) -> [LaidOutSegment] {
         var lanes: [(end: Int, cluster: Int)] = []
         var assigned: [(segment: TaskDayIntervalSegment, lane: Int, cluster: Int)] = []
