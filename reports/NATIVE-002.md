@@ -27,3 +27,7 @@ GLM отдельно сообщает сценарии кнопка/keyboard sub
 NATIVE-001-R1 остаётся открытым/приостановленным и не объявляется DONE; iOS не вызывает его CLI parser. Native implementation всё ещё в task branches, main содержит координационные документы. Не расширять следующими функциями до визуальной оценки.
 
 После review собственный Simulator остановлен/удалён, свой DerivedData удалён; build/test logs сохранены в outputs/NATIVE-002-review-evidence. Чужие Simulator/devices/stores/CRM/Xcode settings не изменены.
+
+## Приёмка и локальная интеграция2026-10-13
+
+Пользователь одобрил визуальное направление отдельного интерактивного концепта и попросил переходить к разработке. NATIVE-002 принимается как технический Inbox foundation в своём scope; одобрение концепта не выдаётся за реализацию Today/Calendar. Main merge14a977810bba9dc4c2bfe15bfdc4adcf177f2c4c, только два coordination conflicts: актуальная очередь main сохранена, полное assignment/review из task ветки сохранено. Apple sources побайтово идентичны task/NATIVE-002. На main независимо swift test20/20 и clean-DerivedData iOS Simulator build exit0/BUILD SUCCEEDED (один штатный AppIntents metadata warning). Повтор GUI не требовался: product sources не изменились. Реальный iPhone и прочие ограничения выше сохраняются. macOS-R1 не закрыт. Push/deploy не выполнялись.

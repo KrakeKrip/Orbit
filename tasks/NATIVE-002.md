@@ -53,3 +53,5 @@ Draft очищается только после успешной записи; 
 ## Review2026-10-13
 
 Product0a351a2: TECHNICAL_REVIEW_PASS / WAITING_FOR_VISUAL_APPROVAL. reports/NATIVE-002.md содержит независимые checks и ограничения. Следующий TASK/merge не выполнялись; пользователь оценивает один iOS экран. NATIVE-001-R1 остаётся приостановленным.
+
+Итог2026-10-13: DONE в Inbox scope, main merge14a9778 и интеграционные core20/iOS build PASS. Концепт дальнейшего интерфейса одобрен пользователем, календарные функции будущие. Реальный iPhone не проверен; macOS-R1 отдельно PAUSED.

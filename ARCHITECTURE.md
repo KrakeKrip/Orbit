@@ -1,4 +1,4 @@
-Приоритет2026-10-13: iOS target NATIVE-002 разрешён пользователем до завершения macOS R1. Reuse закоммиченного OrbitCore; отдельный небольшой iOS View, без переноса macOS UI. R1 CLI parser в iOS не вызывается; stores независимы. Историческое условие «после приёмки NATIVE-001» ниже заменено актуальным решением.
+Актуально2026-10-13: NATIVE-002 интегрирован как локальная iOS база (apple/OrbitIOS + OrbitCore), main build/core20 PASS. NATIVE-001-R1 остаётся открытым для macOS CLI, iOS его resolver не вызывает. Выдан только NATIVE-003: nullable plannedDate civil string, explicit save и обратная совместимость прежних stores. Sync/server/полный календарь не входит. Историческое условие «NATIVE-002 после приёмки NATIVE-001» ниже заменено прямым разрешением пользователя iOS первым.
 
 # Orbit — активная native архитектура
 
@@ -16,7 +16,7 @@ Local store path централизован; для tests/GUI review явно о
 
 ## Tooling и проверка
 
-Окружение подтверждено2026-10-13: /Applications/Xcode.app (Xcode27.0), macOS/iOS SDK, iOS27.0 runtime и список Simulator devices доступны. System xcode-select остаётся CLT; для команд использовать DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer, без глобального переключения. Native iOS app и реальный iPhone пока не проверены.
+Окружение подтверждено2026-10-13: /Applications/Xcode.app (Xcode27.0), macOS/iOS SDK, iOS27.0 runtime и список Simulator devices доступны. System xcode-select остаётся CLT; для команд использовать DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer, без глобального переключения. Native iOS Inbox проверен build/Simulator в NATIVE-002, реальный iPhone пока не проверен; baseline iOS17 runtime не проверен.
 
 swift build / swift test на macOS, disk reopen regression; реальный GUI create/complete/reopen/relaunch на собственном synthetic store. Compile/unit/UI/device evidence разделять. Web full gates на каждом native задании не запускать, пока web код не меняется.
 

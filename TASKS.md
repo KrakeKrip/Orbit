@@ -1,13 +1,16 @@
 # Orbit — активная очередь
 
-2026-10-13: по решению пользователя iOS первый; web очередь PAUSED.
+2026-10-13: iOS первым, local-first. Пользователь одобрил направление концепта: удобство задач Todoist и календаря TickTick, Today Список/Расписание; Календарь День/3 дня/Месяц, без Недели. Концепт не равен реализованному календарю.
 
-| TASK | Статус | Результат |
+| TASK | Статус | Один результат |
 | --- | --- | --- |
-| NATIVE-001 | NEEDS_FIXES / PAUSED | macOS технический Inbox проверен; R1 explicit store path открыт |
-| NATIVE-002 | TECHNICAL_REVIEW_PASS / WAITING_FOR_VISUAL_APPROVAL | iPhone Inbox, локальный core, Simulator и визуальное review одного экрана |
-| NATIVE-003 | TODO, не назначен | следующий небольшой результат после оценки iOS экрана |
+| NATIVE-001 | NEEDS_FIXES / PAUSED | macOS R1 explicit store path открыт; core/macOS base импортирован как зависимость NATIVE-002, задача macOS не DONE |
+| NATIVE-002 | DONE (Inbox scope) | локальный iOS Inbox, build/core20, Simulator evidence; main merge14a9778, интеграционные build/core20 PASS; реальный iPhone не проверен |
+| NATIVE-003 | ASSIGNED | назначить/изменить/убрать дату task в iOS Inbox, disk persistence и сохранность старых stores |
+| NATIVE-004 | TODO (план, не назначен) | время и длительность задачи |
+| NATIVE-005 | TODO (план, не назначен) | Сегодня: реальный список задач на дату |
+| NATIVE-006 | TODO (план, не назначен) | календарный День с временной сеткой |
+| NATIVE-007 | TODO (план, не назначен) | 3 дня на общей шкале времени |
+| NATIVE-008 | TODO (план, не назначен) | календарный Месяц |
 
-Только tasks/NATIVE-002.md разрешён сейчас. Никаких серверных работ и расширения функций. macOS дизайн позже. NATIVE-001 не объявлен принятым, промежуточный source base bd22a87 разрешён пользователем; main не содержит native implementation, merge не выполнялся.
-
-Review2026-10-13: product0a351a2 в task/NATIVE-002 проверен независимо (iOS build, core20, собственный Simulator add/complete/relaunch); подробности reports/NATIVE-002.md в task worktree. Merge не выполнен, дизайн пользователь пока не одобрил; следующая реализация не выдана.
+Сейчас выдан только tasks/NATIVE-003.md, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-003. Следующие строки — ориентир, их scope уточняется перед выдачей; не реализовывать очередь целиком. Реальная навигация добавляется с готовыми экранами, без фиктивных календарных вкладок. Нативные проекты/rename/delete/backup — отдельные последующие маленькие задания; не забыты. Web/сервера/sync PAUSED. macOS дизайн позже, macOS-R1 не потерян.
