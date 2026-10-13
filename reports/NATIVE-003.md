@@ -1,6 +1,6 @@
 # NATIVE-003 — независимый review Codex
 
-2026-10-13. Вердикт NEEDS_FIXES: один scoped R1 [P2]. Product HEAD c75df417a6f144581ea827f8b2341d20cd73ab8e; assignment/review base fb338c440128d71779b84ffb425911e150d2d42d. Root/branch/HEAD совпадают, clean tree, cumulative diff --check PASS;6 product Swift файлов в разрешённом scope. Merge/push не выполнялись.
+2026-10-13. Первичный вердикт NEEDS_FIXES: один scoped R1 [P2]. Итоговый review после коррекции: PASS; подробности ниже. Product HEAD c75df417a6f144581ea827f8b2341d20cd73ab8e; assignment/review base fb338c440128d71779b84ffb425911e150d2d42d. Root/branch/HEAD совпадают, clean tree, cumulative diff --check PASS;6 product Swift файлов в разрешённом scope. Merge/push не выполнялись.
 
 ## Независимые проверки
 
@@ -22,3 +22,11 @@ TaskPlannedDate.swift: civilDateString/date(fromCivilDateString) принима�
 ## Передача
 
 Одна небольшая коррекция того же TASK/ветки. После неё core tests + build и точная probe/regression; нет причины повторять весь legacy GUI сценарий или web gates. NATIVE-004 не назначен. Результаты/report/exits сохранены вне product tree; собственные temp fixtures/DerivedData/probes удаляются после сохранения evidence. Реальный iPhone не проверен.
+
+## Повторное review R1 — PASS, 2026-10-13
+
+Исправленный product SHA7baab2c7d45998a73f13896ac0f9318b2e9fe15c. Коррекция ровно helper+test+executor report, tree clean, cumulative diff --check PASS. Оба adapter используют внутренний Gregorian calendar с timeZone supplied calendar; локальный день не подменяется UTC day. Сигнатуры/schema/model/strings/store/iOS UI не изменены.
+
+Регрессия проверяет не только roundtrip, но точные Gregorian instant: BuddhistUTC canonical2026-10-13 -> noonUTC1791892800; IslamicCivilMoscow -> noonMSK1791882000. Прежний Moscow/NewYork midnight/day case сохранён. В независимом повторе DEVELOPER_DIR Xcode27: swift test31/31 exit0, iOS Simulator build в собственном чистом DerivedData CODE_SIGNING_ALLOWED=NO exit0/BUILD SUCCEEDED. Единственный build warning — штатное отсутствие AppIntents metadata.
+
+R1 закрыт. NATIVE-003 принят в scope даты задачи; исходная legacy upgrade/disk regression проверена независимо в предыдущем раунде, schema с тех пор не менялась. GUI change/реальный iPhone/runtime save failure остаются непроверенными, не заявляются GUI PASS. Повтор GUI не назначался для pure fix. Локальная интеграция после review; push/deploy не разрешались и не выполнялись.

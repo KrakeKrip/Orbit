@@ -13,3 +13,5 @@ Scope только apple/Orbit/Sources/OrbitCore/TaskPlannedDate.swift, Tests/Or
 Checks: DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test, swift build; один iOS Simulator build CODE_SIGNING_ALLOWED=NO. Новый GUI/full legacy прогон не нужен для этого pure fix; GUI change остаётся честно непроверенным. Web/npm/DB/auth/E2E не запускать. В executor report явно отличить invalid-before-save tests от непроверенной runtime save failure/rollback ветки.
 
 Обычный новый scoped commit, git diff --check, clean tree. Полный report только reports/NATIVE-003-executor.md; чат4–5коротких строк статус/fullSHA/итог/checks/report. Остановиться до review; NATIVE-004/macOS-R1 не начинать. Без merge/push/amend/rebase/reset/stash/deploy, main/чужие worktrees/CRM/3000/hooks/xcode-select/signing не менять.
+
+Итог2026-10-13: PASS на product7baab2c. Независимо core31/iOS build PASS; Gregorian/local timezone regression закрыта. reports/NATIVE-003.md.
