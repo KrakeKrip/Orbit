@@ -30,10 +30,12 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   (переключает на живую вкладку, не создаёт задачу). День пересчитывается
   на appear/active и не реже раза в минуту; без сетки/overdue/quick-add.
 - `OrbitIOS/CalendarDayScreen.swift` + `OrbitIOS/DayTimelineView.swift` —
-  вкладка «Календарь» (NATIVE-007B): выбранный civil день (local today по
+  вкладка «Календарь» (NATIVE-007B/007C): выбранный civil день (local today по
   умолчанию), Prev/Next ±1 день с guard 1900–2199, «Сегодня», compact
-  DatePicker; untimed-задачи отдельной областью «Без времени» (те же
-  InboxRowView/actions); ниже — сетка 00:00–24:00 (64pt/час, initial scroll
+  DatePicker; untimed-задачи отдельной **collapsible областью «Без времени»**
+  (NATIVE-007C: default до 3 строк + «Ещё N», раскрытие в bounded scroll
+  ~⅓ экрана, «Свернуть», сброс при смене дня) (те же InboxRowView/actions);
+  ниже — сетка 00:00–24:00 (64pt/час, initial scroll
   к 08:00) с timed-блоками из `TaskDayProjector.project`: side-by-side
   overlap через локальный greedy lane layout (touching segments не
   конфликтуют), continuation-маркеры ↑/↓ из флагов проекции (exact midnight

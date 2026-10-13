@@ -14,6 +14,7 @@ struct CalendarDayScreen: View {
     @State private var pickerDate: Date = TaskPlannedDate.date(
         fromCivilDateString: TaskDaySelection.currentDay()
     ) ?? Date()
+    @State private var untimedExpanded = false
 
     private let gregorianNoon: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
@@ -23,6 +24,8 @@ struct CalendarDayScreen: View {
 
     private static let rangeLowerBound = TaskPlannedDate.date(fromCivilDateString: "1900-01-01") ?? Date.distantPast
     private static let rangeUpperBound = TaskPlannedDate.date(fromCivilDateString: "2199-12-31") ?? Date.distantFuture
+
+    private static let collapsedUntimedLimit = 3
 
     var body: some View {
         NavigationStack {
@@ -61,6 +64,10 @@ struct CalendarDayScreen: View {
                 // keeps the day view in sync after external changes. The
                 // manually selected day is never reset here.
                 model.reload()
+            }
+            .onChange(of: selectedDay) { _, _ in
+                // Day switch collapses the untimed area (TASK: до 3 строк).
+                untimedExpanded = false
             }
         }
     }
@@ -145,15 +152,19 @@ struct CalendarDayScreen: View {
         pickerDate = TaskPlannedDate.date(fromCivilDateString: day, calendar: gregorianNoon) ?? pickerDate
     }
 
-    // MARK: - Untimed area (bounded so 12+ tasks never push the grid away)
+    // MARK: - Untimed area (collapsible so many tasks never push the grid)
 
-    /// The untimed list is capped to a bounded, independently scrollable
-    /// region: with many untimed tasks the date controls and the day grid
-    /// stay visible, and every untimed task remains reachable by scrolling
-    /// inside this region. No store/cache/paging logic.
+    /// Default collapsed: up to 3 untimed rows; «Ещё N» expands into a
+    /// bounded, independently scrollable region (~⅓ of useful screen height)
+    /// where every untimed task stays reachable. Expanding/collapsing never
+    /// writes, never recreates the timeline, and never resets the grid
+    /// scroll position. The selected day keeps its own untimed rows.
     private var untimedSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if projection.untimedTaskIDs.isEmpty {
+        let ids = projection.untimedTaskIDs
+        let overLimit = ids.count > Self.collapsedUntimedLimit
+
+        return VStack(alignment: .leading, spacing: 0) {
+            if ids.isEmpty {
                 Text("Без времени — нет задач")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -167,9 +178,11 @@ struct CalendarDayScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.top, 6)
+
                 ScrollView {
+                    let visible = untimedExpanded ? ids : Array(ids.prefix(Self.collapsedUntimedLimit))
                     VStack(spacing: 0) {
-                        ForEach(projection.untimedTaskIDs, id: \.self) { id in
+                        ForEach(visible, id: \.self) { id in
                             if let task = untimedTask(withID: id) {
                                 InboxRowView(task: task, model: model) {
                                     presentation = .date(task)
@@ -180,11 +193,42 @@ struct CalendarDayScreen: View {
                         }
                     }
                 }
-                .frame(maxHeight: 180)
+                .frame(maxHeight: untimedRegionHeight(count: ids.count))
+                .clipped()
+
+                if overLimit {
+                    Button {
+                        untimedExpanded.toggle()
+                    } label: {
+                        Label(
+                            untimedExpanded ? "Свернуть" : "Ещё \(ids.count - Self.collapsedUntimedLimit)",
+                            systemImage: untimedExpanded ? "chevron.up" : "chevron.down"
+                        )
+                        .font(.footnote.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.orbitAccent)
+                    .accessibilityIdentifier("untimed-toggle")
+                    .accessibilityLabel(
+                        untimedExpanded ? "Свернуть без времени" : "Ещё \(ids.count - Self.collapsedUntimedLimit) без времени"
+                    )
+                }
             }
             Divider()
         }
         .background(Color(.systemBackground))
+    }
+
+    /// ~⅓ of the useful screen height for the expanded region; the collapsed
+    /// height fits exactly the visible rows plus the «Ещё N» control.
+    private func untimedRegionHeight(count: Int) -> CGFloat {
+        if untimedExpanded {
+            return 260
+        }
+        let visibleRows = min(count, Self.collapsedUntimedLimit)
+        return CGFloat(visibleRows) * 56 + (count > Self.collapsedUntimedLimit ? 44 : 0)
     }
 
     // MARK: - Errors
