@@ -8,7 +8,14 @@ struct OrbitIOSApp: App {
         case openFailed(String)
     }
 
+    private enum Tab: Hashable {
+        case today
+        case inbox
+    }
+
+    @Environment(\.scenePhase) private var scenePhase
     @State private var launch: Launch
+    @State private var selectedTab: Tab = .today
 
     init() {
         _launch = State(initialValue: Self.openLaunchStore())
@@ -30,7 +37,27 @@ struct OrbitIOSApp: App {
         WindowGroup {
             switch launch {
             case .ready(let model):
-                InboxScreen(model: model)
+                TabView(selection: $selectedTab) {
+                    TodayScreen(model: model) {
+                        selectedTab = .inbox
+                    }
+                    .tabItem {
+                        Label("Сегодня", systemImage: "sun.max")
+                    }
+                    .tag(Tab.today)
+                    InboxScreen(model: model)
+                        .tabItem {
+                            Label("Входящие", systemImage: "tray")
+                        }
+                        .tag(Tab.inbox)
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    // Returning to the foreground re-reads the shared store so
+                    // both tabs reflect persisted truth.
+                    if phase == .active {
+                        model.reload()
+                    }
+                }
             case .openFailed(let message):
                 StoreFailureView(message: message)
             }
