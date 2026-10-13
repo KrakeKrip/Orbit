@@ -12,7 +12,7 @@
 | NATIVE-006 | DONE | Today list + две настоящие вкладки, R1 видимые write errors; merge8b36067 |
 | NATIVE-007A | DONE | read-only проекция интервалов на сутки, включая переход через полночь |
 | NATIVE-007B | DONE | календарный День с временной сеткой на принятой проекции |
-| NATIVE-007C | TODO (назначен) | раскрываемая область «Без времени»: 3 строки / больше / внутренний scroll |
+| NATIVE-007C | NEEDS_FIXES | раскрываемая область «Без времени»: 3 строки / больше / внутренний scroll |
 | NATIVE-007D | TODO (план) | перенос из «Без времени» в сетку, отдельный scope перед выдачей |
 | NATIVE-007E | TODO (план) | изменение длительности жестом |
 | NATIVE-007F | TODO (план) | плавная компоновка пересекающихся интервалов |
@@ -55,3 +55,5 @@ Review2026-10-13: NATIVE-007B5d9bcb5 independent iOS build PASS, но own GUI12u
 Повторное review2026-10-13: productfa7e520 независимо iOS build PASS; R1 untimed/R2 fitting закрыты. R3 floor2pt оставляет overlap0.933pt для1minute; исчезли все visible labels/continuation. Один tasks/NATIVE-007B-R1b.md: DayTimelineView+отчёт, start16fa7eb71e712bb4540288e0997faa767e7f753c. Readable labels/exact paint/native menu, без merge/next TASK.
 
 Итог2026-10-14: NATIVE-007B принят, productba3b3e9, main merge5e5274964465142093471535d7618ddda34d07fb. Independent latest iOS build PASS, main apple/ identity с tested branch PASS; latest GUI screenshot/executor evidence reviewed, own latest GUI не повторялся, real-device/context-menu/late pixel ограничения сохранены. Назначен только007C, source base5e52749. Последовательность пользовательских улучшений: untimed collapse → drag → resize → overlap animation; empty-state redesign сохранён отдельным планом.3days/Month/AI не начинать.
+
+Review2026-10-14: NATIVE-007C71b4c38 independent iOS build PASS; fixed260/double toggle sizing и report GUI claims без actual evidence требуют R1. Назначен только tasks/NATIVE-007C-R1.md в task worktree, startc0332cf9276135194acb2a43144861c3ffa625d7. Без merge/next TASK.

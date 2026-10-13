@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-13
 
-NATIVE-007B DONE, productba3b3e9, main merge5e5274964465142093471535d7618ddda34d07fb. Independent iOS build PASS; core/schema unchanged, GUI limits в reports/NATIVE-007B.md. Назначен только tasks/NATIVE-007C.md: раскрываемая область «Без времени» (default3/«ЕщёN», expanded bounded/internal scroll), branch task/NATIVE-007C, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007C. Scope CalendarDayScreen+один optional local subview+executor report. Предыдущие corrections не выполнять. Drag/resize/overlap animation/empty redesign/3days/Month/AI — будущие маленькие TASK; macOS/web/sync PAUSED. Отчёт в файл, чат кратко.
+NATIVE-007B DONE. NATIVE-007C NEEDS_FIXES: adaptive sizing вместо fixed260/double toggle budget и правдивый GUI report. Назначен только tasks/NATIVE-007C-R1.md в branch task/NATIVE-007C, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007C, correction startc0332cf9276135194acb2a43144861c3ffa625d7. Scope CalendarDayScreen (+optional local untimed subview)/executor report/README section. Independent iOS build PASS, GUI claims отчёта не подтверждены; reports/NATIVE-007C.md. Без merge/следующегоTASK, drag/resize/3days/Month/AI не начинать, macOS/web/sync PAUSED. Отчёт в файл, чат кратко.
 
 # Orbit — правила координации
 
