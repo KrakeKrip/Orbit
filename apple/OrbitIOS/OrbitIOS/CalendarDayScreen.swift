@@ -15,6 +15,13 @@ struct CalendarDayScreen: View {
         fromCivilDateString: TaskDaySelection.currentDay()
     ) ?? Date()
     @State private var untimedExpanded = false
+    /// Measured height of the whole calendar content area (date controls +
+    /// untimed region + timeline); the expanded untimed viewport derives from
+    /// it instead of fixed screen math, so rotation and window changes adapt.
+    @State private var contentHeight: CGFloat = 0
+    /// Natural height of all untimed rows in the expanded region, measured
+    /// after layout — keeps a short expanded list from becoming an empty area.
+    @State private var expandedContentHeight: CGFloat?
 
     private let gregorianNoon: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
@@ -26,6 +33,16 @@ struct CalendarDayScreen: View {
     private static let rangeUpperBound = TaskPlannedDate.date(fromCivilDateString: "2199-12-31") ?? Date.distantFuture
 
     private static let collapsedUntimedLimit = 3
+
+    /// Rough height of one collapsed row (44pt controls + vertical padding).
+    /// Only a sizing estimate for the expanded viewport floor; real rows
+    /// always render at their natural, Dynamic-Type-aware height.
+    private static let estimatedCompactRowHeight: CGFloat = 56
+    /// Reserves subtracted from the measured content height before the
+    /// expanded untimed viewport may take its ~⅓ share.
+    private static let dayControlsReserve: CGFloat = 64
+    private static let toggleReserve: CGFloat = 56
+    private static let gridReserve: CGFloat = 220
 
     var body: some View {
         NavigationStack {
@@ -51,6 +68,15 @@ struct CalendarDayScreen: View {
             .navigationTitle("Календарь")
             .navigationBarTitleDisplayMode(.large)
             .background(Color(.systemBackground))
+            .background(
+                // Adaptive sizing source: the real height of this content area
+                // (safe areas applied), never fixed UIScreen values.
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { contentHeight = proxy.size.height }
+                        .onChange(of: proxy.size.height) { _, height in contentHeight = height }
+                }
+            )
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):
@@ -66,8 +92,10 @@ struct CalendarDayScreen: View {
                 model.reload()
             }
             .onChange(of: selectedDay) { _, _ in
-                // Day switch collapses the untimed area (TASK: до 3 строк).
+                // Day switch collapses the untimed area and drops its scroll
+                // state; the timeline subtree keeps its identity and offset.
                 untimedExpanded = false
+                expandedContentHeight = nil
             }
         }
     }
@@ -154,11 +182,13 @@ struct CalendarDayScreen: View {
 
     // MARK: - Untimed area (collapsible so many tasks never push the grid)
 
-    /// Default collapsed: up to 3 untimed rows; «Ещё N» expands into a
-    /// bounded, independently scrollable region (~⅓ of useful screen height)
-    /// where every untimed task stays reachable. Expanding/collapsing never
-    /// writes, never recreates the timeline, and never resets the grid
-    /// scroll position. The selected day keeps its own untimed rows.
+    /// Default collapsed: up to 3 untimed rows at their natural height — no
+    /// ScrollView, no reserved empty rows, no blind clipping (multiline and
+    /// Dynamic Type rows stay fully readable). «Ещё N» expands into a bounded,
+    /// independently scrollable viewport capped near ⅓ of the measured content
+    /// height; the toggle is a sibling below the rows, so its 44pt budget is
+    /// laid out exactly once. Expanding/collapsing never writes, never
+    /// recreates the timeline, and never resets the grid scroll position.
     private var untimedSection: some View {
         let ids = projection.untimedTaskIDs
         let overLimit = ids.count > Self.collapsedUntimedLimit
@@ -179,41 +209,18 @@ struct CalendarDayScreen: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 6)
 
-                ScrollView {
-                    let visible = untimedExpanded ? ids : Array(ids.prefix(Self.collapsedUntimedLimit))
+                if untimedExpanded {
+                    expandedUntimedRegion(ids: ids)
+                } else {
                     VStack(spacing: 0) {
-                        ForEach(visible, id: \.self) { id in
-                            if let task = untimedTask(withID: id) {
-                                InboxRowView(task: task, model: model) {
-                                    presentation = .date(task)
-                                } onEditInterval: {
-                                    presentation = .interval(task)
-                                }
-                            }
+                        ForEach(ids.prefix(Self.collapsedUntimedLimit), id: \.self) { id in
+                            untimedRow(id)
                         }
                     }
                 }
-                .frame(maxHeight: untimedRegionHeight(count: ids.count))
-                .clipped()
 
                 if overLimit {
-                    Button {
-                        untimedExpanded.toggle()
-                    } label: {
-                        Label(
-                            untimedExpanded ? "Свернуть" : "Ещё \(ids.count - Self.collapsedUntimedLimit)",
-                            systemImage: untimedExpanded ? "chevron.up" : "chevron.down"
-                        )
-                        .font(.footnote.weight(.medium))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.orbitAccent)
-                    .accessibilityIdentifier("untimed-toggle")
-                    .accessibilityLabel(
-                        untimedExpanded ? "Свернуть без времени" : "Ещё \(ids.count - Self.collapsedUntimedLimit) без времени"
-                    )
+                    untimedToggleButton(count: ids.count)
                 }
             }
             Divider()
@@ -221,14 +228,77 @@ struct CalendarDayScreen: View {
         .background(Color(.systemBackground))
     }
 
-    /// ~⅓ of the useful screen height for the expanded region; the collapsed
-    /// height fits exactly the visible rows plus the «Ещё N» control.
-    private func untimedRegionHeight(count: Int) -> CGFloat {
-        if untimedExpanded {
-            return 260
+    private func untimedRow(_ id: UUID) -> some View {
+        Group {
+            if let task = untimedTask(withID: id) {
+                InboxRowView(task: task, model: model) {
+                    presentation = .date(task)
+                } onEditInterval: {
+                    presentation = .interval(task)
+                }
+            }
         }
-        let visibleRows = min(count, Self.collapsedUntimedLimit)
-        return CGFloat(visibleRows) * 56 + (count > Self.collapsedUntimedLimit ? 44 : 0)
+    }
+
+    /// Bounded expanded region: every untimed row of the day, scrolling
+    /// internally only when they exceed the adaptive viewport (below).
+    /// `.id(selectedDay)` gives this region alone a fresh scroll offset on a
+    /// day switch; the timeline is a separate subtree and never remounts.
+    private func expandedUntimedRegion(ids: [UUID]) -> some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                ForEach(ids, id: \.self) { id in
+                    untimedRow(id)
+                }
+            }
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { expandedContentHeight = proxy.size.height }
+                        .onChange(of: proxy.size.height) { _, height in expandedContentHeight = height }
+                }
+            )
+        }
+        .id(selectedDay)
+        .frame(height: min(expandedViewportCap, expandedContentHeight ?? expandedViewportCap))
+    }
+
+    private func untimedToggleButton(count: Int) -> some View {
+        Button {
+            untimedExpanded.toggle()
+            if untimedExpanded {
+                expandedContentHeight = nil
+            }
+        } label: {
+            Label(
+                untimedExpanded ? "Свернуть" : "Ещё \(count - Self.collapsedUntimedLimit)",
+                systemImage: untimedExpanded ? "chevron.up" : "chevron.down"
+            )
+            .font(.footnote.weight(.medium))
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.orbitAccent)
+        .accessibilityIdentifier("untimed-toggle")
+        .accessibilityLabel(
+            untimedExpanded ? "Свернуть без времени" : "Ещё \(count - Self.collapsedUntimedLimit) без времени"
+        )
+    }
+
+    /// Expanded viewport cap from the measured content height: target ~⅓ of
+    /// it, at least enough for four compact rows on a normal iPhone, never
+    /// more than what remains after the date controls, the toggle row and the
+    /// grid reserve. Small windows or large Dynamic Type show fewer rows and
+    /// scroll inside the region instead of losing the grid.
+    private var expandedViewportCap: CGFloat {
+        let toggle = projection.untimedTaskIDs.count > Self.collapsedUntimedLimit ? Self.toggleReserve : 0
+        let remaining = contentHeight - Self.dayControlsReserve - toggle - Self.gridReserve
+        let target = max(
+            CGFloat(Self.collapsedUntimedLimit + 1) * Self.estimatedCompactRowHeight,
+            contentHeight / 3
+        )
+        return max(0, min(target, remaining))
     }
 
     // MARK: - Errors
