@@ -1,44 +1,45 @@
-# NATIVE-002 — локальный Inbox на iPhone
+# NATIVE-002 — первый iOS Inbox
 
-**PREPARED / WAITING_FOR_NATIVE_001**, 2026-10-13. Это подготовленное задание, не разрешение параллельно переписывать незавершённый NATIVE-001.
+ASSIGNED, 2026-10-13. Прямое решение пользователя: iOS прежде macOS-дизайна. NATIVE-001-R1 приостановлен; NATIVE-001 не объявлен DONE и не влит. Предыдущее WAITING_FOR_NATIVE_001 отменено этим решением.
 
-## Одна цель / обязательная база
+## База и одна цель
 
-Запустить тот же принятый локальный Inbox как настоящее iOS-приложение: add/complete/reopen, данные сохраняются после завершения процесса. Без новых функций, сервера и синхронизации.
+Ветка task/NATIVE-002, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-002. Source/review base bd22a87ddf35defcdcf4b31cfa970bf4fdcb05cd; assignment HEAD записать до работы. Используется закоммиченный native core из c3172a8, который Codex проверил: build/test20 и обычный GUI persistence PASS, но macOS argument parser R1 открыт. Не считать эту базу принятой полностью.
 
-Зависимость: NATIVE-001 должен пройти независимый review и локальную интеграцию в main. Сейчас NATIVE-001 имеет незакоммиченную apple/ работу, поэтому точный starting/review SHA и отдельный worktree NATIVE-002 координатор фиксирует ПОСЛЕ его приёмки. Не копировать WIP из чужого worktree и не начинать от c2b1fb9, где shared core ещё не принят. При передаче без утверждённой базы вернуть WAITING_FOR_NATIVE_001, не реализовывать соседний TASK.
+Один результат: красивый и удобный iPhone Inbox с add/complete/reopen и локальным сохранением, запущенный в Simulator. Никаких новых функций. После этого пользователь оценивает один экран до развития других экранов.
 
-Будущая ветка task/NATIVE-002, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-002; создавать/назначать их будет Codex после приёмки зависимости. Before edits проверить root/branch/clean tree и записать полный starting SHA.
+## Scope
 
-## Малый scope
+Только apple/OrbitIOS/: минимальный OrbitIOS.xcodeproj, shared scheme OrbitIOS, app entry, один iOS Inbox, README; reports/NATIVE-002-executor.md. .gitignore только собственные iOS build/generated артефакты. Local Swift package dependency на apple/Orbit product OrbitCore. Не переносить/переписывать macOS UI и не выделять shared UI framework; отдельный небольшой iOS View/state допустим. Core/store/model/macOS и корневые coordination docs не менять. Если нужен product core fix — сообщить конкретный BLOCKED, не делать его молча.
 
-Минимальный iOS app target в apple/OrbitIOS/ (OrbitIOS.xcodeproj, shared scheme, app entry, Inbox UI/конфигурация локального store, короткий README), local package dependency на существующий apple/Orbit OrbitCore. Если Inbox SwiftUI view из NATIVE-001 переносим — минимально вынести только этот view в shared UI target apple/Orbit, чтобы обе платформы использовали его; не переписывать store/model и не вводить новый architecture framework. Допустимы только необходимые Package.swift/macOS app entry wiring изменения для общего view. Если выделение UI оказывается большой переработкой, сообщить evidence координатору до расширения scope.
+Bundle id local.orbit.ios, baseline iOS17+, SwiftUI, SwiftData. Без новых dependencies/project generators, signing team, Apple ID/entitlements. Build для Simulator CODE_SIGNING_ALLOWED=NO. Xcode через DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer; system xcode-select не менять.
 
-Не генерировать сразу большой multiplatform shell/screens/settings/sync engine. Не устанавливать project generators/новые dependencies, не менять system xcode-select, Apple ID, signing teams/entitlements. Для Simulator достаточен локальный build без device signing. Bundle id для прототипа local.orbit.ios, схема OrbitIOS; iOS17+ baseline, сборка текущим SDK не доказывает запуск на всех старых версиях.
+## Один экран и визуальное направление
 
-## Поведение
+Русский интерфейс. В духе Todoist, адаптированный к iOS: крупный аккуратный «Входящие», спокойный системный фон, простые разделители строк, круглый control завершения слева, читаемый title справа. Один сдержанный coral/red accent для главного действия. Системная типографика и Dynamic Type; без тяжёлых карточек, градиентов, боковой панели, технических labels и пустых будущих tabs.
 
-Reuse OrbitCore validation/model/store из принятого NATIVE-001: stable UUID, title, completion/reopen, explicit save/rollback. Только локальная SwiftData, cloudKitDatabase:.none. Нет account/login/HTTP; данные iPhone и Mac независимы, обмен ими НЕ обещать.
+Компактный composer снизу в safe area: поле и очевидное действие добавления, keyboard submit. Не перекрывать последнюю строку/клавиатуру. Тексты ошибок рядом с действием, draft сохраняется. Открытые и завершённые отдельными компактными секциями, завершённые с менее ярким title и возможностью reopen. Empty state короткий, без декоративных иллюстраций. Control не менее44pt, а11y label содержит действие и title задачи; текст не обрезать молча, перенос длинных названий.
 
-На iPhone: Входящие, native field+Добавить, keyboard submit, open/completed задачи и отдельный control completion. Safe areas/soft keyboard/Dynamic Type/accessibility labels; не фиксировать desktop ширину. Empty/error состояния реальные. Draft очищается только после успешного save, error не теряет ввод; startup не стирает store и не подменяет его пустым memory store. Без rename/delete/projects/scheduling/notifications/search.
+Сохранить screenshots empty/populated/completed + keyboard для визуального review. Только этот экран; дизайн macOS не переделывать. Не заявлять пользовательское одобрение дизайна заранее.
 
-Store в собственном app sandbox/Application Support, не web DB и не macOS personal store. Для review synthetic данные только в специально созданном Simulator/app sandbox; не сбрасывать чужие устройства или личные данные. После kill/relaunch тот же установленный app читает те же id/title/completion. Не переустанавливать/удалять app между persistence проверками.
+## Локальное поведение
 
-## Окружение подтверждено координатором 2026-10-13
+Reuse существующий OrbitCore для validation/model/add/complete/reopen: trim1..500Unicode scalars, UUID/title/createdAt/completedAt, save/rollback. Store только внутри собственного iOS app sandbox/Application Support. Создать directory, передать явный URL OrbitTaskStore; НЕ вызывать macOS CLI resolveStoreURL, не принимать --store-path и не исправлять R1 здесь. Ошибка открытия → понятное состояние ошибки, без стирания/пустого memory fallback. CloudKit .none уже в core, никакого HTTP/login/sync.
 
-/Applications/Xcode.app, Xcode27.0, iOS27.0 SDK и Simulator runtime доступны; simctl list runtimes/devices вне песочницы exit0. System xcode-select остаётся CommandLineTools — перед командами использовать DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer. Ошибка CoreSimulatorService внутри песочницы не означает отсутствие компонента; использовать штатный permission flow, не чинить систему/хуки обходом.
+Draft очищается только после успешной записи; отказ сохраняет ввод и показывает error. Read failure не превращает подтверждённую write в неуспех. Синхронные MainActor operations достаточно; без лишних async controllers/repositories. Mac/iPhone stores независимы — не обещать синхронизацию.
 
-## Целевые проверки
+Вне scope: rename/delete/projects/dates/Today/Upcoming/notifications/search/settings/sync/macOS-дизайн/TestFlight/AppStore/device signing.
 
-1. xcodebuild -project apple/OrbitIOS/OrbitIOS.xcodeproj -scheme OrbitIOS -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath <own tmp dir> CODE_SIGNING_ALLOWED=NO build (путь/schema уточнить только под реальное созданное дерево).
-2. swift test для существующего apple/Orbit core с Xcode DEVELOPER_DIR; swift build macOS product после shared UI wiring. Не повторять web/DB/auth/E2E suites.
-3. Собственный временный iPhone Simulator текущего runtime (не erase существующего). Build→install→launch. Реально выполнить add через кнопку и keyboard, complete/reopen, terminate→launch; данные/id/состояние сохранились. Пустой ввод отвергается, ошибка не утверждает success. Проверить доступный screen/keyboard layout и одну увеличенную system text настройку на своём simulator, без переписывания пользовательских настроек.
-4. Зафиксировать GUI evidence: screenshots до/после relaunch и точные действия/выводы в отчёте. Build не равен GUI PASS. Если UI tools недоступны — честное PARTIALLY_VERIFIED с конкретным ограничением, не придуманный PASS. Persistence Swift unit из NATIVE-001 не заменяет проверку app sandbox на iOS.
+## Соразмерные checks
 
-Реальный iPhone не обязательный gate этого TASK и НЕ ПРОВЕРЕН до отдельной проверки; signing/App Store/TestFlight/deploy не выполнять. Очистить свои derivedData/screenshots вне tracked files/собственный temporary simulator после evidence; не удалять stores пользователя и не выключать чужие booted simulators.
+1. xcodebuild -project apple/OrbitIOS/OrbitIOS.xcodeproj -scheme OrbitIOS -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath <own tmp> CODE_SIGNING_ALLOWED=NO build. Записать фактические Xcode/SDK.
+2. swift test в apple/Orbit с DEVELOPER_DIR (20 существующих core tests). Web/npm/DB/auth/E2E gates не запускать. Store не изменяется — не строить большой новый fault suite.
+3. Собственный временный iPhone Simulator текущего runtime: install/launch, add по кнопке и keyboard, complete/reopen, terminate→launch БЕЗ reinstall между шагами; подтвердить прежние title/состояния на диске. Проверить blank rejection, длинный title, keyboard/safe areas и увеличенный text размер на своём Simulator.
+4. Реальный GUI/screenshots обязательны для утверждения GUI PASS. Сохранить evidence в отдельном outputs каталоге, указать абсолютные пути в отчёте. Если доступен только build — честно PARTIALLY_VERIFIED/ограничение, не придуманный GUI PASS. Не включать png/build/stores в product commit.
+5. git diff --check, scope/clean tree. Одного штатного прогона достаточно, повторять только при изменении/падении.
 
-## Завершение
+Не erase чужие simulators/данные, не менять личные device/settings. После evidence остановить только свой Simulator, можно удалить только свой временный device/derivedData, screenshots сохранить. Реальный iPhone отдельно НЕ ПРОВЕРЕН.
 
-Обычный scoped commit, git diff --check и clean tree. Подробный reports/NATIVE-002-executor.md: starting/latest SHA, files, exact commands/exits, Xcode/runtime/destination, actual GUI/disk evidence, непроверенное/limitations. В чат только4–5коротких строк: READY_FOR_REVIEW/BLOCKED/честный статус, полныйSHA, итог, checks, путь отчёта. Остановиться до review Codex; NATIVE-003/web TASK-009A не начинать.
+## Передача
 
-Без merge/push/amend/rebase/reset/stash/deploy, main/другие worktrees/CRM/localhost3000/hooks changes. No secrets/signing profiles/real personal data. Код платформы не даёт готовой синхронизации.
+Обычный scoped commit. Подробный reports/NATIVE-002-executor.md: start/latest SHA, files, команды/exits, реальные GUI/persistence evidence, screenshots, ограничения. В чат4–5 коротких строк: статус, полный SHA, итог/checks, путь отчёта. Остановиться до Codex review и оценки пользователем экрана. NATIVE-003/macOS-R1 не выполнять. Без merge/push/amend/rebase/reset/stash/deploy, main/другие worktrees/CRM/3000/hooks не трогать.
