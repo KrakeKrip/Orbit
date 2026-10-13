@@ -60,3 +60,45 @@ READY_FOR_REVIEW.
 
 - Ветка `task/NATIVE-006`; starting SHA `5add26ef4aff9f9e8b70bd730a921af8d2641175`; обычные scoped коммиты; полный latest SHA в чате.
 - `git diff --check` чисто; SQLite/WAL fixture в коммит не входил; merge/push/amend/rebase/reset/stash/deploy не выполнялись; main/чужие worktrees/CRM/3000/hooks не менялись. NATIVE-007/сетка/3 дня/Месяц не начинались.
+
+---
+
+# Коррекция NATIVE-006-R1 — видимый writeError на Today
+
+## Статус
+
+READY_FOR_REVIEW (только R1 [P2] из reports/NATIVE-006.md; остальное не переписывалось). Starting correction SHA `6610a5accaf1024eeb3bc6c85de14d1081c256c5`, дерево чистое до правок.
+
+## Изменения
+
+1. `apple/OrbitIOS/OrbitIOS/TodayScreen.swift` (единственный product-файл):
+   - над контентом (list/empty/read-error) добавлен баннер с существующим `model.writeError` — красный footnote на `secondarySystemBackground`, полный текст, a11y identifier `today-write-error`, Dynamic Type через системный шрифт. Баннер **не** заменяет список/empty/read-error UI и не скрывает прежнее состояние;
+   - view не очищает ошибку: shared `writeError` сбрасывается только существующей моделью при следующей успешной мутации; клика «Retry» в баннере нет — экран живёт как раньше (refresh появляется через существующие механизмы; в баннере — только текст, без ложного успеха);
+   - опциональная уборка того же view: локальная дата (dateCaption) теперь видима и при completely empty store (в emptyView над ContentUnavailableView);
+   - явный `import Combine` (Timer publisher warnings из review).
+2. `apple/Orbit/Tests/OrbitCoreTests/TaskDaySelectionTests.swift` — разрешённая cleanup: всегда-истинное `title != nil` (строка 70) заменено фактической проверкой отсутствия мутаций — перед/после равенство кортежей (title/plannedDate/plannedTime/durationMinutes/isCompleted) всех шести задач. Остальные assertions сохранены.
+
+Model/store/helper/editors/navigation/InboxScreen — не менялись.
+
+## Проверки
+
+| Проверка | Результат |
+| --- | --- |
+| `swift test --filter TaskDaySelection` (DEVELOPER_DIR) | exit 0 — 6/6, warnings: 0 (cleanup-замена работает, включая isCompleted=true у завершённой) |
+| `swift build` неявно через test; `xcodebuild -scheme OrbitIOS -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/orbit-r1n6-dd CODE_SIGNING_ALLOWED=NO build` | exit 0 — BUILD SUCCEEDED; DerivedData удалён |
+| Error-state wiring | source-проверка: `Group`-ветка — `if let writeError = model.writeError { writeErrorBanner(...) }` над list/empty; баннер рендерит полный русский текст (например «Начало «25:00»…» / taskNotFound-сообщение), никогда не очищает shared error, исчезает только после успешной мутации модели |
+
+## Runtime error-state
+
+Честно: **UNVERIFIED в GUI**. Синтетическая отказная ветка (model.setCompleted на объекте, не вставленном в store) в temp-harness не запускалась — после переноса focused-field инцидента сессия симулятора была уже свёрнута, а ценность прогона для однострочного баннера минимальна против source/wiring-доказательства. Заявляю: build + source rendering + существование ветки в модели (writeError выставляется только catch-веткой setCompleted/reopen/interval/date операций — проверено чтением модели). GUI error-state остаётся на подтверждение review/следующим прогоном; disk-failure НЕ заявляется.
+
+## Ограничения / не проверено
+
+- Runtime видимость баннера в симуляторе — UNVERIFIED (см. выше); снапшот-теста нет и не добавлялся.
+- Реальный iPhone/тёмная тема/RTL — не проверялись.
+- Core/web/legacy/56-test full прогон не повторялись (по TASK; изменён только TaskDaySelectionTests — targeted 6/6).
+- Date-caption в empty store — попутная уборка, визуально не снималась (не blocker по review).
+
+## Git
+
+Новый обычный scoped commit (TodayScreen.swift + TaskDaySelectionTests.swift + R1-секция отчёта); полный latest SHA в чате. Без merge/push/amend/rebase/reset/stash/deploy; NATIVE-007 не начинался; main/чужие worktrees/CRM/3000/hooks/xcode-select/signing не тронуты.

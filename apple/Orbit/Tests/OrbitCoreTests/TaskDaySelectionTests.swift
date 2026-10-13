@@ -61,13 +61,21 @@ struct TaskDaySelectionTests {
         // Original relative order preserved.
         let indices = selected.map { task in tasks.firstIndex { $0 === task }! }
         #expect(indices == indices.sorted())
-        // No mutations.
+        // No mutations: fields equal their construction values.
         let todayTimed = selected.first { $0.title == "Сегодня с временем" }!
         #expect(todayTimed.plannedDate == "2026-10-13")
         #expect(todayTimed.plannedTime == "09:30")
         #expect(todayTimed.durationMinutes == 45)
         #expect(todayTimed.isCompleted == false)
-        #expect(tasks.allSatisfy { $0.title != nil })
+        let expected = [
+            "Вчера 2026-10-12 – – false",
+            "Сегодня без времени 2026-10-13 – – false",
+            "Сегодня с временем 2026-10-13 09:30 45 false",
+            "Сегодня завершённая 2026-10-13 – – true",
+            "Завтра 2026-10-14 – – false",
+            "Без даты – – – false",
+        ]
+        #expect(tasks.map { "\($0.title) \($0.plannedDate ?? "–") \($0.plannedTime ?? "–") \($0.durationMinutes.map(String.init) ?? "–") \($0.isCompleted)" } == expected)
     }
 
     @Test("invalid or nil day yields an empty result")

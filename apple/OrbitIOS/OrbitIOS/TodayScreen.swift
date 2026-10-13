@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import OrbitCore
 
@@ -17,13 +18,18 @@ struct TodayScreen: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if model.listError != nil {
-                    listErrorView
-                } else if model.tasks.isEmpty || todayTasks.isEmpty {
-                    emptyView
-                } else {
-                    taskList
+            VStack(spacing: 0) {
+                if let writeError = model.writeError {
+                    writeErrorBanner(writeError)
+                }
+                Group {
+                    if model.listError != nil {
+                        listErrorView
+                    } else if model.tasks.isEmpty || todayTasks.isEmpty {
+                        emptyView
+                    } else {
+                        taskList
+                    }
                 }
             }
             .navigationTitle("Сегодня")
@@ -106,19 +112,44 @@ struct TodayScreen: View {
         }
     }
 
+    /// A failed complete/reopen (or another write) on this screen: the shared
+    /// model keeps `writeError` until the next successful mutation, so the
+    /// reason stays visible next to the content without masking the list,
+    /// empty state or a read failure. The view never clears it.
+    private func writeErrorBanner(_ message: String) -> some View {
+        Text(message)
+            .font(.footnote)
+            .foregroundStyle(.red)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color(.secondarySystemBackground))
+            .accessibilityIdentifier("today-write-error")
+    }
+
     private var emptyView: some View {
-        ContentUnavailableView {
-            Label("На сегодня задач нет", systemImage: "sun.max")
-        } description: {
-            if model.tasks.isEmpty {
-                Text("Добавьте задачу во Входящих.")
-            } else {
-                Text("Задачи с датой \(dateCaption) отсутствуют.")
+        VStack(spacing: 0) {
+            // Local day stays visible even on a completely empty store.
+            Text(dateCaption)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+            ContentUnavailableView {
+                Label("На сегодня задач нет", systemImage: "sun.max")
+            } description: {
+                if model.tasks.isEmpty {
+                    Text("Добавьте задачу во Входящих.")
+                } else {
+                    Text("Задачи с датой \(dateCaption) отсутствуют.")
+                }
+            } actions: {
+                Button("Добавить во Входящих") { onGoToInbox() }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orbitAccent)
             }
-        } actions: {
-            Button("Добавить во Входящих") { onGoToInbox() }
-                .buttonStyle(.borderedProminent)
-                .tint(.orbitAccent)
+            Spacer(minLength: 0)
         }
     }
 
