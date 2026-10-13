@@ -29,3 +29,11 @@ TaskDayProjectionTests.swift:166–169: два сегмента имеют од�
 Сохранить проверку end-priority и overlaps. Настоящий UUID tie проверить на двух задачах с одинаковыми start/end и явно фиксированными различными UUID, входной порядок обратный ожидаемому. Не менять верный product sort под ошибочный тест и не ослаблять tests до count-only.
 
 Scope/checks — tasks/NATIVE-007A-R1.md. Одна коррекция двух файлов, без UI/новой архитектуры. NATIVE-007A не принят, merge/push/deploy отсутствуют;007B не назначен.
+
+## Повторное review R1/R2 — PASS
+
+2026-10-13, product SHA `addcfd3d3e434136ab4787cf94cd239fe5e78edc`. Source diff ровно helper boundary flag, targeted tests и отчёт; geometry/next-day exclusion/accepted end/comparator не менялись. Exact-midnight flag теперь проверяет positive end minutes:23:30/30 и00:00/1440 false, positive overnight случаи true. Старый ошибочный UUID assertion убран при сохранённых end-priority/overlap checks. Новый genuine tie test использует одинаковые start/end, fixed разные UUID и reverse input, ожидаемый UUID order/repeat stable.
+
+Независимо: DEVELOPER_DIR Xcode27 swift test --filter TaskDayProjection exit0,11/11; iOS Simulator build на новых own DerivedData/CODE_SIGNING_ALLOWED=NO exit0,BUILD SUCCEEDED (только AppIntents metadata warning). Cumulative diff --check PASS/clean tree. Полный66 suite прошёл на исходном product в предыдущем review; после scoped fix выполнены релевантные11 без повторов legacy/web/GUI. Нельзя обозначать этот раунд полным67test прогоном — он targeted.
+
+R1/R2 закрыты. NATIVE-007A принят как read-only foundation, без календарного UI. Следующий007B — отдельный ограниченный Day grid UI;3дня/Месяц/drag/новый quick-add не назначены. Push/deploy отсутствуют. Логи сохранены в NATIVE-007A-review-evidence.
