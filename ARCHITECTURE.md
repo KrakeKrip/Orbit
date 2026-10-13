@@ -26,3 +26,7 @@ swift build / swift test на macOS, disk reopen regression; реальный GU
 - Явный disk URL/configuration: https://developer.apple.com/documentation/swiftdata/modelconfiguration
 - Отключение sync: https://developer.apple.com/documentation/swiftdata/modelconfiguration/cloudkitdatabase-swift.struct/none
 - Simulator требует Xcode: https://help.apple.com/xcode/mac/current/en.lproj/devfd9e28378.html
+
+## Временной интервал, assignment NATIVE-004
+
+Два nullable поля plannedTime HH:mm и durationMinutes1..1440 требуют plannedDate, pair всегда оба nil либо оба установлены. Это wall-clock/civil interval, без UTC instants/timezone offsets. Pure helper derive end; crossing midnight допускается, end не хранится и должен помещаться в1900–2199. Прежний clearDate очищает pair одним save, date move сохраняет валидную pair. Shared core+tests сейчас, iOS editor отдельным NATIVE-005, calendar rendering позже. Любая additive schema проверяется по own fixture реальной предыдущей версии, без reset stores.
