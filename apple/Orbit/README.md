@@ -32,6 +32,22 @@ Gregorian 1900–2199 отвергается. Derived end (может перех
 не хранится — считает pure-хелпер `TaskTimeInterval.end` целочисленной civil
 арифметикой без Calendar/TimeZone/DST. UI-редактор — отдельный будущий TASK.
 
+## Проекция интервала на календарный день (NATIVE-007A, read-only)
+
+`TaskDayProjector.project(day:in:)` — pure-проекция на один выбранный civil
+день `YYYY-MM-DD` для будущей сетки 00:00–24:00 (NATIVE-007B). Результат
+`TaskDayProjection`: `untimedTaskIDs` (задачи дня без пары, в исходном
+порядке) и `timedSegments` — half-open сегменты `[start, end)` в минутах
+0…1440 с флагами перехода через полночь. Same-day интервал даёт сегмент
+`start…end` на своём дне; overnight — `start…1440` + `continuesIntoNextDay`
+на дне старта и положительный `0…end` + `continuesFromPreviousDay` на
+следующем; end ровно в полночь не создаёт zero-length сегмент. Невалидные
+partial/вне-диапазона интервалы исключаются (не чинятся); завершённые задачи
+не выбрасываются; пересекающиеся остаются отдельными сегментами (без
+lanes/columns); сортировка start/end/UUID-строка. Derived end не хранится;
+невалидный день или день вне 1900–2199 → пустой результат. Никаких мутаций,
+новых UUID или Calendar/TimeZone конверсий.
+
 ## Требования
 
 - macOS 14+ (собрано и проверено на текущей системе с Xcode 27.0 / macOS 27.0 SDK).
