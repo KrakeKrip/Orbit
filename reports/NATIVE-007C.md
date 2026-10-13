@@ -13,3 +13,16 @@ CalendarDayScreen.swift:226–231: expanded всегда260pt, без досту
 README изменён вне исходного scope, но описание feature малое и полезное; для correction явно разрешены исправления только этого раздела. Не новая blocker/task.
 
 Задание tasks/NATIVE-007C-R1.md: одна UI sizing/scroll correction+правдивый report/README, targeted build/own synthetic GUI, no full suites. Без merge/next TASK/push.
+
+
+## Cumulative review R1/R2/R3, 2026-10-14 — NEEDS_FIXES (финальный icon fix)
+
+Product9cefc4d7979eac7f6bbb264043e069d2d9c666cd, base9618c7e. Source scope CalendarDayScreen/CompactCalendarTaskRow/DayTimeline menu relocation, README/executor docs; core/store/projector unchanged. Diff --check clean, tree clean. Latest independent generic iOS Simulator build own DerivedData — результат в evidence ios-final-build.log. Core/web/full tests здесь не запускались.
+
+Проверено чтением: real content sizing заменяетfixed260/double toggle; локальная .id(selectedDay) только expandeduntimed; compact source row безverticalinfinity, circle внутри tintedrect, no date/icons; menu переносит реальные timedsourcecallbacks и leaves paint/lanes unchanged. Просмотрен latest executor screenshot09: компактные3rows/lefttoggle/secondarycounter/standalone menu bar absent, screenshot10 и executor claims — отдельный evidence, own latest GUI не повторялся. Старые GUI claims отозваны в report. Scroll/gridoffset/contextlongpress/реальныйiPhone остаются UNVERIFIED; build не доказательство gestures.
+
+R4 [P2], подтверждённая source ошибка: CalendarDayScreen untimedToggleButton поворачивает SF chevron.up.chevron.down на180°. Симметричный pair визуально остаётся тем же. Прямое решение пользователя: collapsed upper↑ lower↓; expanded upper↓ lower↑. Render ДВА отдельных SF Image с conditional direction, не whole-pair rotation. Fixed source UUID/collapse/AX44/callbacks сохранить.
+
+Дополнительная маленькая sizing гигиена в том же CalendarDayScreen: при<=3tasks gutter использует Color.clear с fixedwidth и без height; Color flexible по vertical и может брать surplusheight, что противоречит compact1–3/no пустаяarea. Runtime manifestation в данном round не воспроизводился, это source risk. Убрать verticalflexibility только этого placeholder (zero/natural fixedheight) без изменения rowhit/panel/grid. Собственная GUI1task по возможности, никаких новых большогоlayoutрефакторинга.
+
+После этого один targeted iOS build+два fresh screenshots state icon, без full повторов, stop independent acceptance. NATIVE-MIN5 подготовлен отдельно, branch/worktree до acceptance007C не выданы. Header может использовать native two-line fallback; новую итерацию его дизайна без пользователя не открываем.
