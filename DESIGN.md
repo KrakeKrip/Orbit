@@ -37,3 +37,7 @@ Clock-action у датированной строки открывает native 
 Следующие отдельные gestures: перенос задачи из untimed в calendar, resize краёв интервала, плавное раздвижение overlaps. Preview/time hint/snap/haptic — уточнить в соответствующих TASK; изменения сохраняются после отпускания, промежуточный drag не является записью. Не входят в007C.
 
 Пустой Today позже: небольшая коралловая точка на тонкой орбите, «Сегодня свободно», «Можно выдохнуть — или запланировать что-нибудь.», действие «Открыть Входящие» до появления настоящего quick-add на Today; русский формат даты. Это согласованный дизайн, пока не implemented.
+
+### Компактный верх календаря — прямое уточнение 2026-10-14
+
+Убрать large title «Календарь» и лишний верхний title gap: сразу компактная дата/navigation под native safe area. Untimed — маленькие тонированные capsules с completion circle+однострочным title, без повторной даты и видимых clock/calendar actions в каждой строке. Full title/edit actions доступны через existing sheet/native menu. Interaction targets >=44pt при компактном paint, accessibility sizes адаптируются. Большие строки остаются обычным list Today/Inbox. Это новый scope007C-R2; адаптивное раскрытие/internal scroll сохраняются, gesture/calendar modes сюда не входят.

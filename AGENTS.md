@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-13
 
-NATIVE-007B DONE. NATIVE-007C NEEDS_FIXES: adaptive sizing вместо fixed260/double toggle budget и правдивый GUI report. Назначен только tasks/NATIVE-007C-R1.md в branch task/NATIVE-007C, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007C, correction startc0332cf9276135194acb2a43144861c3ffa625d7. Scope CalendarDayScreen (+optional local untimed subview)/executor report/README section. Independent iOS build PASS, GUI claims отчёта не подтверждены; reports/NATIVE-007C.md. Без merge/следующегоTASK, drag/resize/3days/Month/AI не начинать, macOS/web/sync PAUSED. Отчёт в файл, чат кратко.
+NATIVE-007B DONE. NATIVE-007C R1 implementation46e755d получена, independent acceptance ещё не выполнена. По прямому уточнению пользователя назначен только tasks/NATIVE-007C-R2.md: компактный верх без large «Календарь», untimed chips без повторной даты/постоянных иконок, full list строки Today/Inbox сохраняются. Branch task/NATIVE-007C, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007C, starting120e2cf28eb2ecc61d42998c4c3e506291ff48e5. Scope CalendarDayScreen+optional local row/report/README section; сохранить R1 adaptive/collapse. Итоговый review cumulative R1+R2, без merge/next TASK. Drag/resize/3days/Month/AI не начинать; macOS/web/sync PAUSED. Отчёт в файл, чат кратко.
 
 # Orbit — правила координации
 

@@ -57,3 +57,5 @@ Review2026-10-13: NATIVE-007B5d9bcb5 independent iOS build PASS, но own GUI12u
 Итог2026-10-14: NATIVE-007B принят, productba3b3e9, main merge5e5274964465142093471535d7618ddda34d07fb. Independent latest iOS build PASS, main apple/ identity с tested branch PASS; latest GUI screenshot/executor evidence reviewed, own latest GUI не повторялся, real-device/context-menu/late pixel ограничения сохранены. Назначен только007C, source base5e52749. Последовательность пользовательских улучшений: untimed collapse → drag → resize → overlap animation; empty-state redesign сохранён отдельным планом.3days/Month/AI не начинать.
 
 Review2026-10-14: NATIVE-007C71b4c38 independent iOS build PASS; fixed260/double toggle sizing и report GUI claims без actual evidence требуют R1. Назначен только tasks/NATIVE-007C-R1.md в task worktree, startc0332cf9276135194acb2a43144861c3ffa625d7. Без merge/next TASK.
+
+Уточнение2026-10-14: пользователь просит компактный верх/chips по IMG_1210. R1 implementation46e755d ещё не принята; назначен один tasks/NATIVE-007C-R2.md поверх неё, start120e2cf28eb2ecc61d42998c4c3e506291ff48e5. Итоговый независимый review cumulative R1+R2. Без merge,007D не выдан.
