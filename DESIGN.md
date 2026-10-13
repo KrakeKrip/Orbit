@@ -45,3 +45,7 @@ Clock-action у датированной строки открывает native 
 ### Дополнение пользователя: плотность и меню, 2026-10-14
 
 Compact untimed rows сблизить; completion circle внутри общей tinted rounded capsule, раздельный completion/title hit без overlap и >=44pt. Большую панель «Задачи с временем» убрать; маленькое native ellipsis меню около даты → «Задачи дня» предоставляет existing actions для реальных timed segments выбранного дня, сохраняет доступ к tiny/dense tasks. Сетка/модель не перерабатываются, большие list rows остаются Today/Inbox. Scope007C-R3 после обычного R2 commit; cumulative review всех corrections, не самостоятельная приёмка R2.
+
+### Последнее уточнение IMG_1218/1219, 2026-10-14
+
+Untimed visual cards ещё ниже (ориентир24–28pt normal font14–15/circle12–14), rounded rectangles с modest6–8corners вместо больших capsules. Expand/collapse chevrons в левом gutter над hour ruler, рядом с первыми rows — именно это красным отмечено в IMG_1219; ellipsis menu около даты не переносить. «ЕщёN» secondary подпись подcards по их левомукраю, без самостоятельной широкой button-panel. Не создавать новую задачу: уточнение текущего007C-R3; реальные hit regions/AX не перекрываются, Dynamic Type сохраняется.
