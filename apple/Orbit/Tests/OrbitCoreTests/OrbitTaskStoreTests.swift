@@ -282,4 +282,225 @@ struct OrbitTaskStoreTests {
         #expect(afterAssign.count == 2)
         #expect(afterAssign.map(\.id) == [dated?.id, plain?.id].compactMap { $0 })
     }
+
+    // MARK: - Time interval (NATIVE-004)
+
+    @Test("new tasks are created without a time interval")
+    @MainActor
+    func createdWithoutInterval() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "Без интервала")
+        #expect(task.plannedTime == nil)
+        #expect(task.durationMinutes == nil)
+    }
+
+    @Test("setPlannedInterval assigns, changes, repeats and clears on a dated task")
+    @MainActor
+    func intervalAssignChangeClear() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "С интервалом")
+        try store.setPlannedDate("2026-10-20", for: task.id)
+
+        try store.setPlannedInterval(plannedTime: "09:30", durationMinutes: 90, for: task.id)
+        var stored = try store.tasks()
+        #expect(stored.count == 1)
+        #expect(stored.first?.plannedTime == "09:30")
+        #expect(stored.first?.durationMinutes == 90)
+        #expect(stored.first?.plannedDate == "2026-10-20")
+        #expect(stored.first?.isCompleted == false)
+        #expect(stored.first?.title == "С интервалом")
+
+        try store.setPlannedInterval(plannedTime: "10:15", durationMinutes: 45, for: task.id)
+        stored = try store.tasks()
+        #expect(stored.first?.plannedTime == "10:15")
+        #expect(stored.first?.durationMinutes == 45)
+
+        // Repeating the same interval is safe and does not duplicate the task.
+        try store.setPlannedInterval(plannedTime: "10:15", durationMinutes: 45, for: task.id)
+        stored = try store.tasks()
+        #expect(stored.count == 1)
+        #expect(stored.first?.plannedTime == "10:15")
+
+        // Clearing keeps the date.
+        try store.setPlannedInterval(plannedTime: nil, durationMinutes: nil, for: task.id)
+        stored = try store.tasks()
+        #expect(stored.first?.plannedTime == nil)
+        #expect(stored.first?.durationMinutes == nil)
+        #expect(stored.first?.plannedDate == "2026-10-20")
+    }
+
+    @Test("incomplete pair is rejected before mutation and keeps old values")
+    @MainActor
+    func incompletePairRejected() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "Задача")
+        try store.setPlannedDate("2026-10-20", for: task.id)
+        try store.setPlannedInterval(plannedTime: "08:00", durationMinutes: 60, for: task.id)
+
+        #expect(throws: TaskTimeIntervalError.incompletePair(time: "08:30", durationMinutes: nil)) {
+            try store.setPlannedInterval(plannedTime: "08:30", durationMinutes: nil, for: task.id)
+        }
+        #expect(throws: TaskTimeIntervalError.incompletePair(time: nil, durationMinutes: 45)) {
+            try store.setPlannedInterval(plannedTime: nil, durationMinutes: 45, for: task.id)
+        }
+        let stored = try store.tasks()
+        #expect(stored.first?.plannedTime == "08:00")
+        #expect(stored.first?.durationMinutes == 60)
+    }
+
+    @Test("invalid time or duration values are rejected and keep the old pair")
+    @MainActor
+    func invalidValuesRejected() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "Задача")
+        try store.setPlannedDate("2026-10-20", for: task.id)
+        try store.setPlannedInterval(plannedTime: "07:00", durationMinutes: 30, for: task.id)
+
+        #expect(throws: TaskTimeIntervalError.invalidTime("24:00")) {
+            try store.setPlannedInterval(plannedTime: "24:00", durationMinutes: 30, for: task.id)
+        }
+        #expect(throws: TaskTimeIntervalError.invalidTime("9:00")) {
+            try store.setPlannedInterval(plannedTime: "9:00", durationMinutes: 30, for: task.id)
+        }
+        #expect(throws: TaskTimeIntervalError.invalidDuration(0)) {
+            try store.setPlannedInterval(plannedTime: "07:30", durationMinutes: 0, for: task.id)
+        }
+        #expect(throws: TaskTimeIntervalError.invalidDuration(1441)) {
+            try store.setPlannedInterval(plannedTime: "07:30", durationMinutes: 1441, for: task.id)
+        }
+        #expect(throws: TaskTimeIntervalError.invalidDuration(Int.max)) {
+            try store.setPlannedInterval(plannedTime: "07:30", durationMinutes: Int.max, for: task.id)
+        }
+        let stored = try store.tasks()
+        #expect(stored.first?.plannedTime == "07:00")
+        #expect(stored.first?.durationMinutes == 30)
+    }
+
+    @Test("interval without a planned date is rejected; undated clear is allowed")
+    @MainActor
+    func intervalRequiresDate() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "Без даты")
+        #expect(throws: TaskTimeIntervalError.missingDate) {
+            try store.setPlannedInterval(plannedTime: "10:00", durationMinutes: 30, for: task.id)
+        }
+        let stored = try store.tasks()
+        #expect(stored.first?.plannedTime == nil)
+        #expect(stored.first?.durationMinutes == nil)
+
+        // Clearing an absent interval on an undated task is a safe no-op.
+        try store.setPlannedInterval(plannedTime: nil, durationMinutes: nil, for: task.id)
+        #expect(try store.tasks().first?.plannedTime == nil)
+    }
+
+    @Test("clearing the date clears the pair in the same save; date change preserves it")
+    @MainActor
+    func dateInterplay() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "С датой и интервалом")
+        try store.setPlannedDate("2026-10-20", for: task.id)
+        try store.setPlannedInterval(plannedTime: "22:30", durationMinutes: 120, for: task.id)
+
+        // Moving the date keeps the valid interval.
+        try store.setPlannedDate("2026-10-21", for: task.id)
+        var stored = try store.tasks()
+        #expect(stored.first?.plannedDate == "2026-10-21")
+        #expect(stored.first?.plannedTime == "22:30")
+        #expect(stored.first?.durationMinutes == 120)
+
+        // Clearing the date wipes the interval too.
+        try store.setPlannedDate(nil, for: task.id)
+        stored = try store.tasks()
+        #expect(stored.first?.plannedDate == nil)
+        #expect(stored.first?.plannedTime == nil)
+        #expect(stored.first?.durationMinutes == nil)
+    }
+
+    @Test("date move that pushes the derived end out of range is rejected atomically")
+    @MainActor
+    func dateMoveEndOutOfRange() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "Граничная задача")
+        try store.setPlannedDate("2199-12-30", for: task.id)
+        try store.setPlannedInterval(plannedTime: "23:30", durationMinutes: 60, for: task.id)
+
+        // 2199-12-31 23:30 + 60 → 2200-01-01 00:30 → outside the product range.
+        #expect(throws: TaskTimeIntervalError.endOutOfRange) {
+            try store.setPlannedDate("2199-12-31", for: task.id)
+        }
+        let stored = try store.tasks()
+        #expect(stored.first?.plannedDate == "2199-12-30")
+        #expect(stored.first?.plannedTime == "23:30")
+        #expect(stored.first?.durationMinutes == 60)
+    }
+
+    @Test("interval end crossing midnight is accepted by the store")
+    @MainActor
+    func midnightIntervalAccepted() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "Ночная задача")
+        try store.setPlannedDate("2026-10-13", for: task.id)
+        try store.setPlannedInterval(plannedTime: "23:30", durationMinutes: 90, for: task.id)
+        let stored = try store.tasks()
+        #expect(stored.first?.plannedTime == "23:30")
+        #expect(stored.first?.durationMinutes == 90)
+    }
+
+    @Test("setPlannedInterval for unknown id throws taskNotFound")
+    @MainActor
+    func intervalUnknownId() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let missingId = UUID()
+        #expect(throws: OrbitStoreError.taskNotFound(id: missingId)) {
+            try store.setPlannedInterval(plannedTime: "10:00", durationMinutes: 30, for: missingId)
+        }
+    }
+
+    @Test("disk reopen keeps the time interval with the date")
+    @MainActor
+    func intervalDiskReopen() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let storeURL = dir.appendingPathComponent("Orbit.store")
+
+        var firstStore: OrbitTaskStore? = try OrbitTaskStore(storeURL: storeURL)
+        let task = try firstStore?.addTask(title: "Интервал на диске", now: Date(timeIntervalSince1970: 1_760_000_000))
+        try firstStore?.setPlannedDate("2026-10-21", for: task?.id ?? UUID())
+        try firstStore?.setPlannedInterval(plannedTime: "23:30", durationMinutes: 90, for: task?.id ?? UUID())
+        firstStore = nil
+
+        let reopened = try OrbitTaskStore(storeURL: storeURL)
+        let all = try reopened.tasks()
+        #expect(all.count == 1)
+        #expect(all.first?.plannedDate == "2026-10-21")
+        #expect(all.first?.plannedTime == "23:30")
+        #expect(all.first?.durationMinutes == 90)
+    }
 }

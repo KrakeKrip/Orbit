@@ -58,6 +58,9 @@ public final class OrbitTaskStore {
     /// Assigns, changes or clears (`nil`) the civil planned date of one task.
     /// Invalid values are rejected before any mutation; completion, title, id
     /// and list order are never touched, and tasks with a date stay in the Inbox.
+    /// Clearing the date also clears the time interval in the same save; a date
+    /// change keeps an existing interval only when the resulting derived end
+    /// stays inside the product calendar range.
     public func setPlannedDate(_ plannedDate: String?, for id: UUID) throws {
         if let plannedDate, !TaskPlannedDate.isValid(plannedDate) {
             throw TaskPlannedDateError.invalid(plannedDate)
@@ -66,7 +69,64 @@ public final class OrbitTaskStore {
         guard let task = try context.fetch(descriptor).first else {
             throw OrbitStoreError.taskNotFound(id: id)
         }
+        if let plannedDate,
+            let time = task.plannedTime, let duration = task.durationMinutes,
+            TaskTimeInterval.end(plannedDate: plannedDate, plannedTime: time, durationMinutes: duration) == nil
+        {
+            throw TaskTimeIntervalError.endOutOfRange
+        }
         task.setPlannedDate(plannedDate)
+        if plannedDate == nil {
+            task.setPlannedInterval(plannedTime: nil, durationMinutes: nil)
+        }
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
+        }
+    }
+
+    /// Assigns, changes or clears (nil/nil) the time interval of one task as a
+    /// complete pair on top of its existing planned date. The whole candidate
+    /// is validated before any property changes; one explicit save with
+    /// rollback on failure. Completion, title, id and order are untouched.
+    public func setPlannedInterval(
+        plannedTime: String?,
+        durationMinutes: Int?,
+        for id: UUID
+    ) throws {
+        if !TaskTimeInterval.isCompletePair(time: plannedTime, durationMinutes: durationMinutes) {
+            throw TaskTimeIntervalError.incompletePair(
+                time: plannedTime,
+                durationMinutes: durationMinutes
+            )
+        }
+        if let plannedTime, !TaskTimeInterval.isValidTime(plannedTime) {
+            throw TaskTimeIntervalError.invalidTime(plannedTime)
+        }
+        if let durationMinutes, !TaskTimeInterval.isValidDuration(durationMinutes) {
+            throw TaskTimeIntervalError.invalidDuration(durationMinutes)
+        }
+        let descriptor = FetchDescriptor<OrbitTask>(predicate: #Predicate { $0.id == id })
+        guard let task = try context.fetch(descriptor).first else {
+            throw OrbitStoreError.taskNotFound(id: id)
+        }
+        if let plannedTime, let durationMinutes {
+            guard let plannedDate = task.plannedDate else {
+                throw TaskTimeIntervalError.missingDate
+            }
+            guard
+                TaskTimeInterval.end(
+                    plannedDate: plannedDate,
+                    plannedTime: plannedTime,
+                    durationMinutes: durationMinutes
+                ) != nil
+            else {
+                throw TaskTimeIntervalError.endOutOfRange
+            }
+        }
+        task.setPlannedInterval(plannedTime: plannedTime, durationMinutes: durationMinutes)
         do {
             try context.save()
         } catch {
