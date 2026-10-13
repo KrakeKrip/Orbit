@@ -34,7 +34,7 @@ Review/source base `aaa01d42cd5196dff246a863270d61c2a2472766` — принят00
 
 Один iOS Simulator build CODE_SIGNING_ALLOWED=NO/own DerivedData/DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer. Core не меняется: full67/legacy/7200oracle/web/DB/auth не повторять. Локальный lane алгоритм проверить по source и фиксированным overlapping fixtures; own tmp небольшой probe допустим, новый test target не добавлять.
 
-Собственный temporary iPhone Simulator, real-core synthetic fixture до launch (как007B predecessor006, без личных данных): selected today untimed;09:00/60;09:30/60 overlap; adjacent10:30/30; completed; yesterday23:30/90 continuation; today23:30/30 exact midnight. GUI проверить:
+Собственный temporary iPhone Simulator, real-core synthetic fixture до launch (как007B predecessor006, без личных данных): selected today untimed;09:00/60;09:30/60 overlap; adjacent10:30/30; completed; yesterday23:30/90 continuation; today23:00/120 positive overnight; today23:30/30 exact midnight. GUI проверить:
 1. Три вкладки/общие UUID, Calendar date/Prev/Next/Today/picker. Untimed отдельно, блоки в правильных часах. Все24часа доступны, верх/низ не обрезаны.
 2. Overlapping9/9:30 реально видны оба; adjacent10:30 не получает ложного overlap. Next day показывает правильное positive continuation; exact-midnight не даёт zero block/стрелку.
 3. Tap block открывает нужный сохранённый interval/title; изменённый interval отражён после Save, Cancel без записи. Complete/reopen через доступный context menu/row, ошибка model не скрыта. Inbox/Today сохраняют прежние flows.
