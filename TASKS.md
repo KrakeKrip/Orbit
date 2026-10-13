@@ -8,13 +8,13 @@
 | NATIVE-002 | DONE (Inbox scope) | локальный iOS Inbox, build/core20, Simulator evidence; main merge14a9778, интеграционные build/core20 PASS; реальный iPhone не проверен |
 | NATIVE-003 | DONE | назначить/изменить/убрать дату task в iOS Inbox, disk persistence и сохранность старых stores |
 | NATIVE-004 | DONE | shared core интервала: core50/iOS build/legacy upgrade/7200 civil oracle PASS; UI отдельно |
-| NATIVE-005 | TODO (план, не назначен) | небольшой iOS editor времени/длительности |
+| NATIVE-005 | ASSIGNED | небольшой iOS editor времени/длительности, три UI файла, без core/calendar |
 | NATIVE-006 | TODO (план, не назначен) | Сегодня: реальный список задач на дату |
 | NATIVE-007 | TODO (план, не назначен) | календарный День с временной сеткой |
 | NATIVE-008 | TODO (план, не назначен) | 3 дня на общей шкале времени |
 | NATIVE-009 | TODO (план, не назначен) | календарный Месяц |
 
-NATIVE-004 принят и локально интегрирован; активного assignment сейчас нет. Следующий NATIVE-005 — небольшой iOS editor, пока не выдан. NATIVE-003 закрыт. Время/длительность разбиты на core и отдельный editor, чтобы не наращивать TASK. Следующие строки — ориентир, их scope уточняется перед выдачей; не реализовывать очередь целиком. Реальная навигация добавляется с готовыми экранами, без фиктивных календарных вкладок. Нативные проекты/rename/delete/backup — отдельные последующие маленькие задания; не забыты. Web/сервера/sync PAUSED. macOS дизайн позже, macOS-R1 не потерян.
+NATIVE-004 принят и локально интегрирован; назначен только tasks/NATIVE-005.md, task/NATIVE-005, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-005. NATIVE-003 закрыт. Время/длительность разбиты на core и отдельный editor, чтобы не наращивать TASK. Следующие строки — ориентир, их scope уточняется перед выдачей; не реализовывать очередь целиком. Реальная навигация добавляется с готовыми экранами, без фиктивных календарных вкладок. Нативные проекты/rename/delete/backup — отдельные последующие маленькие задания; не забыты. Web/сервера/sync PAUSED. macOS дизайн позже, macOS-R1 не потерян.
 
 Первичное review NATIVE-0032026-10-13: core30/iOS build/legacy upgrade PASS, один R1 в Gregorian UI adapters. Выдан tasks/NATIVE-003-R1.md в task/NATIVE-003; остальные функции не назначены. Полный review в reports/NATIVE-003.md task worktree.
 
@@ -23,3 +23,5 @@ NATIVE-004 принят и локально интегрирован; актив
 Назначение2026-10-13: NATIVE-004 только3product core files + targeted tests, без UI. Изначальные будущие номера005–008 были планом без assignment; уточнены005editor/006Today/007Day/008Three/009Month. Последующие файлы/ветки не выданы.
 
 Итог2026-10-13: NATIVE-004 DONE, product40f1b20 независимо core50/iOS build/legacy upgrade/7200 civil oracle PASS; локальный mergebd4984eba8a9e23b748bf017499e7bd3b1f41952. Native sources main совпадают с протестированной веткой. UI editor/реальный iPhone/runtime save failure не проверялись; NATIVE-005 не назначен, push/deploy отсутствуют.
+
+Назначение2026-10-13: NATIVE-005 — только iOS interval editor поверх принятого core (source base a56137473b186efe5b87d4ae9c46881f092262df). Следующий NATIVE-006/Today не назначен. По уточнению пользователя после принятия задачи сразу выдавать следующий небольшой prompt.
