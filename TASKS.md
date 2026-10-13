@@ -11,7 +11,7 @@
 | NATIVE-005 | DONE | iOS interval editor, R1 title закрыт, build/GUI evidence; локальный merge6d12ae2 |
 | NATIVE-006 | DONE | Today list + две настоящие вкладки, R1 видимые write errors; merge8b36067 |
 | NATIVE-007A | DONE | read-only проекция интервалов на сутки, включая переход через полночь |
-| NATIVE-007B | NEEDS_FIXES (layout) | календарный День с временной сеткой на принятой проекции |
+| NATIVE-007B | NEEDS_FIXES (R1b) | календарный День с временной сеткой на принятой проекции |
 | NATIVE-008 | TODO (план, не назначен) | 3 дня на общей шкале времени |
 | NATIVE-009 | TODO (план, не назначен) | календарный Месяц |
 
@@ -46,3 +46,5 @@ Review2026-10-13: NATIVE-007A1e53a77 independently core66 PASS, но точна�
 Назначение2026-10-13: NATIVE-007B только Day grid UI, source baseaaa01d42cd5196dff246a863270d61c2a2472766. Core неизменен, три iOS файла, native Calendar tab и existing editors;3days/Month/drag/AI не входят. После первого рабочего Day предполагается editing/delete и device QA; дальнейший порядок уточняется по личному тестированию.
 
 Review2026-10-13: NATIVE-007B5d9bcb5 independent iOS build PASS, но own GUI12untimed теряет сетку/date controls; width probe8lanes536pt на402viewport; short visual height != duration. Один tasks/NATIVE-007B-R1.md на2UIfiles, correction start4aa3b893e69b78466058c58fcfe818fb600ea0e8. Tap/context/evening GUI UNVERIFIED, без merge/next TASK.
+
+Повторное review2026-10-13: productfa7e520 независимо iOS build PASS; R1 untimed/R2 fitting закрыты. R3 floor2pt оставляет overlap0.933pt для1minute; исчезли все visible labels/continuation. Один tasks/NATIVE-007B-R1b.md: DayTimelineView+отчёт, start16fa7eb71e712bb4540288e0997faa767e7f753c. Readable labels/exact paint/native menu, без merge/next TASK.

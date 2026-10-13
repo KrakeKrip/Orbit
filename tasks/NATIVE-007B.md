@@ -1,6 +1,6 @@
 # NATIVE-007B — iOS: календарный вид «День»
 
-NEEDS_FIXES (layout), 2026-10-13. Review/correction в task worktree: reports/NATIVE-007B.md и tasks/NATIVE-007B-R1.md. Исходный scope сохранён. Один результат: настоящий Day timeline над принятой проекцией007A. Три product UI файла; без3дней/Месяца/нового создания/drag/серверов/AI.
+NEEDS_FIXES (R1b), 2026-10-13. Review/correction в task worktree: reports/NATIVE-007B.md и tasks/NATIVE-007B-R1b.md. Исходный scope сохранён. Один результат: настоящий Day timeline над принятой проекцией007A. Три product UI файла; без3дней/Месяца/нового создания/drag/серверов/AI.
 
 ## Старт / scope
 
