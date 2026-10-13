@@ -21,3 +21,7 @@ Inbox: заголовок «Входящие», короткое поле «На
 ## NATIVE-005: маленький редактор интервала
 
 Clock-action у датированной строки открывает native sheet с «Начало» HH:mm и «Длительность, мин», явными Save/Cancel/Clear. Системные формы/цвета, прежний coral accent, доступные подписи и >=44pt actions; keyboard/Dynamic Type не скрывают controls. Текстовый ввод временно даёт простой проверяемый editor без calendar wheel/UTC конверсий. Строка показывает start–derived end и (+1 день), когда end на следующую дату. Дизайн главной навигации/календаря в этом задании не реализуется.
+
+## NATIVE-006: только list «Сегодня»
+
+Две настоящие системные вкладки Сегодня/Входящие, общий coral accent. Today показывает local date и open/completed строки текущей plannedDate; existing date/time controls и empty state/action в Inbox. Нет фиктивного «Расписания», календарных вкладок или Glass imitation. Сетка Дня — следующий маленький TASK.
