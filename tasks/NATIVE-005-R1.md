@@ -1,6 +1,6 @@
 # NATIVE-005-R1 — название задачи в редакторе интервала
 
-ASSIGNED, 2026-10-13. Один небольшой результат: редактор явно показывает, какую задачу редактируем. Review: reports/NATIVE-005.md, R1 [P2].
+DONE, 2026-10-13. Product961cc2d, повторное review PASS. Один небольшой результат: редактор явно показывает, какую задачу редактируем. Review: reports/NATIVE-005.md, R1 [P2].
 
 Работать в `/Users/atlhnv/Codex/orbit-worktrees/NATIVE-005`, ветка `task/NATIVE-005`. Product review SHA `aa22fdce6cd662df5143555a2e0a72a3ef956636`; старт коррекции — coordinator HEAD из handoff. До правок проверить Git root/branch/HEAD/status, прочитать AGENTS и эти два документа.
 

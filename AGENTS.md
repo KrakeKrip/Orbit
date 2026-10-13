@@ -1,10 +1,10 @@
 ## Актуальный статус 2026-10-13
 
-NATIVE-005 NEEDS_FIXES: одна маленькая R1 — показать название задачи в interval sheet. Назначен только tasks/NATIVE-005-R1.md в task/NATIVE-005, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-005, coordinator HEAD d3edd9abbe1f25607c8122055e953e5f27ca74cd. Scope один UI файл + отчёт; review reports/NATIVE-005.md в task worktree. Исходная реализация aa22fdc независимо iOS build/экранный ввод/invalid draft refusal PASS, но задача ещё не принята и не merged. NATIVE-006 не назначен. NATIVE-004 DONE; macOS-R1/web/sync PAUSED. Старые assignments не выполнять, формат короткого чата/файлового отчёта сохраняется.
+NATIVE-005 принят после R1 и локально интегрирован6d12ae2. iOS interval editor работает поверх принятого core; independent build/экранный ввод/invalid refusal PASS, title source/screenshot проверены. Активного assignment пока нет, следующим готовится небольшой NATIVE-006 Today list. NATIVE-001 macOS-R1/web/sync PAUSED. Старые assignments не выполнять; формат файлового отчёта и короткого чата сохраняется.
 
 # Orbit — правила координации
 
-Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; назначена только коррекция tasks/NATIVE-005-R1.md в worktree NATIVE-005. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
+Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; NATIVE-005 завершён, следующая задача готовится отдельно. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований

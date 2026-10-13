@@ -23,3 +23,7 @@ NATIVE-005 не принят, merge отсутствует; NATIVE-006 пока 
 2026-10-13, product SHA `961cc2dcb06db77a7d4eda1b9037278e195dd64a`. Изменён только TaskIntervalSheet.swift (+11 строк) и отчёт. Видимая секция «Задача» содержит актуальный task.title, системный body medium, перенос без lineLimit/фиксированной высоты, отдельный accessibility id. Остальной editor/source не менялся. Скриншот06-r1-long-title-editor.png независимо просмотрен: полное название читается на двух строках; открытие двух задач/Cancel без записи подтверждено executor GUI/readonly evidence, Codex новый GUI-прогон не выполнял.
 
 Независимый iOS Simulator build на новых DerivedData, DEVELOPER_DIR Xcode27/CODE_SIGNING_ALLOWED=NO: exit0, BUILD SUCCEEDED; только прежний AppIntents metadata warning. Cumulative git diff --check a561374..HEAD PASS, дерево чистое. Core и исходные GUI-проверки не повторялись без изменения соответствующего кода. R1 закрыт; NATIVE-005 принят в scope interval editor. Реальный iPhone/disk failure/тёмная тема остаются непроверенными.
+
+## Локальная интеграция
+
+Main merge `6d12ae26e3c145ccd9041efde7bf6dc443447e1f` (обычный no-ff, без конфликтов). Native source identity: git diff --exit-code task/NATIVE-005 -- apple/Orbit apple/OrbitIOS: exit0. Проверки выполнены на task tree; интеграция сохраняет идентичные исходники, без повторных прогонов. NATIVE-005 DONE; push/deploy отсутствуют.
