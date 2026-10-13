@@ -41,3 +41,7 @@ Clock-action у датированной строки открывает native 
 ### Компактный верх календаря — прямое уточнение 2026-10-14
 
 Убрать large title «Календарь» и лишний верхний title gap: сразу компактная дата/navigation под native safe area. Untimed — маленькие тонированные capsules с completion circle+однострочным title, без повторной даты и видимых clock/calendar actions в каждой строке. Full title/edit actions доступны через existing sheet/native menu. Interaction targets >=44pt при компактном paint, accessibility sizes адаптируются. Большие строки остаются обычным list Today/Inbox. Это новый scope007C-R2; адаптивное раскрытие/internal scroll сохраняются, gesture/calendar modes сюда не входят.
+
+### Дополнение пользователя: плотность и меню, 2026-10-14
+
+Compact untimed rows сблизить; completion circle внутри общей tinted rounded capsule, раздельный completion/title hit без overlap и >=44pt. Большую панель «Задачи с временем» убрать; маленькое native ellipsis меню около даты → «Задачи дня» предоставляет existing actions для реальных timed segments выбранного дня, сохраняет доступ к tiny/dense tasks. Сетка/модель не перерабатываются, большие list rows остаются Today/Inbox. Scope007C-R3 после обычного R2 commit; cumulative review всех corrections, не самостоятельная приёмка R2.
