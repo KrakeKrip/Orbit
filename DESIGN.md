@@ -25,3 +25,7 @@ Clock-action у датированной строки открывает native 
 ## NATIVE-006: только list «Сегодня»
 
 Две настоящие системные вкладки Сегодня/Входящие, общий coral accent. Today показывает local date и open/completed строки текущей plannedDate; existing date/time controls и empty state/action в Inbox. Нет фиктивного «Расписания», календарных вкладок или Glass imitation. Сетка Дня — следующий маленький TASK.
+
+## NATIVE-007B: первый календарный День
+
+Третья настоящая вкладка Календарь, выбранная civil дата, Prev/Next/Сегодня/picker. Один полный Day timeline00–24, untimed отдельно, overlaps side-by-side, muted completed и positive overnight cues. Системные native controls/materials, общий coral accent.3days/Month/Projects без готовой реализации не добавлять как пустые selectors. Existing editor по tap;drag/new creation не входят.
