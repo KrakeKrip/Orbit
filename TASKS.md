@@ -10,12 +10,12 @@
 | NATIVE-004 | DONE | shared core интервала: core50/iOS build/legacy upgrade/7200 civil oracle PASS; UI отдельно |
 | NATIVE-005 | DONE | iOS interval editor, R1 title закрыт, build/GUI evidence; локальный merge6d12ae2 |
 | NATIVE-006 | DONE | Today list + две настоящие вкладки, R1 видимые write errors; merge8b36067 |
-| NATIVE-007A | TODO (готовится отдельно) | read-only проекция интервалов на сутки, включая переход через полночь |
+| NATIVE-007A | ASSIGNED | read-only проекция интервалов на сутки, включая переход через полночь |
 | NATIVE-007B | TODO (план, не назначен) | календарный День с временной сеткой на принятой проекции |
 | NATIVE-008 | TODO (план, не назначен) | 3 дня на общей шкале времени |
 | NATIVE-009 | TODO (план, не назначен) | календарный Месяц |
 
-NATIVE-004 принят и локально интегрирован; NATIVE-005 принят, назначен только tasks/NATIVE-006.md в task/NATIVE-006, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-006. NATIVE-003 закрыт. Время/длительность разбиты на core и отдельный editor, чтобы не наращивать TASK. Следующие строки — ориентир, их scope уточняется перед выдачей; не реализовывать очередь целиком. Реальная навигация добавляется с готовыми экранами, без фиктивных календарных вкладок. Нативные проекты/rename/delete/backup — отдельные последующие маленькие задания; не забыты. Web/сервера/sync PAUSED. macOS дизайн позже, macOS-R1 не потерян.
+NATIVE-004 принят и локально интегрирован; NATIVE-005 принят, NATIVE-006 принят; назначен только tasks/NATIVE-007A.md в task/NATIVE-007A, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007A. NATIVE-003 закрыт. Время/длительность разбиты на core и отдельный editor, чтобы не наращивать TASK. Следующие строки — ориентир, их scope уточняется перед выдачей; не реализовывать очередь целиком. Реальная навигация добавляется с готовыми экранами, без фиктивных календарных вкладок. Нативные проекты/rename/delete/backup — отдельные последующие маленькие задания; не забыты. Web/сервера/sync PAUSED. macOS дизайн позже, macOS-R1 не потерян.
 
 Первичное review NATIVE-0032026-10-13: core30/iOS build/legacy upgrade PASS, один R1 в Gregorian UI adapters. Выдан tasks/NATIVE-003-R1.md в task/NATIVE-003; остальные функции не назначены. Полный review в reports/NATIVE-003.md task worktree.
 
@@ -36,3 +36,5 @@ Review2026-10-13: NATIVE-005 aa22fdc — одна R1: название зада�
 Review2026-10-13: NATIVE-006917f960 независимо core56/iOS build PASS. Один R1: writeError не отображается на Today; tasks/NATIVE-006-R1.md назначен только в task worktree, correction start6610a5accaf1024eeb3bc6c85de14d1081c256c5. Без merge, NATIVE-007 не выдан.
 
 Итог2026-10-13: NATIVE-006 принят после R1, локальный merge8b360670035f77612eec6792f40449cf10916892. Core56/iOS build до коррекции, targeted6/iOS build после коррекции PASS; shared source identity после merge PASS. Runtime banner/real iPhone не проверены. NATIVE-007 разделён на маленькие007A projection и007B grid UI, без гигантского задания на весь календарь.
+
+Назначение2026-10-13: NATIVE-007A только one-file projection helper+targeted tests, source base2b14c779ad2abff50e6b30bc87457c8f9e580fb2. Minute segments0...1440, positive overnight continuation; без lanes/UI/миграций.007B grid UI пока не назначен.
