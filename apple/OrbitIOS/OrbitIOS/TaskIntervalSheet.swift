@@ -28,6 +28,17 @@ struct TaskIntervalSheet: View {
         NavigationStack {
             Form {
                 Section {
+                    Text(task.title)
+                        .font(.body.weight(.medium))
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                        .accessibilityIdentifier("interval-task-title")
+                } header: {
+                    Text("Задача")
+                }
+
+                Section {
                     LabeledContent("Начало") {
                         TextField("09:00", text: $draftTime)
                             .keyboardType(.numbersAndPunctuation)

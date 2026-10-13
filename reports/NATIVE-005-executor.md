@@ -61,3 +61,36 @@ READY_FOR_REVIEW.
 
 - Ветка `task/NATIVE-005`; starting SHA `0985c32198eefadfcdad33c8a3c2bcf4ff9a1fab`; обычный scoped commit (3 product файла + README + отчёт); полный latest SHA в чате.
 - `git diff --check` чисто; merge/push/amend/rebase/reset/stash/deploy не выполнялись; main/чужие worktrees/CRM/localhost:3000/hooks/xcode-select не менялись. NATIVE-006/Today/календарь не начинались.
+
+---
+
+# Коррекция NATIVE-005-R1 — название задачи в редакторе интервала
+
+## Статус
+
+READY_FOR_REVIEW (только R1 [P2] из reports/NATIVE-005.md; остальной TASK не переписывался). Starting correction SHA `d3edd9abbe1f25607c8122055e953e5f27ca74cd` (coordinator review HEAD), дерево чистое.
+
+## Изменение (один product файл)
+
+`apple/OrbitIOS/OrbitIOS/TaskIntervalSheet.swift`: в начало Form добавлена секция «Задача» с видимым `Text(task.title)` — отдельно от generic заголовка навигации «Время задачи» и от строки «Дата». Стиль: `.body.weight(.medium)`, перенос длинных названий (`fixedSize(horizontal: false, vertical: true)`, без lineLimit/жёсткой высоты), `textSelection(.enabled)`, Dynamic Type (системный шрифт), a11y identifier `interval-task-title`. Название берётся из переданной задачи — при открытии другой задачи показывается актуальное. Поля/draft/валидация/Сохранить/Отмена/Убрать время/store/presentation — не менялись.
+
+## Проверки
+
+| Проверка | Результат |
+| --- | --- |
+| `xcodebuild -scheme OrbitIOS -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/orbit-r1-dd CODE_SIGNING_ALLOWED=NO build` | exit 0 — BUILD SUCCEEDED (DerivedData удалён) |
+| GUI (свой временный iPhone 17 iOS 27.0, UDID 11F5F16B-…, удалён после): задача «Банк» (короткое) | date editor (сегодня) → clock-action → interval sheet содержит секцию «Задача» с «Банк»; поля с defaults 09:00/30; Cancel закрыл без записи. Скриншот `05-r1-editor-title-bank.png` |
+| GUI: задача «Сходить в магазин за продуктами и не забыть кофе» (48 символов, длинное) | date editor → interval sheet: длинное название **переносится на 2 строки и читается полностью**; в Expanded-детенте поля Начало/Длительность (09:00/30) и кнопки Сохранить/Отмена доступны; Cancel без записи. Скриншот `06-r1-long-title-editor.png`, финальный Inbox `07-r1-final-inbox.png` |
+| «Правильный title после нового открытия» | редактор открывался поочерёдно для двух задач — каждый раз показано название соответствующей задачи (Банк ↔ Сходить…), перекрёстного названия не было |
+| sqlite readonly после Cancel-ов | интервалы не записаны: `Банк|2026-10-13||`, `Сходить…|2026-10-13||` (открытие/Cancel не пишут) |
+
+Core не менялся — core 50 и legacy-прогоны не повторялись (по TASK). Ввод длинного названия выполнен accessibility setValue + «Добавить задачу» (SwiftUI binding подтверждён появлением строки; тот же подтверждённый путь, что в основном отчёте для «Молоко»); экранный набор 48 символов клавишами не гонялся (tooling-ограничение suggestion-бара из основного отчёта) — на проверку читаемости/переноса не влияет.
+
+## Ограничения / не проверено
+
+- Реальный iPhone, тёмная тема, RTL — не проверялись (без изменений).
+- Runtime save-failure/дата-смена flows — вне R1, не повторялись.
+
+## Git
+
+Новый обычный scoped commit (TaskIntervalSheet.swift + R1-секция отчёта); полный latest SHA в чате. Без merge/push/amend/rebase/reset/stash/deploy; NATIVE-006 не начинался; main/чужие worktrees/CRM/3000/hooks не тронуты.
