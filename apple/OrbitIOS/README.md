@@ -51,10 +51,17 @@ Core-тесты (независимо): `DEVELOPER_DIR=... swift test` в `apple
 (`<app container>/Library/Application Support/Orbit/store.sqlite`). Stores Mac и
 iPhone независимы; синхронизации нет и не обещается.
 
-## Статус NATIVE-002 (важно)
+## Статус NATIVE-002 (проверено 2026-10-13)
 
-Сборка под iOS возвращает BLOCKED: `OrbitCore` не компилируется для iOS из-за
-`FileManager.homeDirectoryForCurrentUser` в
-`apple/Orbit/Sources/OrbitCore/OrbitStoreLocation.swift:9` (API unavailable on
-iOS). По TASK core-фикс требует отдельного решения координатора — подробности и
-предложенная однострочная правка в `reports/NATIVE-002-executor.md`.
+Собрано и проверено на Simulator (Xcode 27.0, iOS 27.0 runtime, iPhone 17,
+`CODE_SIGNING_ALLOWED=NO`): add по кнопке «+» и клавиатурному «Готово»,
+complete/reopen круглым контролом, terminate→relaunch без reinstall — задачи и
+состояния восстанавливаются с диска; blank rejection с видимой ошибкой; длинный
+название переносится на несколько строк; Dynamic Type на accessibility-large;
+композер не перекрывается клавиатурой. Скриншоты — вне product tree
+(пути в `reports/NATIVE-002-executor.md`). Реальный iPhone НЕ ПРОВЕРЕН.
+
+Совместимость OrbitCore с iOS обеспечена разрешённой однострочной заменой
+fallback в `apple/Orbit/Sources/OrbitCore/OrbitStoreLocation.swift`
+(`NSHomeDirectory()` вместо `homeDirectoryForCurrentUser`); поведение macOS
+не изменено (20/20 core tests).

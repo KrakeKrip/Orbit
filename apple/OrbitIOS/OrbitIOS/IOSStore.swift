@@ -19,6 +19,7 @@ enum IOSStore {
     /// and opens the local store. Failure is thrown to the caller and shown
     /// as an explicit error state; the store file is never deleted and no
     /// in-memory fallback is used.
+    @MainActor
     static func open() throws -> OrbitTaskStore {
         let url = storeURL()
         try FileManager.default.createDirectory(

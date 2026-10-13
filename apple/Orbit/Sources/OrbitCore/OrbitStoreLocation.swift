@@ -6,7 +6,7 @@ public enum OrbitStoreLocation {
     /// Default persistent store: `~/Library/Application Support/OrbitNative/Orbit.store`.
     public static func defaultStoreURL(fileManager: FileManager = .default) -> URL {
         let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? fileManager.homeDirectoryForCurrentUser
+            ?? URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
                 .appendingPathComponent("Library/Application Support", isDirectory: true)
         return base
             .appendingPathComponent("OrbitNative", isDirectory: true)
