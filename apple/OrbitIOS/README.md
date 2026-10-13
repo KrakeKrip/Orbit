@@ -43,13 +43,19 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   честная disabled-строка «Нет задач с временем», без fake actions. Это
   единственный доступный путь к tiny/dense блокам — отдельная панель над
   сеткой удалена (007C-R3); untimed-задачи отдельной **collapsible областью
-  «Без времени»** из компактных chips (007C-R3: одна общая tinted capsule
-  на круг+title, визуально ~34pt внутри hit-ряда ≥44pt, completion-круг
-  20pt с собственным 44×44 hit внутри ряда (tap по title круг не
-  переключает), однострочный title с tail truncation (полный title в AX),
-  плотная группа с 2pt-зазорами и content-отступом 16, без повторной даты и
-  постоянных clock/calendar иконок; tap по title — существующий date sheet,
-  context menu — дата/время/complete через существующие callbacks)
+  «Без времени»** из компактных карточек (007C-R3 + уточнение IMG_1218/1219:
+  короткий tinted rounded rectangle ~26pt с cornerRadius 7, completion-круг
+  ~13pt внутри слева от однострочного title .subheadline с tail truncation
+  (полный title в AX), высота content-derived без flexible spacers, hit
+  regions соседних рядов не перекрываются, Dynamic Type растит карточку;
+  плотная группа с 2pt-зазорами, левый край карточек совпадает с task-областью
+  сетки (56pt); toggle раскрытия — маленькие paired chevrons нативной кнопкой
+  в левой gutter-колонке над часовой линейкой (44×44 hit внутри gutter, AX
+  «Показать ещё N / Свернуть без времени», identifier untimed-toggle), «Ещё N»
+  при collapsed — мелкая secondary подпись под карточками по их левому краю,
+  без отдельной button-панели; при ≤3 задач toggle/подписи нет; tap по title —
+  существующий date sheet, context menu — дата/время/complete через
+  существующие callbacks)
   (NATIVE-007C: default до 3 chips + «Ещё N», раскрытие в adaptive bounded
   scroll — viewport ~⅓ измеренной высоты content area с резервом
   date controls/toggle/сетки, короткие списки не оставляют пустой области,

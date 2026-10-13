@@ -236,3 +236,65 @@ READY_FOR_REVIEW (R3 поверх R2 в той же ветке; приёмка R
 ## Git
 
 - Ветка `task/NATIVE-007C`; R3 start `5804d9e352544f6bf717855e16d13b042be18142` (full SHA R2); полный SHA итогового коммита — в чате.
+
+---
+
+# NATIVE-007C-R3 — уточнение IMG_1218/IMG_1219 (прямая визуальная правка текущего R3, не новый TASK)
+
+## Статус
+
+READY_FOR_REVIEW (второй scoped R3-коммит поверх первого R3; итоговый Codex review кумулятивный R1+R2+R3).
+
+## Исходное состояние
+
+- Ветка `task/NATIVE-007C`; **start = full SHA первого R3-коммита `ea4dfd30842723f66e2bd6b93bba493488207773`**; `git status --porcelain` перед началом пустой. Предыдущие коммиты не переписывались.
+- Прочитаны последняя секция `/Users/atlhnv/Codex/orbit-outputs/NATIVE-007C-R3.md` («Последнее прямое уточнение пользователя — IMG_1218/IMG_1219»), сами reference-изображения и свой R3-отчёт выше.
+
+## Изменённые файлы
+
+| Файл | Изменение |
+| --- | --- |
+| `apple/OrbitIOS/OrbitIOS/CompactCalendarTaskRow.swift` | вместо Capsule — короткий tinted `RoundedRectangle(cornerRadius: 7)`; визуальная высота ≈26pt (title .subheadline 15pt + vertical padding 3, БЕЗ minHeight-44 и без любых flexible/infinity frames — рост только от Dynamic Type); completion-круг 13pt (галочка 7pt) внутри слева; hit regions круга и title ограничены своим рядом, соседние ряды (зазор 2pt) не перекрываются; completed по-прежнему muted; AX/context menu без изменений |
+| `apple/OrbitIOS/OrbitIOS/CalendarDayScreen.swift` | untimed-область перестроена: левая gutter-колонка `untimedGridLeading = 56` (= lane inset сетки — левый край карточек совпадает с task-областью grid); toggle — маленькие paired chevrons (`chevron.up.chevron.down`, 11pt, поворот 180° в expanded) нативной Button в gutter над часовой линейкой, 44×44 hit полностью внутри gutter (не перекрывает карточки справа), AX «Показать ещё N / Свернуть без времени», identifier `untimed-toggle`; прежняя centered button-панель «Ещё N/Свернуть» удалена; «Ещё N» при collapsed — мелкая secondary подпись (.footnote) под карточками по их левому краю (не кнопка, единственный toggle — chevron); при ≤3 задач ни toggle, ни подписи; `estimatedCompactRowHeight` 46→28 (26+2), `toggleReserve` удалён (gutter-toggle не занимает вертикальный бюджет), expanded viewport cap упрощён; ellipsis-меню у даты не тронуто (другой control); default 3/bounded internal scroll/`.id(selectedDay)`/grid identity сохранены |
+| `apple/OrbitIOS/README.md` | секция Calendar Day под уточнение IMG_1218/1219 |
+| `reports/NATIVE-007C-executor.md` | эта секция |
+
+Не менялись: DayTimelineView (grid/ruler/paint/lanes/tap — совсем), core/model/store, editors, Today/Inbox/shared rows, Xcode project, tests, root docs.
+
+## Соответствие уточнению
+
+1. **Карточки ниже:** ≈24–26pt в обычном размере (цель 24–28), cornerRadius 7 (6–8), круг 13pt (12–14), font .subheadline = 15pt (14–15). Рост только content-derived (Dynamic Type), infinity/spacers убраны полностью — «pillow»-рядов нет. Соседние hit targets не перекрываются (каждый ряд — своя 26pt+ полоса, зазор 2).
+2. **Toggle влево:** paired chevrons в левой gutter-колонке (x 0–56, как колонка часовой шкалы), вертикально у первых рядов, над ruler; один native Button, hit 44×44 в gutter; в expanded те же chevrons сворачивают (поворот 180°), internal scroll сохранён. «Ещё N» — компактная secondary подпись под карточками по левому краю (в expanded скрыта). При ≤3 — ни toggle, ни подписи. Ellipsis у даты — отдельный control, не переносился.
+3. **Сохранено:** default 3, bounded expanded viewport (~⅓, от измеренной высоты; резервы актуализированы — toggle больше не съедает вертикаль), source UUID/mutations через существующие callbacks, grid identity/scroll (DayTimelineView не менялся), свёрнутое состояние при смене дня.
+
+## Команды и результаты
+
+| Команда | Результат |
+| --- | --- |
+| `xcodebuild … -derivedDataPath /tmp/orbit-n7c-r3b-dd CODE_SIGNING_ALLOWED=NO build` (DEVELOPER_DIR) | exit 0, **BUILD SUCCEEDED** |
+| Core/web/full suites | НЕ повторялись (core не менялся) |
+| Fixture/симулятор | заново (прежние удалены при R3-cleanup): генератор на OrbitCore, today=2026-10-14, те же 19 задач (12 untimed + 4 timed вкл. tiny/dense + 2 соседних + 1 undated); свой `orbit-n7c-r3b-gui` iPhone 17 Pro / iOS 27.0 UDID 55AE4A5A-3149-4DF6-BE62-A39134A9CB6B, создан/deleted мной |
+| Ввод | Device Hub, AX-элементы (gutter toggle кликался как «Показать ещё 9 без времени» / «Свернуть без времени») |
+
+## GUI evidence (скриншоты в `/Users/atlhnv/Codex/orbit-outputs/NATIVE-007C/r3/`)
+
+1. `09-refined-collapsed-gutter-toggle.png` — collapsed: 3 компактные карточки (~26pt, radius 7, круг 13 внутри), paired chevrons слева в gutter напротив первых рядов над линейкой, «Ещё 9» мелкой подписью под карточками по левому краю, левый край карточек = task-область сетки; НЕТ centered button-панели; сетка с блоком 09:00–10:00 и tiny-полосами занимает большую часть экрана.
+2. `10-refined-expanded-gutter-toggle.png` — expanded через gutter-chevron: bounded region с 9 видимыми компактными карточками (AX — все 12), caption скрыта, chevron перешёл в «Свернуть без времени», шапка/меню/сетка видимы; повторный клик свернул (AX подтвердил возврат toggle и подписи).
+
+**sqlite readonly до/после** (`store-before-r3b.txt`/`store-after-r3b.txt`): 19 строк идентичны — toggle/expand/collapse не пишут store.
+
+## UNVERIFIED (честно)
+
+- Внутренний scroll expanded-региона и «нет сброса grid offset на прокрученной сетке» — как прежде UNVERIFIED пиксельно (pan-жесты зеркалом не доставляются; source контрактов не менялся: тот же bounded ScrollView + `.id(selectedDay)`, DayTimelineView без изменений).
+- Dynamic Type smoke в этом проходе не повторялся (карточки растут контентно — механика прежних прогонов; отдельный AXL-скриншот не снимался).
+- Реальный iPhone, тёмная тема, RTL, VoiceOver, SE-класс — не проверялись.
+
+## Ограничения / гигиена
+
+- Один scoped commit поверх первого R3; `git diff --check` чисто; без merge/push/amend/rebase/reset/stash/deploy; чужие ресурсы/settings не трогались.
+- Cleanup: свой simulator удалён, `/tmp/orbit-n7c-r3b-*` удалены, Device Hub закрыт; outputs R1/R2/первого R3 не тронуты.
+- Stop: Codex cumulative review R1+R2+R3; drag/resize/3-дня/Месяц/AI не начинались.
+
+## Git
+
+- Ветка `task/NATIVE-007C`; start `ea4dfd30842723f66e2bd6b93bba493488207773`; полный SHA итогового коммита — в чате.

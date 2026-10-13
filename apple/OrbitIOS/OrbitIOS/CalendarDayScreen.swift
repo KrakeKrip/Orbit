@@ -37,17 +37,22 @@ struct CalendarDayScreen: View {
 
     private static let collapsedUntimedLimit = 3
 
-    /// Rough height of one compact untimed chip row (44pt interactive row
-    /// plus the 2pt group gap). Only a sizing estimate for the expanded
-    /// viewport floor; real rows always render at their natural,
+    /// Rough height of one compact untimed card (≈26pt visual rounded
+    /// rectangle) plus the 2pt group gap. Only a sizing estimate for the
+    /// expanded viewport floor; real rows always render at their natural,
     /// Dynamic-Type-aware height.
-    private static let estimatedCompactRowHeight: CGFloat = 46
+    private static let estimatedCompactRowHeight: CGFloat = 28
+    /// Left gutter of the untimed area, equal to the timeline's hour-ruler
+    /// inset (DayTimelineView lane inset): the paired-chevrons expand toggle
+    /// lives in this gutter and the card column's left edge lines up with
+    /// the grid task area (user reference IMG_1218/IMG_1219).
+    private static let untimedGridLeading: CGFloat = 56
     /// Reserves subtracted from the measured content height before the
     /// expanded untimed viewport may take its ~⅓ share. The date controls
     /// reserve covers the adaptive header: one 44pt row where it fits, or
-    /// two rows («Сегодня» + «⋯» move down) on narrow widths.
+    /// two rows («Сегодня» + «⋯» move down) on narrow widths. The gutter
+    /// toggle adds no vertical budget — it sits beside the cards.
     private static let dayControlsReserve: CGFloat = 104
-    private static let toggleReserve: CGFloat = 56
     private static let gridReserve: CGFloat = 220
 
     var body: some View {
@@ -271,15 +276,16 @@ struct CalendarDayScreen: View {
     // MARK: - Untimed area (compact chips, collapsible so many tasks never
     // push the grid)
 
-    /// Default collapsed: up to 3 untimed chips at their natural height — no
-    /// ScrollView, no reserved empty rows, no blind clipping (Dynamic Type
-    /// rows grow instead of truncating their controls). The chips form one
-    /// tight group (2pt gaps, cards inset to the content margin — no large
-    /// interleaved padding). «Ещё N» expands into a bounded, independently
-    /// scrollable viewport capped near ⅓ of the measured content height; the
-    /// toggle is a sibling below the chips, so its 44pt budget is laid out
-    /// exactly once. Expanding/collapsing never writes, never recreates the
-    /// timeline, and never resets the grid scroll position.
+    /// Default collapsed: up to 3 compact untimed cards in one tight group
+    /// (2pt gaps), left edge aligned with the grid task area. The expand
+    /// toggle is the small paired-chevrons button in the left gutter above
+    /// the hour-ruler column (reference IMG_1219) — no standalone button
+    /// row under the cards; «Ещё N» is a small secondary caption under the
+    /// card group at its left edge. Toggle and caption appear only when
+    /// there are more than 3 tasks. Expanding shows a bounded, independently
+    /// scrollable viewport capped near ⅓ of the measured content height;
+    /// expanding/collapsing never writes, never recreates the timeline, and
+    /// never resets the grid scroll position.
     private var untimedSection: some View {
         let ids = projection.untimedTaskIDs
         let overLimit = ids.count > Self.collapsedUntimedLimit
@@ -300,19 +306,37 @@ struct CalendarDayScreen: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 6)
 
-                if untimedExpanded {
-                    expandedUntimedRegion(ids: ids)
-                } else {
-                    VStack(spacing: 2) {
-                        ForEach(ids.prefix(Self.collapsedUntimedLimit), id: \.self) { id in
-                            untimedRow(id)
+                HStack(alignment: .top, spacing: 0) {
+                    Group {
+                        if overLimit {
+                            untimedToggleButton(count: ids.count)
+                        } else {
+                            Color.clear
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .frame(width: Self.untimedGridLeading)
+
+                    Group {
+                        if untimedExpanded {
+                            expandedUntimedRegion(ids: ids)
+                        } else {
+                            VStack(spacing: 2) {
+                                ForEach(ids.prefix(Self.collapsedUntimedLimit), id: \.self) { id in
+                                    untimedRow(id)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.trailing, 16)
                 }
 
-                if overLimit {
-                    untimedToggleButton(count: ids.count)
+                if overLimit && !untimedExpanded {
+                    Text("Ещё \(ids.count - Self.collapsedUntimedLimit)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, Self.untimedGridLeading)
+                        .padding(.top, 2)
                 }
             }
             Divider()
@@ -343,7 +367,6 @@ struct CalendarDayScreen: View {
                     untimedRow(id)
                 }
             }
-            .padding(.horizontal, 16)
             .background(
                 GeometryReader { proxy in
                     Color.clear
@@ -356,6 +379,11 @@ struct CalendarDayScreen: View {
         .frame(height: min(expandedViewportCap, expandedContentHeight ?? expandedViewportCap))
     }
 
+    /// Paired-chevrons expand/collapse toggle in the left gutter (reference
+    /// IMG_1219): one small native button above the hour-ruler column,
+    /// beside the first rows. Its 44×44 hit sits fully inside the gutter
+    /// column and never overlaps the card hit regions to its right. In the
+    /// expanded state the same chevrons collapse; state never writes.
     private func untimedToggleButton(count: Int) -> some View {
         Button {
             untimedExpanded.toggle()
@@ -363,30 +391,27 @@ struct CalendarDayScreen: View {
                 expandedContentHeight = nil
             }
         } label: {
-            Label(
-                untimedExpanded ? "Свернуть" : "Ещё \(count - Self.collapsedUntimedLimit)",
-                systemImage: untimedExpanded ? "chevron.up" : "chevron.down"
-            )
-            .font(.footnote.weight(.medium))
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.orbitAccent)
+                .rotationEffect(.degrees(untimedExpanded ? 180 : 0))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.orbitAccent)
         .accessibilityIdentifier("untimed-toggle")
         .accessibilityLabel(
-            untimedExpanded ? "Свернуть без времени" : "Ещё \(count - Self.collapsedUntimedLimit) без времени"
+            untimedExpanded ? "Свернуть без времени" : "Показать ещё \(count - Self.collapsedUntimedLimit) без времени"
         )
     }
 
     /// Expanded viewport cap from the measured content height: target ~⅓ of
     /// it, at least enough for four compact rows on a normal iPhone, never
-    /// more than what remains after the date controls, the toggle row and the
-    /// grid reserve. Small windows or large Dynamic Type show fewer rows and
-    /// scroll inside the region instead of losing the grid.
+    /// more than what remains after the date controls and the grid reserve.
+    /// Small windows or large Dynamic Type show fewer rows and scroll
+    /// inside the region instead of losing the grid.
     private var expandedViewportCap: CGFloat {
-        let toggle = projection.untimedTaskIDs.count > Self.collapsedUntimedLimit ? Self.toggleReserve : 0
-        let remaining = contentHeight - Self.dayControlsReserve - toggle - Self.gridReserve
+        let remaining = contentHeight - Self.dayControlsReserve - Self.gridReserve
         let target = max(
             CGFloat(Self.collapsedUntimedLimit + 1) * Self.estimatedCompactRowHeight,
             contentHeight / 3
