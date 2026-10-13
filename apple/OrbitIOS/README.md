@@ -22,6 +22,13 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   операции через OrbitCore (валидация/список/complete/reopen/plannedDate/
   setPlannedInterval), успех только после явного `save()`, при ошибке draft
   сохраняется.
+- `OrbitIOS/TodayScreen.swift` — вкладка «Сегодня» (NATIVE-006): read-only
+  срез задач на текущий локальный Gregorian день через `TaskDaySelection`;
+  те же строки/actions/editors, что в Inbox (complete/reopen, date/interval
+  editors); заголовок «Сегодня» + видимая локальная дата; честный empty
+  state «На сегодня задач нет» с действием «Добавить во Входящих»
+  (переключает на живую вкладку, не создаёт задачу). День пересчитывается
+  на appear/active и не реже раза в минуту; без сетки/overdue/quick-add.
 - `OrbitIOS/InboxScreen.swift` — экран: NavigationStack large title «Входящие»,
   секции «Открытые»/«Завершённые», круглый completion-контроль ≥44pt с a11y
   label «действие: задача», краткая подпись даты и интервала
