@@ -1,6 +1,6 @@
 # NATIVE-007A-R1 — midnight flag и детерминированный sort test
 
-ASSIGNED, 2026-10-13. Одна небольшая коррекция helper + tests по reports/NATIVE-007A.md (R1/R2). Worktree `/Users/atlhnv/Codex/orbit-worktrees/NATIVE-007A`, branch task/NATIVE-007A. Product review SHA1e53a778fe92b91ef00b97254edaa122c691e5d5; starting correction SHA — coordinator HEAD из handoff. Проверить root/branch/HEAD/status, прочитать AGENTS/review/этот TASK.
+DONE, 2026-10-13. Source addcfd3, R1/R2 повторное review PASS. Одна небольшая коррекция helper + tests по reports/NATIVE-007A.md (R1/R2). Worktree `/Users/atlhnv/Codex/orbit-worktrees/NATIVE-007A`, branch task/NATIVE-007A. Product review SHA1e53a778fe92b91ef00b97254edaa122c691e5d5; starting correction SHA — coordinator HEAD из handoff. Проверить root/branch/HEAD/status, прочитать AGENTS/review/этот TASK.
 
 Scope: только TaskDayProjection.swift, TaskDayProjectionTests.swift, R1-секция reports/NATIVE-007A-executor.md. Если README содержит неверное описание exact-midnight flag, разрешено только уточнить эту строку. Root docs/accepted helpers/model/store/UI не менять.
 

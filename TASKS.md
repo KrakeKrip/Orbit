@@ -10,7 +10,7 @@
 | NATIVE-004 | DONE | shared core интервала: core50/iOS build/legacy upgrade/7200 civil oracle PASS; UI отдельно |
 | NATIVE-005 | DONE | iOS interval editor, R1 title закрыт, build/GUI evidence; локальный merge6d12ae2 |
 | NATIVE-006 | DONE | Today list + две настоящие вкладки, R1 видимые write errors; merge8b36067 |
-| NATIVE-007A | NEEDS_FIXES (R1/R2) | read-only проекция интервалов на сутки, включая переход через полночь |
+| NATIVE-007A | DONE | read-only проекция интервалов на сутки, включая переход через полночь |
 | NATIVE-007B | TODO (план, не назначен) | календарный День с временной сеткой на принятой проекции |
 | NATIVE-008 | TODO (план, не назначен) | 3 дня на общей шкале времени |
 | NATIVE-009 | TODO (план, не назначен) | календарный Месяц |
@@ -40,3 +40,5 @@ Review2026-10-13: NATIVE-006917f960 независимо core56/iOS build PASS. 
 Назначение2026-10-13: NATIVE-007A только one-file projection helper+targeted tests, source base2b14c779ad2abff50e6b30bc87457c8f9e580fb2. Minute segments0...1440, positive overnight continuation; без lanes/UI/миграций.007B grid UI пока не назначен.
 
 Review2026-10-13: NATIVE-007A1e53a77 independently core66 PASS, но точная midnight граница помечается продолжением и UUID-test ошибочно игнорирует end-priority. Fixed-ID probe воспроизводит обе находки; назначен один tasks/NATIVE-007A-R1.md в task worktree, correction startde64a83364b310d82fa251e3a1ca032de8af2137. Без merge/007B.
+
+Итог2026-10-13: NATIVE-007A принят после R1/R2, productaddcfd3, main merge9c499d4e81c251b2f8c2b93d70ff94202a374a88. Независимые11targeted/iOS build после fix PASS;66full ранее до fix, полный67 после fix не запускался. Calendar UI пока отсутствует, следующий007B только Day screen.

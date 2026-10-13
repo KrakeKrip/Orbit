@@ -1,10 +1,10 @@
 ## Актуальный статус 2026-10-13
 
-NATIVE-007A NEEDS_FIXES: одна маленькая коррекция midnight continuation flag и неверного nondeterministic UUID sort assertion. Назначен только tasks/NATIVE-007A-R1.md в task/NATIVE-007A, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-007A, correction startde64a83364b310d82fa251e3a1ca032de8af2137. Scope helper+tests/report, без UI; independent core66 PASS, обе находки детерминированно воспроизведены. Review reports/NATIVE-007A.md в task worktree; merge/007B отсутствуют. NATIVE-006 DONE, macOS-R1/web/sync PAUSED, старые задания не выполнять, отчёт в файл/чат краткий.
+NATIVE-007A принят после R1/R2 и локально integrated9c499d4. Принята pure read-only projection,11targeted/iOS build PASS, UI сетки ещё отсутствует. Активного assignment пока нет, следующий007B готовится как ограниченный Day UI. NATIVE-006 DONE; macOS-R1/web/sync PAUSED, старые задания не выполнять, отчёт в файл/чат краткий.
 
 # Orbit — правила координации
 
-Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; NATIVE-005 завершён; NATIVE-006 принят; назначена только коррекция tasks/NATIVE-007A-R1.md в task worktree. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
+Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; NATIVE-005 завершён; NATIVE-006 принят; NATIVE-007A принят, следующий Day UI TASK готовится отдельно. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований

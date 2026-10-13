@@ -37,3 +37,7 @@ Scope/checks — tasks/NATIVE-007A-R1.md. Одна коррекция двух �
 Независимо: DEVELOPER_DIR Xcode27 swift test --filter TaskDayProjection exit0,11/11; iOS Simulator build на новых own DerivedData/CODE_SIGNING_ALLOWED=NO exit0,BUILD SUCCEEDED (только AppIntents metadata warning). Cumulative diff --check PASS/clean tree. Полный66 suite прошёл на исходном product в предыдущем review; после scoped fix выполнены релевантные11 без повторов legacy/web/GUI. Нельзя обозначать этот раунд полным67test прогоном — он targeted.
 
 R1/R2 закрыты. NATIVE-007A принят как read-only foundation, без календарного UI. Следующий007B — отдельный ограниченный Day grid UI;3дня/Месяц/drag/новый quick-add не назначены. Push/deploy отсутствуют. Логи сохранены в NATIVE-007A-review-evidence.
+
+## Локальная интеграция
+
+Main merge `9c499d4e81c251b2f8c2b93d70ff94202a374a88`, обычный no-ff без конфликтов. Native source identity `git diff --exit-code task/NATIVE-007A -- apple/Orbit apple/OrbitIOS`: exit0. Проверки выполнены в task worktree; одинаковые исходники после merge не повторялись. NATIVE-007A DONE, UI calendar grid пока отсутствует. Push/deploy отсутствуют.
