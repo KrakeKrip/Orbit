@@ -28,3 +28,7 @@ NATIVE-006 не принят, merge/push/deploy отсутствуют; NATIVE-0
 Независимо targeted swift test --filter TaskDaySelection: exit0,6/6, без warnings. iOS Simulator build на новых own DerivedData: exit0,BUILD SUCCEEDED, только AppIntents metadata warning. Дерево/cumulative diff check чистые. Core helper/mutations не менялись, полный56/legacy/web прогон не повторялся. Runtime screenshot баннера НЕ проверен ни исполнителем, ни Codex; по R1 это явно допустимое ограничение малой rendering-коррекции. Проверены source/wiring и compilation, не disk failure GUI.
 
 R1 закрыт, NATIVE-006 принят в scope Today list. Реальный iPhone/системная clock-timezone смена/RTL/dark/runtime disk failure остаются непроверенными. Проекция overnight для календарной сетки — отдельный следующий небольшой TASK; Today list по-прежнему только start date. Push/deploy не выполнялись.
+
+## Локальная интеграция
+
+Main merge `8b360670035f77612eec6792f40449cf10916892`, обычный no-ff без конфликтов. git diff --exit-code task/NATIVE-006 -- apple/Orbit apple/OrbitIOS: exit0; исходники совпадают с проверенной task веткой. Проверки выполнены в task worktree до merge, идентичный код без причины не повторялся. NATIVE-006 DONE, push/deploy отсутствуют.

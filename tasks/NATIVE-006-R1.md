@@ -1,6 +1,6 @@
 # NATIVE-006-R1 — видимая ошибка записи на Today
 
-ASSIGNED, 2026-10-13. Один результат: отказ complete/reopen показывается на том же экране Today. Product review SHA917f9608b9670b01ff10f397d8478b77979fb4c3; correction start — coordinator HEAD из handoff. Worktree `/Users/atlhnv/Codex/orbit-worktrees/NATIVE-006`, branch task/NATIVE-006. Проверить root/branch/HEAD/status, прочитать AGENTS/reports/NATIVE-006.md и этот TASK.
+DONE, 2026-10-13. Source52ba760, повторное review PASS. Один результат: отказ complete/reopen показывается на том же экране Today. Product review SHA917f9608b9670b01ff10f397d8478b77979fb4c3; correction start — coordinator HEAD из handoff. Worktree `/Users/atlhnv/Codex/orbit-worktrees/NATIVE-006`, branch task/NATIVE-006. Проверить root/branch/HEAD/status, прочитать AGENTS/reports/NATIVE-006.md и этот TASK.
 
 Scope: TodayScreen.swift + R1-секция reports/NATIVE-006-executor.md. Отобразить существующий model.writeError видимым русским текстом, доступным AX/Dynamic Type, рядом с контентом, без удаления списка/empty/read error UI. Не очищать ошибку в View, не писать в store; model mutation уже сбрасывает ошибку при успехе. Не менять complete/reopen/model/helper/store/navigation/editors и не создавать новый state machine. Popутно добавить явный import Combine в этом же файле для Timer publisher warnings. Если удобно, local date можно показывать также при completely empty store (не отдельный blocker).
 

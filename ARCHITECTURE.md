@@ -1,3 +1,5 @@
+Актуально2026-10-13: NATIVE-006 принят: native Today/Inbox TabView используют один IOSInboxModel/store; Today read-only plannedDate==local Gregorian today, day пересчитывается appear/active/periodic30s. Store/model/schema не менялись. Calendar overnight projection/grid отдельно. Реальный iPhone и runtime error banner не проверены.
+
 Актуально2026-10-13: NATIVE-002 интегрирован как локальная iOS база (apple/OrbitIOS + OrbitCore), main build/core20 PASS. NATIVE-001-R1 остаётся открытым для macOS CLI, iOS его resolver не вызывает. NATIVE-003 принят: nullable plannedDate civil Gregorian string, explicit save и проверенная миграция прежнего store; UI adapters фиксируют Gregorian calendar, сохраняя локальную timezone. GUI смены даты и реальный iPhone остаются непроверенными. Sync/server/полный календарь не входит. Историческое условие «NATIVE-002 после приёмки NATIVE-001» ниже заменено прямым разрешением пользователя iOS первым.
 
 # Orbit — активная native архитектура
