@@ -26,3 +26,12 @@ R4 [P2], подтверждённая source ошибка: CalendarDayScreen unt
 Дополнительная маленькая sizing гигиена в том же CalendarDayScreen: при<=3tasks gutter использует Color.clear с fixedwidth и без height; Color flexible по vertical и может брать surplusheight, что противоречит compact1–3/no пустаяarea. Runtime manifestation в данном round не воспроизводился, это source risk. Убрать verticalflexibility только этого placeholder (zero/natural fixedheight) без изменения rowhit/panel/grid. Собственная GUI1task по возможности, никаких новых большогоlayoutрефакторинга.
 
 После этого один targeted iOS build+два fresh screenshots state icon, без full повторов, stop independent acceptance. NATIVE-MIN5 подготовлен отдельно, branch/worktree до acceptance007C не выданы. Header может использовать native two-line fallback; новую итерацию его дизайна без пользователя не открываем.
+
+
+## Итог FINAL — ACCEPTED в renderer/untimed scope,2026-10-14
+
+Productfe8e58d3a93f1e8e657eaa0ed4b5ba92a8668856, correctionbasec8b6f8c. Scope ровно CalendarDayScreen+executorsection, tree/diff --check чист. Explicit two SF chevrons conditionally swap; no whole-pair rotation. Gutterplaceholderheight0 для<=3. Independent generic iOSSimulator build ownDerivedData CODE_SIGNING_ALLOWED=NO — BUILD SUCCEEDED/exit0, evidence final-icon-build.log. Просмотрен actual executor screenshot12: верхнийchevrondown/нижнийup и expandedcards/timeline visible; screenshots11/13 и GUI detailedreport — executor evidence, нового ownSimulator вtinyreview не было.
+
+Cumulative R1/R2/R3 проверены раньше source+independentbuild+screenshots: adaptive bounded untimed,compactcards/lefttoggle,menu relocated without grid/corechanges. Core/tests/web/legacy не повторялись, no newcorepassclaim. Pan/internaloffset/longpress/realiPhone ещё UNVERIFIED; sourceidentity сохраняется. Один reported spontaneousrestart вownSimulator не объяснён/не повторён, storeсохранён — записать дляdeviceQA, не утверждать crashfreequalification.
+
+ACCEPTED означает этот boundedUI scope. Неправильная separateCalendar tab НЕ целевойproductnavigation: пользователь явно отменил её, новаяNAV001 заменяет Today/Calendar navigation, NAV002 добавляетrealUpcoming. Принятый renderer сохраняется reusable. No push/deploy.
