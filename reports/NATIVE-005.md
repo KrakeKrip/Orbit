@@ -17,3 +17,9 @@
 Добавить видимое название task в самом sheet, с переносом для длинного текста и Dynamic Type, сохранив простой native Form. Не менять поля, валидацию, store, presentation и список. Это один product файл + executor report. Проверки соразмерны: один iOS build и GUI открытие редактора двух разных задач (правильный title после нового открытия; длинный title читается); без полного core/legacy/web прогона. Scope/передача — tasks/NATIVE-005-R1.md.
 
 NATIVE-005 не принят, merge отсутствует; NATIVE-006 пока не выдаётся. Push/deploy не выполнялись.
+
+## Повторное review R1 — PASS
+
+2026-10-13, product SHA `961cc2dcb06db77a7d4eda1b9037278e195dd64a`. Изменён только TaskIntervalSheet.swift (+11 строк) и отчёт. Видимая секция «Задача» содержит актуальный task.title, системный body medium, перенос без lineLimit/фиксированной высоты, отдельный accessibility id. Остальной editor/source не менялся. Скриншот06-r1-long-title-editor.png независимо просмотрен: полное название читается на двух строках; открытие двух задач/Cancel без записи подтверждено executor GUI/readonly evidence, Codex новый GUI-прогон не выполнял.
+
+Независимый iOS Simulator build на новых DerivedData, DEVELOPER_DIR Xcode27/CODE_SIGNING_ALLOWED=NO: exit0, BUILD SUCCEEDED; только прежний AppIntents metadata warning. Cumulative git diff --check a561374..HEAD PASS, дерево чистое. Core и исходные GUI-проверки не повторялись без изменения соответствующего кода. R1 закрыт; NATIVE-005 принят в scope interval editor. Реальный iPhone/disk failure/тёмная тема остаются непроверенными.
