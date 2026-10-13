@@ -37,8 +37,27 @@ enum IOSInboxFormatting {
         switch error {
         case TaskPlannedDateError.invalid:
             return "Дата должна быть в формате ГГГГ-ММ-ДД (год 1900–2199)."
+        case TaskTimeIntervalError.endOutOfRange:
+            return "Не удалось сохранить дату: итоговое время задачи выходит за пределы 1900–2199."
         default:
             return "Не удалось сохранить дату. \(storageMessage(error))"
+        }
+    }
+
+    static func intervalMessage(_ error: Error) -> String {
+        switch error {
+        case TaskTimeIntervalError.invalidTime(let value):
+            return "Начало «\(value)» должно быть временем в формате ЧЧ:ММ (00:00–23:59)."
+        case TaskTimeIntervalError.invalidDuration(let value):
+            return "Длительность \(value) недопустима: укажите целое число минут от 1 до 1440."
+        case TaskTimeIntervalError.incompletePair:
+            return "Укажите начало и длительность вместе."
+        case TaskTimeIntervalError.missingDate:
+            return "Сначала назначьте дату задачи."
+        case TaskTimeIntervalError.endOutOfRange:
+            return "Итоговое время задачи выходит за пределы календаря (1900–2199)."
+        default:
+            return "Не удалось сохранить время. \(storageMessage(error))"
         }
     }
 
@@ -116,6 +135,22 @@ final class IOSInboxModel {
         } catch {
             reload()
             return IOSInboxFormatting.plannedDateMessage(error)
+        }
+    }
+
+    /// Assigns, changes or clears (nil/nil) the time interval as a whole pair.
+    /// Returns nil on success (the list is reloaded from persisted truth);
+    /// otherwise returns a user-facing message for the interval editor, which
+    /// stays open for retry. The pair is always passed to the store whole —
+    /// the core remains the single source of validation rules.
+    func setPlannedInterval(plannedTime: String?, durationMinutes: Int?, for task: OrbitTask) -> String? {
+        do {
+            try store.setPlannedInterval(plannedTime: plannedTime, durationMinutes: durationMinutes, for: task.id)
+            reload()
+            return nil
+        } catch {
+            reload()
+            return IOSInboxFormatting.intervalMessage(error)
         }
     }
 }

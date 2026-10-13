@@ -1,4 +1,4 @@
-# Orbit — iOS Inbox (NATIVE-002/003)
+# Orbit — iOS Inbox (NATIVE-002/003/004/005)
 
 Один экран «Входящие» для iPhone (Todoist-настроение: крупный системный заголовок,
 компактные строки с круглым контролем завершения слева, спокойный системный фон,
@@ -19,19 +19,30 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   macOS CLI resolver (`OrbitStoreLocation.resolveStoreURL`) на iOS не вызывается,
   launch-override не принимается.
 - `OrbitIOS/IOSInboxModel.swift` — `@MainActor @Observable` состояние экрана:
-  операции через OrbitCore (валидация/список/complete/reopen/plannedDate),
-  успех только после явного `save()`, при ошибке draft сохраняется.
+  операции через OrbitCore (валидация/список/complete/reopen/plannedDate/
+  setPlannedInterval), успех только после явного `save()`, при ошибке draft
+  сохраняется.
 - `OrbitIOS/InboxScreen.swift` — экран: NavigationStack large title «Входящие»,
   секции «Открытые»/«Завершённые», круглый completion-контроль ≥44pt с a11y
-  label «действие: задача», краткая подпись назначенной даты, calendar-действие
-  в строке, перенос длинных названий, композер в нижнем safe area (клавиатура
-  его поднимает), inline-ошибка, честный empty state.
+  label «действие: задача», краткая подпись даты и интервала
+  («09:00–09:30», «23:30–01:00 (+1 день)»), calendar/clock-действия в строке
+  (clock — только у датированной задачи), перенос длинных названий, композер
+  в нижнем safe area (клавиатура его поднимает), inline-ошибка, честный
+  empty state; один editor за раз (presentation kind+UUID).
 - `OrbitIOS/TaskDateSheet.swift` — маленький редактор даты (NATIVE-003):
   native wheel `DatePicker`, draft по умолчанию — сегодняшний local civil день,
   явные «Сохранить»/«Отмена» (открытие/отмена ничего не пишут), «Убрать дату»
   для назначенной; отказ показывает ошибку и оставляет редактор для retry.
+- `OrbitIOS/TaskIntervalSheet.swift` — редактор времени/длительности
+  (NATIVE-005): два подписанных текстовых поля («Начало» ЧЧ:ММ, «Длительность,
+  мин»), draft из сохранённых значений при каждом открытии (defaults 09:00/30),
+  видимые формат/диапазон, «Сохранить»/«Отмена»/«Убрать время» (для
+  назначенного интервала); открытие/отмена/swipe не пишут; отклонённый draft
+  не воскресает; невалидный ввод не превращается в nil/nil — core остаётся
+  источником правил (пара передаётся целиком), отказ показывает русскую
+  ошибку и сохраняет sheet для retry.
 
-## Дата задачи (NATIVE-003)
+## Дата и время задачи (NATIVE-003/004/005)
 
 `plannedDate` — nullable civil строка `YYYY-MM-DD` (Gregorian 1900–2199,
 валидация `TaskPlannedDate`, store-операция `setPlannedDate` с явным save и
