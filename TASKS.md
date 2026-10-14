@@ -76,3 +76,5 @@ Cumulative review2026-10-14: NATIVE-007C9cefc4d independentiOSbuild/diffcheck PA
 Итог2026-10-14: NAV001 accepted58ae60a, main mergebe6d6abbffeefe9fc76a8fa2cbc43fb3bec86cec; independentiOSbuild/diffcheck PASS, mainapple identity testedbranch. P3 datecaption locale tracked NAV002. Следующий NAV002 realUpcoming: List7inclusive/calendarDay, owner selectedday+mode; near2199 list windowtruncate, nofakeCalendarTab/core changes/3days. Источникbasebe6d6abb; MIN5/drag не выданы.
 
 Уточнение2026-10-14: пользователь назначил listrowmenu/no icons/lessheight. NAV002сейчасWIP (егофайлыкоординаторнетрогает); следующийпослеегоreview NATIVE-LIST-001, затемMIN5/drag. Boundedplan /Users/atlhnv/Codex/orbit-outputs/NATIVE-LIST-001.md, no assignedbranchyet. Этоlistrowheight, не taskduration/calendargeometry.
+
+Прямое уточнениеNAV0022026-10-14: contextual «Сегодня» тольконавыбранномнесегодняшнемдне вList/Calendar. Supplementalprompt /Users/atlhnv/Codex/orbit-outputs/NATIVE-NAV-002-today-button-prompt.txt. Никакихproductправоккоординатором/WIPперезаписей, branchscopeпрежний.

@@ -57,3 +57,7 @@ Calendar — ВИД задач, не bottom tab. Сегодня: same-local-day 
 ## Обычные list строки — уточнение2026-10-14
 
 По нажатию на название/тело task открывается компактное меню: дата, время/длительность через существующие editors. Clock/calendar icons постоянно настроке убрать, completioncircle независим. Строки Today/Upcoming/Inbox сделать ниже за счёт padding/insets; читабельность/DynamicType и sourceUUID сохранить, calendarpaint/duration не уменьшать. Повторнуюдату подстрокой вToday/day-groupedUpcoming можноскрыть, вInboxполезнаядатаостаётся. ScopeбудущийNATIVE-LIST-001 послеNAV002, не текущийWIP и не bigtaskdetail/save-redesign.
+
+### Contextual jump «Сегодня»,2026-10-14
+
+В Предстоящем (List/Calendar) кнопка «Сегодня» видна только если selected civil day != current localGregorian day. Послеjump/ручного выбораtoday исчезает, беззарезервированнойпустойпанели. Reference day обновляется lifecycle/clock, manuallyselectedday/mode не сбрасывается; фиксированныйToday screen jump не получает. Уточнение текущегоNAV002, не отдельнаяfeatureзадача.
