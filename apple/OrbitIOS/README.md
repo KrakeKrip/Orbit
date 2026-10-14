@@ -22,19 +22,34 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   операции через OrbitCore (валидация/список/complete/reopen/plannedDate/
   setPlannedInterval), успех только после явного `save()`, при ошибке draft
   сохраняется.
-- `OrbitIOS/TodayScreen.swift` — вкладка «Сегодня» (NATIVE-006): read-only
-  срез задач на текущий локальный Gregorian день через `TaskDaySelection`;
+- `OrbitIOS/TodayWorkspaceScreen.swift` — контейнер раздела «Сегодня»
+  (NATIVE-NAV-001): единственный owner текущего локального Gregorian дня
+  (пересчёт на appear/active/не реже раза в минуту; при смене дня reload
+  общей модели — оба вида обновляются вместе) и compact native
+  переключатель «Список / Календарь» (segmented, identifier
+  `today-mode-switcher`). Выбранный вид — presentation-состояние:
+  сохраняется при Today → Входящие → Today в рамках сессии, никогда не
+  пишет задачи и не создаёт копий; оба вида работают над одним
+  `IOSInboxModel`/store. Самостоятельной нижней вкладки «Календарь» больше
+  нет — tabs только Сегодня/Входящие (фейковый Upcoming не создаётся,
+  настоящий добавляется отдельным NAV002).
+- `OrbitIOS/TodayScreen.swift` — список «Сегодня» (NATIVE-006/NAV-001):
+  read-only срез задач на день из входа `day` через `TaskDaySelection`;
   те же строки/actions/editors, что в Inbox (complete/reopen, date/interval
-  editors); заголовок «Сегодня» + видимая локальная дата; честный empty
-  state «На сегодня задач нет» с действием «Добавить во Входящих»
-  (переключает на живую вкладку, не создаёт задачу). День пересчитывается
-  на appear/active и не реже раза в минуту; без сетки/overdue/quick-add.
+  editors); заголовок «Сегодня» + видимая локальная дата; переключатель
+  «Список / Календарь» в navigation bar; честный empty state «На сегодня
+  задач нет» с действием «Добавить во Входящих» (переключает на живую
+  вкладку, не создаёт задачу). Без сетки/overdue/quick-add.
 - `OrbitIOS/CalendarDayScreen.swift` + `OrbitIOS/DayTimelineView.swift` +
-  `OrbitIOS/CompactCalendarTaskRow.swift` — вкладка «Календарь»
-  (NATIVE-007B/007C/007C-R2/007C-R3): без крупного заголовка, под safe area
-  сразу компактные date controls — Prev/Next ±1 день с guard 1900–2199,
-  «Сегодня», compact DatePicker с view-local ru_RU locale (системная locale
-  не меняется) и native «⋯» меню («Меню календаря», hit ≥44pt); при
+  `OrbitIOS/CompactCalendarTaskRow.swift` — календарный вид дня
+  (NATIVE-007B/007C/007C-R2/007C-R3/NAV-001), переиспользуется в двух
+  контекстах: fixed-day внутри «Сегодня» (`fixedDay` != nil) — компактная
+  шапка с русским caption текущего дня, переключателем «Список /
+  Календарь» и «⋯» меню, БЕЗ Prev/Next/picker/«Сегодня» (другие даты —
+  будущий Upcoming/NAV002); browsing-контекст по умолчанию (для NAV002) —
+  Prev/Next ±1 день с guard 1900–2199, «Сегодня», compact DatePicker с
+  view-local ru_RU locale (системная locale не меняется) и native «⋯»
+  меню («Меню календаря», hit ≥44pt); при
   стандартном шрифте ряд может не помещаться — `ViewThatFits` переносит
   «Сегодня» + «⋯» на вторую компактную строку, без возвращения large title.
   «⋯» содержит «Задачи дня» — реальные TIMED сегменты выбранного дня

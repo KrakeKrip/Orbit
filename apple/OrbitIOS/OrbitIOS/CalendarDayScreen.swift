@@ -9,8 +9,19 @@ import OrbitCore
 /// Read-only slice over the shared model — taps and the context menu reuse
 /// the existing complete/reopen and date/interval editors for the source
 /// task; creation stays in the Inbox composer.
+/// NATIVE-NAV-001 fixed-day context (`fixedDay` non-nil, used inside
+/// «Сегодня»): the shown day comes from the workspace's current local day
+/// input, the date browser (Prev/Next/picker/«Сегодня») is hidden and the
+/// compact «Список / Календарь» switcher replaces it. The default browsing
+/// context (no `fixedDay`) stays untouched for the future Upcoming screens.
 struct CalendarDayScreen: View {
     let model: IOSInboxModel
+    /// Fixed-day Today context: when non-nil the screen shows exactly this
+    /// civil day and follows its changes from the current-day owner.
+    var fixedDay: String? = nil
+    /// Today mode switcher binding; rendered in the fixed-day header when
+    /// provided (browsing contexts simply omit it).
+    var todayMode: Binding<Bool>? = nil
 
     @State private var presentation: InboxSheetPresentation?
     @State private var selectedDay: String = TaskDaySelection.currentDay()
@@ -98,7 +109,12 @@ struct CalendarDayScreen: View {
                 // Reactive model updates already refresh the rows; this reload
                 // keeps the day view in sync after external changes. The
                 // manually selected day is never reset here.
+                applyFixedDay()
                 model.reload()
+            }
+            .onChange(of: fixedDay) { _, _ in
+                // The current-day owner moved midnight/timezone: follow it.
+                applyFixedDay()
             }
             .onChange(of: selectedDay) { _, _ in
                 // Day switch collapses the untimed area and drops its scroll
@@ -106,6 +122,19 @@ struct CalendarDayScreen: View {
                 untimedExpanded = false
                 expandedContentHeight = nil
             }
+        }
+    }
+
+    private var isFixedDayMode: Bool {
+        fixedDay != nil
+    }
+
+    /// Fixed-day Today context: the shown day always equals the owner's
+    /// current local day (invalid values never change the state).
+    private func applyFixedDay() {
+        guard let fixedDay, TaskPlannedDate.isValid(fixedDay) else { return }
+        if selectedDay != fixedDay {
+            selectedDay = fixedDay
         }
     }
 
@@ -126,6 +155,61 @@ struct CalendarDayScreen: View {
     /// moves «Сегодня» to its own line so nothing overflows and shifts the
     /// rest of the content sideways.
     private var dayControls: some View {
+        Group {
+            if isFixedDayMode {
+                fixedDayControls
+            } else {
+                browserDayControls
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.bar)
+    }
+
+    /// Fixed-day Today context header: the Russian current-day caption, the
+    /// compact «Список / Календарь» switcher and the existing «⋯» menu — no
+    /// Prev/Next/picker/«Сегодня» date browsing (that belongs to the future
+    /// Upcoming section). Adaptive like the browsing header.
+    private var fixedDayControls: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                modeControl
+                Spacer(minLength: 8)
+                Text(fixedDayCaption)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                calendarMenu
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    modeControl
+                    Spacer(minLength: 0)
+                    calendarMenu
+                }
+                Text(fixedDayCaption)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var modeControl: some View {
+        Group {
+            if let todayMode {
+                TodayModeSwitcher(showsCalendar: todayMode)
+            } else {
+                Color.clear.frame(height: 0)
+            }
+        }
+    }
+
+    private var fixedDayCaption: String {
+        InboxRowView.dateLabel(selectedDay)
+    }
+
+    private var browserDayControls: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) {
                 prevDayButton
@@ -148,9 +232,6 @@ struct CalendarDayScreen: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(.bar)
     }
 
     private var prevDayButton: some View {

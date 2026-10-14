@@ -11,7 +11,6 @@ struct OrbitIOSApp: App {
     private enum Tab: Hashable {
         case today
         case inbox
-        case calendar
     }
 
     @Environment(\.scenePhase) private var scenePhase
@@ -39,7 +38,7 @@ struct OrbitIOSApp: App {
             switch launch {
             case .ready(let model):
                 TabView(selection: $selectedTab) {
-                    TodayScreen(model: model) {
+                    TodayWorkspaceScreen(model: model) {
                         selectedTab = .inbox
                     }
                     .tabItem {
@@ -51,11 +50,6 @@ struct OrbitIOSApp: App {
                             Label("Входящие", systemImage: "tray")
                         }
                         .tag(Tab.inbox)
-                    CalendarDayScreen(model: model)
-                        .tabItem {
-                            Label("Календарь", systemImage: "calendar")
-                        }
-                        .tag(Tab.calendar)
                 }
                 .tint(.orbitAccent)
                 .onChange(of: scenePhase) { _, phase in

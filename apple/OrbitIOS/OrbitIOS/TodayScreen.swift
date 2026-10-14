@@ -1,20 +1,19 @@
-import Combine
 import SwiftUI
 import OrbitCore
 
 /// The «Сегодня» list: tasks planned on the device's current local civil
 /// date. Read-only slice over the shared model — the same rows, editors and
-/// sheets as the Inbox; creation stays in the Inbox composer. The current
-/// day is recomputed on appear, on scene activation and at least once a
-/// minute while the screen is visible; task dates are never rewritten.
+/// sheets as the Inbox; creation stays in the Inbox composer.
+/// NATIVE-NAV-001: the current day is owned by `TodayWorkspaceScreen` and
+/// provided as the `day` input; the compact «Список / Календарь» switcher
+/// lives in the navigation bar. Task dates are never rewritten.
 struct TodayScreen: View {
     let model: IOSInboxModel
+    let day: String
     let onGoToInbox: () -> Void
+    var todayMode: Binding<Bool>? = nil
 
-    @Environment(\.scenePhase) private var scenePhase
     @State private var presentation: InboxSheetPresentation?
-    @State private var currentDay: String = TaskDaySelection.currentDay()
-    private let dayRefreshTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationStack {
@@ -35,6 +34,13 @@ struct TodayScreen: View {
             .navigationTitle("Сегодня")
             .navigationBarTitleDisplayMode(.large)
             .background(Color(.systemBackground))
+            .toolbar {
+                if let todayMode {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        TodayModeSwitcher(showsCalendar: todayMode)
+                    }
+                }
+            }
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):
@@ -44,18 +50,10 @@ struct TodayScreen: View {
                 }
             }
         }
-        .onAppear { refresh() }
-        .onReceive(dayRefreshTimer) { _ in refresh(reloadTasks: false) }
-        .onChange(of: currentDay) { _, _ in model.reload() }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                refresh()
-            }
-        }
     }
 
     private var todayTasks: [OrbitTask] {
-        TaskDaySelection.tasks(onDay: currentDay, in: model.tasks)
+        TaskDaySelection.tasks(onDay: day, in: model.tasks)
     }
 
     private var openTasks: [OrbitTask] {
@@ -106,7 +104,7 @@ struct TodayScreen: View {
         } description: {
             Text(model.listError ?? "")
         } actions: {
-            Button("Повторить") { refresh() }
+            Button("Повторить") { model.reload() }
                 .buttonStyle(.borderedProminent)
                 .tint(.orbitAccent)
         }
@@ -154,17 +152,6 @@ struct TodayScreen: View {
     }
 
     private var dateCaption: String {
-        InboxRowView.dateLabel(currentDay)
-    }
-
-    /// Recomputes the current local day; reloads the shared model on explicit
-    /// refreshes (appear, retry, scene activation) or when the day changed.
-    private func refresh(reloadTasks: Bool = true) {
-        let newDay = TaskDaySelection.currentDay()
-        let dayChanged = newDay != currentDay
-        currentDay = newDay
-        if reloadTasks || dayChanged {
-            model.reload()
-        }
+        InboxRowView.dateLabel(day)
     }
 }
