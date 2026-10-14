@@ -15,7 +15,8 @@
 | NATIVE-007C | DONE | раскрываемая область «Без времени»: 3 строки / больше / внутренний scroll |
 | NATIVE-NAV-001 | DONE | Today Список/Календарь, убрать самостоятельную Calendar tab |
 | NATIVE-NAV-002 | DONE | реальный раздел Предстоящее с List/Calendar над shared tasks |
-| NATIVE-LIST-001 | TODO (назначен) | меню даты/времени/длительности по tap, без иконок, компактнее обычные list строки |
+| NATIVE-LIST-001 | DONE | меню даты/времени/длительности по tap, без иконок, компактнее обычные list строки |
+| NATIVE-MIN5 | TODO (назначен) | core write минимум5минут, legacy1–4неперезаписывать/readgeometryсохранить |
 | NATIVE-UI-MODE | TODO (план) | единая позиция и оформление view switcher в Today/Upcoming обоих видах |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
 | NATIVE-PRJ-002 | TODO (план) | настоящий экран списка/создания проектов и нижняя вкладка |
@@ -88,3 +89,5 @@ Cumulative review2026-10-14: NATIVE-007C9cefc4d independentiOSbuild/diffcheck PA
 Review2026-10-14: NAV002185a19b independentiOSbuild/diffcheckPASS, но contextualToday отсутствует вbothviews и Calendarfallback слишкомwide (actualscreenshot04mode/hourlabelsclipped). Одинheadercorrection tasks/NATIVE-NAV-002-R1.md на3UI files, start322b55761f6fcfb83c625e4a23d9874e784963d9. Membership/range/sharedselectionsource reviewed, no merge/LIST001branchyet.
 
 Итог2026-10-14: NAV002 accepted8551416/mainmerge8547b026986aa563ef31751521f23587642cb51d, independentiOSbuildPASS/mainapple sourceidentityPASS. R1/R2closed, runtime6buttonstates executor evidence reviewed/ownlatestGUIнеповторялся. Current nextLIST001 sourcebase8547b026 (actual assignmenttasksfile). Unifiedmodeheader position отдельноplanned поuser«дальшеисправим/покаwait», не блокируетLIST001 иscopeнерасширяет.
+
+Итог2026-10-14: LIST001 acceptededf45db/mainmerge12fbee7dc651128fa1aa829570180f15c2cd92be, independentiOSbuildPASS/sourceidentityaftermergePASS. Native Menu/bodyhit/circle independent/undatedgating/dateflag/noicon reviewed, source+executorGUIexplicit. NextMIN5 sourcebase12fbee7, actualtasks/NATIVE-MIN5.md; Projects/commonheader/gestures планы не выданы.

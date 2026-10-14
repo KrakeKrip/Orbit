@@ -38,3 +38,7 @@ swift build / swift test на macOS, disk reopen regression; реальный GU
 ## Navigation/view separation,2026-10-14
 
 Bottom sections Today/Inbox/Upcoming, Calendar не отдельная section. Today/Upcoming containers имеют собственный list/calendar presentation state над общим IOSInboxModel/SwiftData store. Accepted DayTimeline/TaskDayProjector/compact untimed UI reuse, без новой persistence entity/cache/клонов данных. Same task identity/mutations/errors across views. Today local current date обновляется lifecycle/clock как accepted TodayScreen; Upcoming selected civil day/range независим, сохраняется при view switches. Navigation migration не требует schema migration/network. No nested NavigationStacks при embedding existing screens; минимум local UI extraction по реальной необходимости. Последовательные boundedNAV001(Today mode/remove Calendar tab),NAV002(real Upcoming list/calendar) без fake empty tabs, full3days/Month ещёfuture.
+
+## Назначенный NATIVE-MIN5: write minimum vs legacy read
+
+Новая запись/изменение interval —5…1440; уже существующие1…4 остаются вstore/end/projector и не мигрируются автоматически. Отдельный маленький writevalidator вacceptedTaskTimeInterval, storeprecheck beforemutation; pureend/isValidDuration сохраняютreadcompatibility1…1440. Schema неизменна, minimumнеравенкратности5, clear/dateMove/complete legacydataпрежние. Это назначенныйконтракт, доreviewнеimplementedPASS.
