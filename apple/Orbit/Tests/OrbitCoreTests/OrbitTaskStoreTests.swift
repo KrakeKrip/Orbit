@@ -937,4 +937,262 @@ struct OrbitTaskStoreTests {
         try reopened.renameTask(title: "Ещё раз", for: kept.id)
         #expect(try reopened.tasks().first?.title == "Ещё раз")
     }
+
+    // MARK: - NATIVE-ADD-003: atomic creation with date and interval
+
+    @Test("addTask with date and interval creates one complete timed row in a single save")
+    @MainActor
+    func addTimedTask() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let at = Date(timeIntervalSince1970: 1_760_000_000)
+        let task = try store.addTask(
+            title: "  С временем  ",
+            now: at,
+            plannedDate: "2026-10-14",
+            plannedTime: "09:00",
+            durationMinutes: 30
+        )
+
+        #expect(task.title == "С временем")
+        #expect(task.createdAt == at)
+        #expect(task.completedAt == nil)
+        #expect(task.plannedDate == "2026-10-14")
+        #expect(task.plannedTime == "09:00")
+        #expect(task.durationMinutes == 30)
+        // The derived end stays computed, never stored.
+        #expect(task.plannedDate == "2026-10-14")
+        #expect(TaskTimeInterval.end(plannedDate: "2026-10-14", plannedTime: "09:00", durationMinutes: 30)?.time == "09:30")
+
+        let all = try store.tasks()
+        #expect(all.count == 1)
+        #expect(all.first?.id == task.id)
+    }
+
+    @Test("overnight interval and non-step durations (5/6/7, start 09:08) are accepted")
+    @MainActor
+    func addTimedOvernightAndNonStepDurations() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        // 23:30 + 90 crosses midnight; the derived end is computed, the row
+        // keeps its own start date and pair.
+        let overnight = try store.addTask(
+            title: "Ночная",
+            plannedDate: "2026-10-14",
+            plannedTime: "23:30",
+            durationMinutes: 90
+        )
+        #expect(overnight.plannedDate == "2026-10-14")
+        #expect(overnight.plannedTime == "23:30")
+        #expect(overnight.durationMinutes == 90)
+        let derivedEnd = try #require(
+            TaskTimeInterval.end(plannedDate: "2026-10-14", plannedTime: "23:30", durationMinutes: 90)
+        )
+        #expect(derivedEnd.date == "2026-10-15")
+        #expect(derivedEnd.time == "01:00")
+
+        // The write minimum 5 is a minimum, not a step-of-5 rule, and the
+        // start minute is free (0...59): 09:08 with 6 and 7 minutes is valid.
+        let six = try store.addTask(title: "Шесть", plannedDate: "2026-10-14", plannedTime: "09:08", durationMinutes: 6)
+        let seven = try store.addTask(title: "Семь", plannedDate: "2026-10-14", plannedTime: "09:08", durationMinutes: 7)
+        let five = try store.addTask(title: "Пять", plannedDate: "2026-10-14", plannedTime: "09:08", durationMinutes: 5)
+        #expect(six.durationMinutes == 6)
+        #expect(seven.durationMinutes == 7)
+        #expect(five.durationMinutes == 5)
+        #expect(try store.tasks().count == 4)
+    }
+
+    @Test("a timed candidate requires an explicit date: nothing is silently dated today")
+    @MainActor
+    func addTimedRequiresDate() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let existing = try store.addTask(title: "Существующая", now: Date(timeIntervalSince1970: 100), plannedDate: "2026-01-02")
+
+        #expect(throws: TaskTimeIntervalError.missingDate) {
+            try store.addTask(title: "Со временем без даты", plannedTime: "09:00", durationMinutes: 30)
+        }
+
+        // No row was created (also not undated), the fixture is untouched.
+        var all = try store.tasks()
+        #expect(all.count == 1)
+        #expect(all.first?.id == existing.id)
+        #expect(all.first?.title == "Существующая")
+        #expect(all.first?.plannedDate == "2026-01-02")
+
+        // A valid retry with an explicit date works.
+        let retry = try store.addTask(
+            title: "Со временем без даты",
+            plannedDate: "2026-10-14",
+            plannedTime: "09:00",
+            durationMinutes: 30
+        )
+        #expect(retry.plannedDate == "2026-10-14")
+        all = try store.tasks()
+        #expect(all.count == 2)
+    }
+
+    @Test("partial pairs are rejected before insert; a valid retry works")
+    @MainActor
+    func addPartialPairRejected() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        #expect(throws: TaskTimeIntervalError.incompletePair(time: nil, durationMinutes: 30)) {
+            try store.addTask(title: "Только длительность", plannedDate: "2026-10-14", durationMinutes: 30)
+        }
+        #expect(throws: TaskTimeIntervalError.incompletePair(time: "09:00", durationMinutes: nil)) {
+            try store.addTask(title: "Только начало", plannedDate: "2026-10-14", plannedTime: "09:00")
+        }
+
+        // Both refusals happened before any insert.
+        #expect(try store.tasks().isEmpty)
+
+        let retry = try store.addTask(
+            title: "Полная пара",
+            plannedDate: "2026-10-14",
+            plannedTime: "09:00",
+            durationMinutes: 30
+        )
+        #expect(retry.plannedTime == "09:00")
+        #expect(try store.tasks().count == 1)
+    }
+
+    @Test("invalid date or time in a timed candidate is refused; the fixture keeps every field")
+    @MainActor
+    func addTimedInvalidDateOrTime() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let createdAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let fixture = try store.addTask(
+            title: "Существующая",
+            now: createdAt,
+            plannedDate: "2026-01-02",
+            plannedTime: "08:00",
+            durationMinutes: 30
+        )
+
+        #expect(throws: TaskPlannedDateError.invalid("2026-13-40")) {
+            try store.addTask(title: "Новая", plannedDate: "2026-13-40", plannedTime: "09:00", durationMinutes: 30)
+        }
+        #expect(throws: TaskTimeIntervalError.invalidTime("24:00")) {
+            try store.addTask(title: "Новая", plannedDate: "2026-10-14", plannedTime: "24:00", durationMinutes: 30)
+        }
+        #expect(throws: TaskTimeIntervalError.invalidTime("9:00")) {
+            try store.addTask(title: "Новая", plannedDate: "2026-10-14", plannedTime: "9:00", durationMinutes: 30)
+        }
+
+        let all = try store.tasks()
+        #expect(all.count == 1)
+        #expect(all.first?.id == fixture.id)
+        #expect(all.first?.title == "Существующая")
+        #expect(all.first?.createdAt == createdAt)
+        #expect(all.first?.plannedDate == "2026-01-02")
+        #expect(all.first?.plannedTime == "08:00")
+        #expect(all.first?.durationMinutes == 30)
+
+        let retry = try store.addTask(title: "Новая", plannedDate: "2026-10-14", plannedTime: "09:00", durationMinutes: 30)
+        #expect(retry.plannedDate == "2026-10-14")
+        #expect(try store.tasks().count == 2)
+    }
+
+    @Test("duration write gate: 0, 1...4, 1441 and Int.max are refused before insert")
+    @MainActor
+    func addTimedDurationGate() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        #expect(throws: TaskTimeIntervalError.invalidDuration(0)) {
+            try store.addTask(title: "Ноль", plannedDate: "2026-10-14", plannedTime: "09:00", durationMinutes: 0)
+        }
+        for low in 1...4 {
+            #expect(throws: TaskTimeIntervalError.invalidDuration(low)) {
+                try store.addTask(title: "Мало \(low)", plannedDate: "2026-10-14", plannedTime: "09:00", durationMinutes: low)
+            }
+        }
+        #expect(throws: TaskTimeIntervalError.invalidDuration(1441)) {
+            try store.addTask(title: "Много", plannedDate: "2026-10-14", plannedTime: "09:00", durationMinutes: 1441)
+        }
+        #expect(throws: TaskTimeIntervalError.invalidDuration(Int.max)) {
+            try store.addTask(title: "Бесконечность", plannedDate: "2026-10-14", plannedTime: "09:00", durationMinutes: Int.max)
+        }
+
+        // Every refusal happened before any insert.
+        #expect(try store.tasks().isEmpty)
+
+        let retry = try store.addTask(title: "Валидная", plannedDate: "2026-10-14", plannedTime: "09:00", durationMinutes: 30)
+        #expect(retry.durationMinutes == 30)
+        #expect(try store.tasks().count == 1)
+    }
+
+    @Test("a derived end outside 2199 is refused atomically")
+    @MainActor
+    func addTimedEndOutOfRange() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        // 2199-12-31 23:30 + 60 → 2200-01-01 00:30: outside the product range.
+        #expect(throws: TaskTimeIntervalError.endOutOfRange) {
+            try store.addTask(title: "За границей", plannedDate: "2199-12-31", plannedTime: "23:30", durationMinutes: 60)
+        }
+        #expect(try store.tasks().isEmpty)
+
+        let inside = try store.addTask(title: "В границах", plannedDate: "2199-12-31", plannedTime: "22:00", durationMinutes: 60)
+        #expect(inside.plannedDate == "2199-12-31")
+        #expect(try store.tasks().count == 1)
+    }
+
+    @Test("undated and dated-untimed defaults stay compatible; disk reopen keeps the timed row")
+    @MainActor
+    func addDefaultsAndDiskReopen() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let storeURL = dir.appendingPathComponent("Orbit.store")
+
+        let at = Date(timeIntervalSince1970: 1_760_000_000)
+        var firstStore: OrbitTaskStore? = try OrbitTaskStore(storeURL: storeURL)
+        let plain = try firstStore?.addTask(title: "Просто задача", now: at)
+        let datedUntimed = try firstStore?.addTask(title: "Датированная", now: at.addingTimeInterval(5), plannedDate: "2026-10-14")
+        let timed = try firstStore?.addTask(
+            title: "С временем",
+            now: at.addingTimeInterval(10),
+            plannedDate: "2026-10-15",
+            plannedTime: "09:08",
+            durationMinutes: 7
+        )
+
+        // Legacy/compatibility semantics are unchanged.
+        #expect(plain?.plannedDate == nil)
+        #expect(plain?.plannedTime == nil)
+        #expect(plain?.durationMinutes == nil)
+        #expect(datedUntimed?.plannedDate == "2026-10-14")
+        #expect(datedUntimed?.plannedTime == nil)
+        #expect(datedUntimed?.durationMinutes == nil)
+        firstStore = nil
+
+        let reopened = try OrbitTaskStore(storeURL: storeURL)
+        let all = try reopened.tasks()
+        #expect(all.count == 3)
+        let reopenedTimed = try #require(all.first { $0.id == timed?.id })
+        #expect(reopenedTimed.id == timed?.id)
+        #expect(reopenedTimed.title == "С временем")
+        #expect(reopenedTimed.createdAt == at.addingTimeInterval(10))
+        #expect(reopenedTimed.completedAt == nil)
+        #expect(reopenedTimed.plannedDate == "2026-10-15")
+        #expect(reopenedTimed.plannedTime == "09:08")
+        #expect(reopenedTimed.durationMinutes == 7)
+        #expect(all.contains { $0.id == plain?.id } == true)
+        #expect(all.contains { $0.id == datedUntimed?.id } == true)
+    }
 }

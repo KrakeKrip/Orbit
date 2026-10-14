@@ -23,27 +23,69 @@ public final class OrbitTaskStore {
         return fetched.sorted { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }
     }
 
-    /// NATIVE-ADD-001: creates one task together with its optional civil
-    /// planned date in a single save. Backwards compatible: existing
-    /// title/now calls keep working (plannedDate defaults to nil — the
-    /// previous undated semantics). The accepted `TaskTitle.validated` and
-    /// `TaskPlannedDate.isValid` checks run before any context mutation; on
-    /// success exactly one explicit `context.save()` persists the row with
-    /// one UUID/createdAt and nil completion/time/duration, with the existing
-    /// rollback rethrowing a save failure. The date is always an explicit
-    /// civil string from the caller — the current local day is resolved by
-    /// the UI, never defaulted here.
+    /// NATIVE-ADD-001/ADD-003: creates one task together with its optional
+    /// civil planned date and optional time interval in a single save.
+    /// Backwards compatible: existing title/now and title/now/date calls
+    /// keep working — an undated task and a dated untimed task stay valid
+    /// (plannedDate/plannedTime/durationMinutes default to nil; a nil/nil
+    /// pair means no interval). The whole candidate is validated before any
+    /// context mutation: `TaskTitle.validated`, `TaskPlannedDate.isValid`,
+    /// `TaskTimeInterval.isCompletePair` (a partial pair is never silently
+    /// ignored), `isValidTime`, `isWritableDuration` (write minimum
+    /// 5...1440 — a minimum, not a step-of-5 rule: 6/7 stay valid) and, for
+    /// a timed candidate, the presence of an explicit date (never implicitly
+    /// "today") plus the derived end through `TaskTimeInterval.end`. Existing
+    /// error cases are reused, no new validators/calendar/UTC/rounding. On
+    /// success exactly one explicit `context.save()` persists one row with
+    /// one UUID/createdAt and nil completion — never an add-then-edit
+    /// sequence or intermediate saves — with the existing rollback
+    /// rethrowing a save failure. The derived end is never stored; the date
+    /// is always an explicit civil string from the caller.
     @discardableResult
     public func addTask(
         title rawTitle: String,
         now: Date = .now,
-        plannedDate: String? = nil
+        plannedDate: String? = nil,
+        plannedTime: String? = nil,
+        durationMinutes: Int? = nil
     ) throws -> OrbitTask {
         let title = try TaskTitle.validated(rawTitle)
         if let plannedDate, !TaskPlannedDate.isValid(plannedDate) {
             throw TaskPlannedDateError.invalid(plannedDate)
         }
-        let task = OrbitTask(title: title, createdAt: now, plannedDate: plannedDate)
+        if !TaskTimeInterval.isCompletePair(time: plannedTime, durationMinutes: durationMinutes) {
+            throw TaskTimeIntervalError.incompletePair(time: plannedTime, durationMinutes: durationMinutes)
+        }
+        if let plannedTime, !TaskTimeInterval.isValidTime(plannedTime) {
+            throw TaskTimeIntervalError.invalidTime(plannedTime)
+        }
+        if let durationMinutes {
+            if !TaskTimeInterval.isValidDuration(durationMinutes) {
+                throw TaskTimeIntervalError.invalidDuration(durationMinutes)
+            }
+            if !TaskTimeInterval.isWritableDuration(durationMinutes) {
+                throw TaskTimeIntervalError.invalidDuration(durationMinutes)
+            }
+        }
+        if let plannedTime, let durationMinutes {
+            guard let plannedDate else {
+                throw TaskTimeIntervalError.missingDate
+            }
+            guard TaskTimeInterval.end(
+                plannedDate: plannedDate,
+                plannedTime: plannedTime,
+                durationMinutes: durationMinutes
+            ) != nil else {
+                throw TaskTimeIntervalError.endOutOfRange
+            }
+        }
+        let task = OrbitTask(
+            title: title,
+            createdAt: now,
+            plannedDate: plannedDate,
+            plannedTime: plannedTime,
+            durationMinutes: durationMinutes
+        )
         context.insert(task)
         do {
             try context.save()
