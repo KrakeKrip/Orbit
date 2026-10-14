@@ -23,8 +23,8 @@
 | NATIVE-ADD-002 | DONE | общий + и create sheet в Inbox/Today/Upcoming, убрать Inbox composer, спокойное empty Today |
 | NATIVE-EDIT-001 | DONE | core rename/delete поUUID безпереписыванияschema |
 | NATIVE-ADD-003 | DONE | atomiccreateoptionalinterval вcore, безUI |
-| NATIVE-ADD-004 | NEEDS_FIXES (tinyR1) | editabledate/start/duration вsharedcreatesheet |
-| NATIVE-EDIT-002 | TODO (план) | native rename/delete UI сconfirm иCancel |
+| NATIVE-ADD-004 | DONE | editabledate/start/duration вsharedcreatesheet |
+| NATIVE-EDIT-002 | TODO (назначен) | native rename/delete UI сconfirm иCancel |
 | NATIVE-DEVICE-001 | TODO (план) | личныйiPhone install/основныеflows/finalsmallUIpolish |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
 | NATIVE-PRJ-002 | TODO (план) | настоящий экран списка/создания проектов и нижняя вкладка |
@@ -127,3 +127,5 @@ Review2026-10-14: EDIT00184f6048 independent36/iOSbuildPASS, одна R1publicse
 Итог2026-10-14: ADD00388207a3 accepted/mainmerge55ca03221ae23d938b9534e8c2a93b63696f888f; independent44/iOSbuildPASS/appleidentityPASS. НазначенADD004sharedcreateform editabledate/time/duration, sourcebase55ca032; scope2UIfiles+optionalhelper/report, core/existingeditorsне трогать. ДалееEDIT002/deviceQA, deadlines/notificationsпослеfirstiPhonecheck.
 
 Review2026-10-15: ADD004867a0a1 independentiOSbuild/diffcheckPASS. SourceR1optionaldateonlyonChange: невозможноподтвердитьshownvalueбезпрокруткиInbox/reselectafterclear. Назначенtasks/NATIVE-ADD-004-R1.md, correctionstartd62df0c665b5c29bd22e46ac7c53b4d95f1af688; oneUIfix+report/targetedGUI/onebuild, безfullQA. No merge/EDIT002пока.
+
+Итог2026-10-15: ADD004591396faccepted/mainmerge9a16ea0041601eb12c15be040493453e8fd074d1. IndependentR1buildPASS/sourceidentityPASS; dateconfirmGUIexecutorreviewed/softwarekeyboardunverified. Назначен EDIT002sharedlistrowrename/deleteconfirmation, sourcebase9a16ea; CalendareditчерезList, безcontextmenuscope. ПослеacceptancefirstiPhoneQA, deadlines/remindersпозже.

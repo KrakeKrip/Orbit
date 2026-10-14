@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-15
 
-ADD004NEEDS_FIXESHEAD867a0a1, independentiOSbuild/diffcheckPASS. R1: optionaldateзаписываетсялишьonChangepickerDate, нетconfirmshownvalue; Inboxсегодняилиreselectпослеclear требуютненужнойпрокрутки. Назначен толькоtasks/NATIVE-ADD-004-R1.md/taskNATIVE-ADD-004/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-ADD-004, correctionstartd62df0c665b5c29bd22e46ac7c53b4d95f1af688. Tinyexplicitdateconfirm+report, targetedGUI/onebuild; model/core/time/othereditorsнетрогать. No merge/EDIT002пока. ДалееEDIT002UIrename/delete→firstiPhoneQA; deadlines/reminders/notificationsпозже. Reportsfile/chatshort.
+ADD004DONEHEAD591396f/mainmerge9a16ea0041601eb12c15be040493453e8fd074d1. R1explicitdateconfirmclosed/independentiOSbuild/sourceidentityPASS, executorGUIreviewed; latestownGUI/softwarekeyboardrenderunverified. Назначен толькоtasks/NATIVE-EDIT-002.md/taskNATIVE-EDIT-002/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-EDIT-002: sharedLISTrowrename/deleteUI,3UIfiles+report. Calendarcontextmenuнерасширять; Calendarотражаетsharedmutations, editчерезСписок. Core/schema/create/date-timeeditors/header/gridне менять. ПослеacceptancefirstiPhoneQA; deadlines/reminders/notificationsпослепервойпроверки. Reportsfile/chatshort.
 
 # Orbit — правила координации
 
