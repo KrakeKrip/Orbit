@@ -1,3 +1,13 @@
+# NATIVE-EDIT-001 — итог независимой приёмки
+
+2026-10-14 ACCEPTED после tinyR1. HEAD2bccf59736d35096d461a59df6c625fe87dc3d73 отcorrectionbf53794fd610f75e58780c9bf4b7421fec598df4. Clean/diffcheckPASS. Diff толькоOrbitTask.setTitle public→internal+comment/report; единственныйcallerOrbitTaskStore, validation/storeoperations/schema/UI/tests unchanged. R1 publicrawbypassзакрыт.
+
+НезависимыйgenericiOSSimulatorbuild own/private/tmp/orbit-edit001-r1-review-dd, DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer CODE_SIGNING_ALLOWED=NO — exit0 BUILD SUCCEEDED.36/36storetests independentlypassed исходный84f6048; послеvisibilityonlyнеповторялись. Runtime savefailure/realdevice/rename-deleteGUI не проверены(UIещёнет).
+
+Локальная интеграцияразрешена/appleidentityпослеmerge. СледующийassignedADD003atomiccreateintervalcore, затемADD004createUI/date-time-duration, EDIT002UIrename/delete иfirstiPhoneQA. Deadlines/reminders/notifications послеdevicecheck. НижеR0NEEDS_FIXESистория, не текущийстатус.
+
+---
+
 # NATIVE-EDIT-001 — независимый review
 
 2026-10-14 NEEDS_FIXES(одна tiny visibility correction). HEAD84f60482ce49ec25f831956013964cad562f6ae5, assignment411f5fc77ba0a9e60ed4b42c8cc8867de75f0058. Clean/diffcheckPASS, source/testdiff reviewed.
