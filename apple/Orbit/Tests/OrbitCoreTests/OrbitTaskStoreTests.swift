@@ -738,4 +738,203 @@ struct OrbitTaskStoreTests {
         #expect(all.first?.plannedTime == "23:30")
         #expect(all.first?.durationMinutes == 90)
     }
+
+    // MARK: - NATIVE-EDIT-001: rename and delete one task by UUID
+
+    @Test("renameTask trims the new title and changes only the title")
+    @MainActor
+    func renameTrimsAndChangesOnlyTitle() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let createdAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let completedAt = createdAt.addingTimeInterval(300)
+        let task = try store.addTask(title: "Старое имя", now: createdAt, plannedDate: "2026-10-14")
+        try store.setPlannedInterval(plannedTime: "09:00", durationMinutes: 30, for: task.id)
+        try store.setCompleted(true, for: task.id, at: completedAt)
+
+        try store.renameTask(title: "  Новое имя  ", for: task.id)
+
+        let stored = try store.tasks()
+        #expect(stored.count == 1)
+        #expect(stored.first?.title == "Новое имя")
+        // Every non-title field, including UUID and createdAt, is preserved.
+        #expect(stored.first?.id == task.id)
+        #expect(stored.first?.createdAt == createdAt)
+        #expect(stored.first?.completedAt == completedAt)
+        #expect(stored.first?.isCompleted == true)
+        #expect(stored.first?.plannedDate == "2026-10-14")
+        #expect(stored.first?.plannedTime == "09:00")
+        #expect(stored.first?.durationMinutes == 30)
+    }
+
+    @Test("renameTask rejects empty and too-long titles; the task and its fields survive and retry works")
+    @MainActor
+    func renameInvalidRejected() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let createdAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let completedAt = createdAt.addingTimeInterval(300)
+        let task = try store.addTask(title: "Исходное имя", now: createdAt, plannedDate: "2026-10-14")
+        try store.setPlannedInterval(plannedTime: "10:15", durationMinutes: 45, for: task.id)
+        try store.setCompleted(true, for: task.id, at: completedAt)
+        let other = try store.addTask(title: "Другая задача", now: createdAt.addingTimeInterval(5))
+
+        let overLimit = String(repeating: "b", count: 501)
+        #expect(throws: TaskTitleError.empty) {
+            try store.renameTask(title: "   ", for: task.id)
+        }
+        #expect(throws: TaskTitleError.empty) {
+            try store.renameTask(title: "", for: task.id)
+        }
+        #expect(throws: TaskTitleError.tooLong(limit: 500)) {
+            try store.renameTask(title: overLimit, for: task.id)
+        }
+
+        // The rejected candidates changed nothing: the dated, completed and
+        // timed task keeps its exact field set, the other row is untouched.
+        var stored = try store.tasks()
+        #expect(stored.count == 2)
+        let kept = try #require(stored.first { $0.id == task.id })
+        #expect(kept.title == "Исходное имя")
+        #expect(kept.id == task.id)
+        #expect(kept.createdAt == createdAt)
+        #expect(kept.completedAt == completedAt)
+        #expect(kept.plannedDate == "2026-10-14")
+        #expect(kept.plannedTime == "10:15")
+        #expect(kept.durationMinutes == 45)
+        #expect(stored.first { $0.id == other.id }?.title == "Другая задача")
+
+        // A valid retry on the same task works.
+        try store.renameTask(title: "Переименовано", for: task.id)
+        stored = try store.tasks()
+        #expect(stored.first { $0.id == task.id }?.title == "Переименовано")
+        #expect(stored.count == 2)
+    }
+
+    @Test("renameTask with the same normalized title leaves the state unchanged")
+    @MainActor
+    func renameIdenticalNoop() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let createdAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let task = try store.addTask(title: "Задача", now: createdAt, plannedDate: "2026-10-14")
+        try store.setPlannedInterval(plannedTime: "08:30", durationMinutes: 15, for: task.id)
+
+        // Trimmed candidate normalizes to the stored title: a state no-op —
+        // asserted by the full observable state (no save instrumentation).
+        try store.renameTask(title: "  Задача  ", for: task.id)
+
+        let stored = try store.tasks()
+        #expect(stored.count == 1)
+        #expect(stored.first?.id == task.id)
+        #expect(stored.first?.title == "Задача")
+        #expect(stored.first?.createdAt == createdAt)
+        #expect(stored.first?.completedAt == nil)
+        #expect(stored.first?.plannedDate == "2026-10-14")
+        #expect(stored.first?.plannedTime == "08:30")
+        #expect(stored.first?.durationMinutes == 15)
+
+        // The store remains usable for a real rename afterwards.
+        try store.renameTask(title: "Другое имя", for: task.id)
+        #expect(try store.tasks().first?.title == "Другое имя")
+    }
+
+    @Test("renameTask and deleteTask for an unknown id refuse and leave the store usable")
+    @MainActor
+    func renameDeleteUnknownId() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let existing = try store.addTask(title: "Существующая задача", now: Date(timeIntervalSince1970: 100))
+        let missingId = UUID()
+
+        #expect(throws: OrbitStoreError.taskNotFound(id: missingId)) {
+            try store.renameTask(title: "Новое имя", for: missingId)
+        }
+        #expect(throws: OrbitStoreError.taskNotFound(id: missingId)) {
+            try store.deleteTask(for: missingId)
+        }
+
+        // Nothing changed and both operations stay usable for real ids.
+        var stored = try store.tasks()
+        #expect(stored.count == 1)
+        #expect(stored.first?.id == existing.id)
+        #expect(stored.first?.title == "Существующая задача")
+
+        try store.renameTask(title: "Реальное переименование", for: existing.id)
+        stored = try store.tasks()
+        #expect(stored.count == 1)
+        #expect(stored.first?.title == "Реальное переименование")
+    }
+
+    @Test("deleteTask removes exactly the addressed task from a larger set and keeps the others intact")
+    @MainActor
+    func deleteRemovesOnlyOne() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let createdAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let completedAt = createdAt.addingTimeInterval(300)
+        let open = try store.addTask(title: "Открытая", now: createdAt, plannedDate: "2026-10-14")
+        let completed = try store.addTask(title: "Завершённая", now: createdAt.addingTimeInterval(5), plannedDate: "2026-10-15")
+        try store.setCompleted(true, for: completed.id, at: completedAt)
+        try store.setPlannedInterval(plannedTime: "21:00", durationMinutes: 60, for: completed.id)
+        let undated = try store.addTask(title: "Без даты", now: createdAt.addingTimeInterval(10))
+
+        try store.deleteTask(for: completed.id)
+
+        let stored = try store.tasks()
+        #expect(stored.count == 2)
+        #expect(stored.contains { $0.id == completed.id } == false)
+
+        // The survivors keep every field, not just their titles.
+        let keptOpen = try #require(stored.first { $0.id == open.id })
+        #expect(keptOpen.title == "Открытая")
+        #expect(keptOpen.createdAt == createdAt)
+        #expect(keptOpen.completedAt == nil)
+        #expect(keptOpen.plannedDate == "2026-10-14")
+        #expect(keptOpen.plannedTime == nil)
+        #expect(keptOpen.durationMinutes == nil)
+        let keptUndated = try #require(stored.first { $0.id == undated.id })
+        #expect(keptUndated.title == "Без даты")
+        #expect(keptUndated.createdAt == createdAt.addingTimeInterval(10))
+        #expect(keptUndated.isCompleted == false)
+    }
+
+    @Test("disk reopen keeps the renamed task and the deleted UUID absent")
+    @MainActor
+    func renameDeleteDiskReopen() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let storeURL = dir.appendingPathComponent("Orbit.store")
+
+        var firstStore: OrbitTaskStore? = try OrbitTaskStore(storeURL: storeURL)
+        let createdAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let renamed = try firstStore?.addTask(title: "До переименования", now: createdAt, plannedDate: "2026-10-14")
+        let deleted = try firstStore?.addTask(title: "На удаление", now: createdAt.addingTimeInterval(5))
+        try firstStore?.renameTask(title: "После переименования", for: renamed?.id ?? UUID())
+        try firstStore?.deleteTask(for: deleted?.id ?? UUID())
+        firstStore = nil
+
+        let reopened = try OrbitTaskStore(storeURL: storeURL)
+        let all = try reopened.tasks()
+        #expect(all.count == 1)
+        let kept = try #require(all.first)
+        #expect(kept.id == renamed?.id)
+        #expect(kept.title == "После переименования")
+        #expect(kept.plannedDate == "2026-10-14")
+        #expect(all.contains { $0.id == deleted?.id } == false)
+
+        // The reopened store keeps working on the surviving row.
+        try reopened.renameTask(title: "Ещё раз", for: kept.id)
+        #expect(try reopened.tasks().first?.title == "Ещё раз")
+    }
 }

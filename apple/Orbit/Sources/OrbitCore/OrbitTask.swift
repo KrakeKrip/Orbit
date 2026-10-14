@@ -50,6 +50,14 @@ public final class OrbitTask {
         completedAt = nil
     }
 
+    /// NATIVE-EDIT-001-R1: internal (module-only) title setter. It assigns
+    /// the string as-is without validation — `OrbitTaskStore.renameTask` is
+    /// the one validated entry point and the only caller, so no public raw
+    /// bypass exists outside OrbitCore.
+    func setTitle(_ value: String) {
+        title = value
+    }
+
     /// Assigns, changes or clears (`nil`) the planned civil date.
     /// Validation of the `YYYY-MM-DD` contract lives in `TaskPlannedDate`
     /// and in the store, which rejects invalid values before mutating.
