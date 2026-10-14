@@ -5,12 +5,14 @@ import OrbitCore
 /// date. Read-only slice over the shared model — the same rows, editors and
 /// sheets as the Inbox; creation stays in the Inbox composer.
 /// NATIVE-NAV-001: the current day is owned by `TodayWorkspaceScreen` and
-/// provided as the `day` input. NATIVE-UI-MODE: the compact
-/// «Список / Календарь» switcher sits in the one common top mode row
-/// (`NativeModeHeader`) directly under the navigation bar — the same
-/// placement, insets and height as the calendar presentation — instead of a
-/// toolbar item, so the control never moves or gains a second contour when
-/// the view switches. Task dates are never rewritten.
+/// provided as the `day` input. NATIVE-UI-MODE/R1: there is no navigation
+/// title or bar on this screen — the compact «Список / Календарь» switcher
+/// sits in the one common top mode row (`NativeModeHeader`) directly under
+/// the safe area, the same host as the calendar presentation, so the control
+/// keeps its physical position when the view switches (user clarification:
+/// the former «Сегодня» title area is freed; the section's local date
+/// caption below stays, the bottom tab name is unchanged). Task dates are
+/// never rewritten.
 struct TodayScreen: View {
     let model: IOSInboxModel
     let day: String
@@ -38,11 +40,11 @@ struct TodayScreen: View {
                     }
                 }
             }
-            .navigationTitle("Сегодня")
-            // NATIVE-UI-MODE: inline title keeps the common mode row at the
-            // same top position as the calendar presentation — the placement
-            // of the switcher must not depend on the title height.
-            .navigationBarTitleDisplayMode(.inline)
+            // NATIVE-UI-MODE/R1: no navigation title/bar in any section view —
+            // the common mode row is the deterministic top row directly under
+            // the safe area in the list and calendar alike, so the switcher
+            // never moves (the former «Сегодня» title area is freed).
+            .toolbar(.hidden, for: .navigationBar)
             .background(Color(.systemBackground))
             .sheet(item: $presentation) { item in
                 switch item {

@@ -55,11 +55,11 @@ struct UpcomingListScreen: View {
                     }
                 }
             }
-            .navigationTitle("Предстоящее")
-            // NATIVE-UI-MODE: inline title keeps the common mode row at the
-            // same top position as the calendar presentation — the placement
-            // of the switcher must not depend on the title height.
-            .navigationBarTitleDisplayMode(.inline)
+            // NATIVE-UI-MODE/R1: the same no-title/no-bar policy as the
+            // calendar presentation and Today — the common mode row is the
+            // deterministic top row directly under the safe area, so the
+            // switcher keeps its position when the view switches.
+            .toolbar(.hidden, for: .navigationBar)
             .background(Color(.systemBackground))
             .sheet(item: $presentation) { item in
                 switch item {
