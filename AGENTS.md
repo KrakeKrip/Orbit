@@ -1,10 +1,10 @@
 ## Актуальный статус 2026-10-14
 
-NATIVE-MIN5 DONE producta23134f, mainmerge8e2abbd74c8bdbb6de66e9f2064b4a96feda2320; independent70/70+iOSbuild PASS, corewrite5/readlegacy1 separated, keyboard4→5GUIunverified/deferred. Назначен толькоtasks/NATIVE-TIME-WHEEL.md вtask/NATIVE-TIME-WHEEL, /Users/atlhnv/Codex/orbit-worktrees/NATIVE-TIME-WHEEL. UI-onlyStart/durationwheels, DURATIONminutes0/5/10…55 +hours, min5/max24h, oldoffgridбезавтоперезаписи. ScopeTaskIntervalSheet+optionallocalcomponent/report/README, no corechanges. Projects/commonmodeheader/gestures отдельноfuture, no TASKbatch. Отчётвфайл/чаткратко.
+NATIVE-TIME-WHEEL DONE productf1a952c, mainmergee4f304e3d5a133108bf5c870855d7d43f5e4c9dc. Independent iOSbuildPASS/coreunchanged, GUIbounds/overnight/realdeviceunverified. USERlatest: Startwheel0..59оставить, НЕstep5; durationwheelstep5. Futuremovinggesturestartsnap5; resizesduration5minimum+10/20/30… . Назначен толькоtasks/NATIVE-UI-MODE.md вtask/NATIVE-UI-MODE/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-UI-MODE: commonPickerplacement/одинcontour,3UIleafscreens+optionaloneheader/report. Workspace/core/store/grid/editor не менять, Projects/gesturesfuture. Отчётвфайл/чаткратко.
 
 # Orbit — правила координации
 
-Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; NATIVE-005 завершён; NATIVE-006 принят; NATIVE-007A принят; назначена только tasks/NATIVE-TIME-WHEEL.md в отдельном task worktree. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
+Этап NATIVE LOCAL-FIRST, 2026-10-12. Пользователь сменил приоритет на локальные SwiftUI приложения iOS/macOS без сервера и синхронизации в первом прототипе. Web TASK-001–008 DONE и сохранены; TASK-009A PAUSED, прежняя web очередь не активна. NATIVE-003 и NATIVE-004 завершены; NATIVE-005 завершён; NATIVE-006 принят; NATIVE-007A принят; назначена только tasks/NATIVE-UI-MODE.md в отдельном task worktree. Root PRODUCT/ARCHITECTURE/DESIGN/TASKS — новые актуальные native требования; docs/web-baseline-2026-10-12 — исторические документы.
 GLM работает только в назначенном отдельном worktree и выполняет один TASK.
 
 ## Роли и источники требований

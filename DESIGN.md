@@ -79,3 +79,7 @@ Calendar — ВИД задач, не bottom tab. Сегодня: same-local-day 
 ### Шаг duration wheel — прямое уточнение2026-10-14
 
 ВЧАСОВОМколесе выбираетсяколичествочасов; вМИНУТНОМdurationwheel только0/5/10/15…55. Минимальнаяноваядлительность5мин, max24ч00. ЭтоUIшагduration, не coreкратность5 и неограничениеStartminute; acceptedread6/7/1…4 не округлятьмолча. Exactoffgridсохранённоеvalue показыватьreadable, новаяwheelдлительностьвыбираетсяявно. ScopeназначенногоTIME-WHEEL, no corechange.
+
+### Последнее правило календарных жестов,2026-10-14
+
+Пользователь отменилшаг5дляSTARTwheel: там0..59minutes остаются. При переносе задачи пальцем calendarstart snaps to5minutes (09:00/09:05/09:10…), preview/drop согласованы. При растягивании блока duration меняется назначения10/20/30…минут, сминимальнымисключением5минут. Нетgesture — existingintervalне округляется. Durationwheel остаётсяstep5 (0/5/...55 plushours). Этиправила UIgesture, corewrite5..1440не становитсякратностью5/10. Реализацияdrag/resizeвбудущихTASK, не UI-MODE.
