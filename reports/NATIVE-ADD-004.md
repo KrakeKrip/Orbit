@@ -1,3 +1,15 @@
+# NATIVE-ADD-004 — итог независимой приёмки
+
+2026-10-15 ACCEPTED послеR1. HEAD591396f5fcdfc70bb849dd8be45c10a29f77795f отd62df0c665b5c29bd22e46ac7c53b4d95f1af688. Clean/cumulativediffcheckPASS. ProductR1diff толькоexplicitdateconfirmButton+комментарий: acceptedciviladapter присваиваетcurrentpickerDateвdraft независимоonChange; доступенвnil/послеclear. Открытиегруппынесохраняет, changewheel/clearpair/model/core/time/прочиеviewsunchanged. R0sourceполностьюпроверенранее, R1закрыт.
+
+НезависимыйgenericiOSSimulatorbuild own/private/tmp/orbit-add004-r1-review-dd/DEVELOPER_DIR/CODE_SIGNING_ALLOWED=NO — exit0 BUILD SUCCEEDED. Core44/UIotherflowsнеповторялисьпоtinyR1scope. Executoractualscreensr1-confirm-shown-date/r1-clear-reconfirm-restored просмотрены:summaryсоответствуетцентруwheel, confirmвидим, clear/reselect работаетreportedstorecount1послеCancel. РеальногоownGUIэтогоSHAнебыло. SoftwarekeyboardrenderчестноUNVERIFIED(hardwaremode); AXLinput/scrollreported, невыдаётсязаsoftwarekeyboardproof. Realdevice/diskfailure/VoiceOver/darkнепроверены.
+
+Неблокирующееограничениеevidence: secondformpickerбылслучайнопрокрученinstrumentationнаJan15, поэтомуэтоreconfirmshownJan15, неstrictповторпервогоOct15. Sourceexplicitsetter покрываетлюбойunchangedpickerDate; ещёкоррекцияповтораGUIнеобоснована. ФормаScrollView, finalrealdeviceQAвключаетkeyboard/smallwidth.
+
+Локальнаяинтеграция/appleidentityпослеmerge. СледующийEDIT002: sharedlistrow rename/deleteUI, сохраняющийexistingdate/timecallbacks ииспользующийпринятыйcore. CalendaroperatorsможновыполнитьчерезСписок; calendarcontextmenuрасширениене входитвэтотмаленькийTASK. ПослеEDIT002firstiPhoneQA; deadlines/remindersпосле.
+
+---
+
 # NATIVE-ADD-004 — независимый review
 
 2026-10-15 NEEDS_FIXES: одна date-selection lifecycle correction. HEAD867a0a1025ddb502795230955f194c9b0b3c7a32 от5dbb4a0d3c10ecb791160da2c305fd3e1135592b. Clean/diffcheckPASS; scope2productfiles/report. НезависимыйgenericiOSSimulatorbuild own/private/tmp/orbit-add004-review-dd/DEVELOPER_DIR/CODE_SIGNING_ALLOWED=NO exit0 BUILD SUCCEEDED. Core44/full/webнеповторялись(UIonly).
