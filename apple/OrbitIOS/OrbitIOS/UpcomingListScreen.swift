@@ -134,7 +134,9 @@ struct UpcomingListScreen: View {
             ForEach(dayGroups, id: \.day) { group in
                 Section(RussianDateCaption.label(group.day)) {
                     ForEach(group.tasks) { task in
-                        InboxRowView(task: task, model: model) {
+                        // NATIVE-LIST-001: the day-section header already
+                        // shows the date — no repeated subtitle in the row.
+                        InboxRowView(task: task, model: model, showsDateLabel: false) {
                             presentation = .date(task)
                         } onEditInterval: {
                             presentation = .interval(task)

@@ -120,11 +120,18 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   quick-add; создание остаётся в Inbox.
 - `OrbitIOS/InboxScreen.swift` — экран: NavigationStack large title «Входящие»,
   секции «Открытые»/«Завершённые», круглый completion-контроль ≥44pt с a11y
-  label «действие: задача», краткая подпись даты и интервала
-  («09:00–09:30», «23:30–01:00 (+1 день)»), calendar/clock-действия в строке
-  (clock — только у датированной задачи), перенос длинных названий, композер
-  в нижнем safe area (клавиатура его поднимает), inline-ошибка, честный
-  empty state; один editor за раз (presentation kind+UUID).
+  label «действие: задача» (никогда не открывает меню), перенос длинных
+  названий, композер в нижнем safe area (клавиатура его поднимает),
+  inline-ошибка, честный empty state; один editor за раз (presentation
+  kind+UUID). Строки NATIVE-LIST-001: постоянных clock/calendar иконок нет —
+  тело строки (title+метаданные, полный source title в AX) открывает
+  компактное native меню «Дата…» / «Время и длительность…» через
+  существующие editor callbacks; у undated-задачи время disabled с подписью
+  «сначала назначьте дату» (today молча не ставится); ряды ниже за счёт
+  вертикального padding; подпись даты — по-русски через `RussianDateCaption`
+  (флаг `showsDateLabel`: Inbox true, Today/дневные секции Upcoming false —
+  там дата уже в заголовке секции), подпись времени start–end/(+1 день)
+  сохраняется; `InboxRowView.dateLabel` остан для caption редактора.
 - `OrbitIOS/TaskDateSheet.swift` — маленький редактор даты (NATIVE-003):
   native wheel `DatePicker`, draft по умолчанию — сегодняшний local civil день,
   явные «Сохранить»/«Отмена» (открытие/отмена ничего не пишут), «Убрать дату»
