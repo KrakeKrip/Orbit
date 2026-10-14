@@ -50,10 +50,11 @@ public final class OrbitTask {
         completedAt = nil
     }
 
-    /// Assigns a new title. Validation (trim + scalar-length limit) lives in
-    /// `TaskTitle` and in the store, which rejects invalid candidates before
-    /// mutating; no second validator and no public raw bypass are added here.
-    public func setTitle(_ value: String) {
+    /// NATIVE-EDIT-001-R1: internal (module-only) title setter. It assigns
+    /// the string as-is without validation — `OrbitTaskStore.renameTask` is
+    /// the one validated entry point and the only caller, so no public raw
+    /// bypass exists outside OrbitCore.
+    func setTitle(_ value: String) {
         title = value
     }
 

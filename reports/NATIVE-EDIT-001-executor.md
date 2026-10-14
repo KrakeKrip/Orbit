@@ -2,7 +2,19 @@
 
 ## Статус
 
-**READY_FOR_REVIEW** (остановка до Codex review). Bounded core CRUD: rename/delete одной задачи по UUID в принятом local store + 6 целевых тестов.
+**READY_FOR_REVIEW** (R1, остановка до Codex review). Bounded core CRUD: rename/delete одной задачи по UUID в принятом local store + 6 целевых тестов. R1 (2026-10-14): tiny visibility correction — `setTitle` стал internal по review [P2].
+
+## R1 — коррекция видимости setter (2026-10-14, tasks/NATIVE-EDIT-001-R1.md)
+
+Review reports/NATIVE-EDIT-001.md [P2]: публичный `setTitle` принимал любую строку без валидации — public raw bypass вопреки п.1 TASK. Исправление (только OrbitTask.swift, по scope):
+
+- `public func setTitle` → `func setTitle` (internal внутри `public final class OrbitTask`) — доступен только `OrbitTaskStore` в том же OrbitCore модуле; единственный caller подтверждён grep (`OrbitTaskStore.swift:91`).
+- Комментарий переписан честно: internal setter без валидации, единственная validated точка входа — публичный `renameTask`; публичного raw-обхода нет.
+- Не менялись: валидация/schema/store logic/`renameTask`/`deleteTask`/tests/UI/старые public методы модели.
+
+Проверка R1: один generic iOS Simulator build (own DerivedData, CODE_SIGNING_ALLOWED=NO, DEVELOPER_DIR) — **BUILD SUCCEEDED**; подтверждает module boundary/callers. Тела методов/поведение не менялись, поэтому повтор 36 store tests/новые tests/full core/GUI не выполнялись (36/36 PASS зафиксирован review для исходного HEAD).
+
+Ниже — исходный R0-отчёт (84f60482…) без изменений, кроме обновлённой строки таблицы про OrbitTask.swift.
 
 ## Назначение и база
 
@@ -15,7 +27,7 @@
 
 | Файл | Изменение |
 | --- | --- |
-| `apple/Orbit/Sources/OrbitCore/OrbitTask.swift` | Только минимальный `setTitle(_:)` для `private(set) title` — без второго валидатора и без нового public raw-обхода; комментарий фиксирует, что валидация живёт в `TaskTitle`/store. |
+| `apple/Orbit/Sources/OrbitCore/OrbitTask.swift` | Только минимальный `setTitle(_:)` для `private(set) title`. **R1:** метод INTERNAL (module-only, без `public`) — строка присваивается без валидации, единственный caller — `OrbitTaskStore.renameTask` в том же OrbitCore модуле (подтверждено grep по всем Swift-файлам); публичного raw-обхода вне OrbitCore нет, UI использует публичный validated `renameTask`. |
 | `apple/Orbit/Sources/OrbitCore/OrbitTaskStore.swift` | `renameTask(title:for:)` (стиль existing API): `TaskTitle.validated` ДО любых мутаций; fetch ровно по UUID, unknown → существующий `OrbitStoreError.taskNotFound`; меняется только `title` (UUID/createdAt/completedAt/plannedDate/plannedTime/duration нетрогуны); normalized identical title → no-op БЕЗ `context.save()`; реальное изменение → один explicit save с существующим rollback/rethrow. `@discardableResult` возвращает задачу. `deleteTask(for:)`: unknown UUID → `taskNotFound`; `context.delete` только этой строки; один save/rollback; остальные задачи нетрогнуты; hard delete без schema/soft delete/history — подтверждение пользователя — обязанность будущего UI (EDIT002). |
 | `apple/Orbit/Tests/OrbitCoreTests/OrbitTaskStoreTests.swift` | 6 новых тестов в секции `NATIVE-EDIT-001` (см. ниже). TestSupport/tempstore прежние, только синтетические уникальные temp-каталоги. |
 
