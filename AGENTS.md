@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-14
 
-NATIVE-NAV-001 DONE, product58ae60a8ff71264a5c9774f17dc28a86e5218985, main mergebe6d6abbffeefe9fc76a8fa2cbc43fb3bec86cec. Independent iOS build PASS, GUI screenshots/executor source evidence reviewed; midnight/pan/device unverified. Назначен только tasks/NATIVE-NAV-002.md, branch task/NATIVE-NAV-002, worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-NAV-002. Реальный Upcoming List7/CalendarDay с shared selected day/model и независимым mode, no fake tab, no core/grid rewrite. Малый tracked caption P3 «Oct» исправить view-local в NAV002. MIN5/gestures/3days/Month/AI/macOS/websync позже. Отчёт в файл/чат кратко.
+NATIVE-NAV-002 NEEDS_FIXES, product185a19b: independent iOS build PASS, actual executor Calendar screenshot обрезает mode/hour labels; contextualTodaybutton ещё не выполнена. Назначен толькоtasks/NATIVE-NAV-002-R1.md, branchtask/NATIVE-NAV-002/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-NAV-002, correctionstart322b55761f6fcfb83c625e4a23d9874e784963d9. Scope UpcomingWorkspace/UpcomingList/CalendarDay header/reference-day wiring +report, no range/core/grid rewrite. Послеacceptance nextLIST001, затемMIN5/Projects/gestures; никакихnextTASK/mergeсейчас. Подробныйreportвфайл, чаткратко.
 
 # Orbit — правила координации
 
