@@ -1,3 +1,5 @@
+Итог DONE,2026-10-14, producta23134f16819864de052c860fdf32185ab13f77a, independent70/70/iOSbuildPASS. Review reports/NATIVE-MIN5.md. Нижe historicalassignment; GUItext4→5explicitlyunverified/deferredwheel.
+
 # NATIVE-MIN5 — минимум назначаемого интервала 5 минут
 
 ASSIGNED, 2026-10-14. Один небольшой результат: новые назначения/изменения ненулевого интервала допускают duration5…1440; legacy1…4 сохраняются и отображаются. База `12fbee7dc651128fa1aa829570180f15c2cd92be` — принят LIST001. Branch `task/NATIVE-MIN5`, worktree `/Users/atlhnv/Codex/orbit-worktrees/NATIVE-MIN5`. Starting SHA assignmentHEAD из handoff. Проверить root/branch/HEAD/status; прочитать AGENTS/ARCHITECTURE/этотTASK. Старые assignments не выполнять.

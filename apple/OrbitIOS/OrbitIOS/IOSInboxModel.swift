@@ -49,7 +49,7 @@ enum IOSInboxFormatting {
         case TaskTimeIntervalError.invalidTime(let value):
             return "Начало «\(value)» должно быть временем в формате ЧЧ:ММ (00:00–23:59)."
         case TaskTimeIntervalError.invalidDuration(let value):
-            return "Длительность \(value) недопустима: укажите целое число минут от 1 до 1440."
+            return "Длительность \(value) недопустима: укажите целое число минут от \(TaskTimeInterval.minimumWritableDurationMinutes) до \(TaskTimeInterval.maximumDurationMinutes)."
         case TaskTimeIntervalError.incompletePair:
             return "Укажите начало и длительность вместе."
         case TaskTimeIntervalError.missingDate:

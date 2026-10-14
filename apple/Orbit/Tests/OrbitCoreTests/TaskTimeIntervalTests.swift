@@ -43,6 +43,26 @@ struct TaskTimeIntervalTests {
         #expect(!TaskTimeInterval.isCompletePair(time: nil, durationMinutes: 30))
     }
 
+    @Test("write gate NATIVE-MIN5: 5...1440 writable including 5/6/7; read compatibility keeps 1...4")
+    func writableDurationGate() {
+        #expect(TaskTimeInterval.isWritableDuration(5))
+        #expect(TaskTimeInterval.isWritableDuration(6))
+        #expect(TaskTimeInterval.isWritableDuration(7))
+        #expect(TaskTimeInterval.isWritableDuration(30))
+        #expect(TaskTimeInterval.isWritableDuration(1440))
+        #expect(!TaskTimeInterval.isWritableDuration(1))
+        #expect(!TaskTimeInterval.isWritableDuration(4))
+        #expect(!TaskTimeInterval.isWritableDuration(0))
+        #expect(!TaskTimeInterval.isWritableDuration(-5))
+        #expect(!TaskTimeInterval.isWritableDuration(1441))
+        #expect(!TaskTimeInterval.isWritableDuration(Int.max))
+        // The read rule is not weakened: legacy 1...4 stay valid reads and
+        // keep deriving an end.
+        #expect(TaskTimeInterval.isValidDuration(1))
+        #expect(TaskTimeInterval.isValidDuration(4))
+        #expect(TaskTimeInterval.end(plannedDate: "2026-10-13", plannedTime: "10:00", durationMinutes: 1)?.time == "10:01")
+    }
+
     @Test("end inside the same day")
     func endSameDay() {
         let end = TaskTimeInterval.end(plannedDate: "2026-10-13", plannedTime: "10:00", durationMinutes: 90)
