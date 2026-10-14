@@ -13,8 +13,8 @@
 | NATIVE-007A | DONE | read-only проекция интервалов на сутки, включая переход через полночь |
 | NATIVE-007B | DONE | календарный День с временной сеткой на принятой проекции |
 | NATIVE-007C | DONE | раскрываемая область «Без времени»: 3 строки / больше / внутренний scroll |
-| NATIVE-NAV-001 | TODO (назначен) | Today Список/Календарь, убрать самостоятельную Calendar tab |
-| NATIVE-NAV-002 | TODO (план) | реальный раздел Предстоящее с List/Calendar над shared tasks |
+| NATIVE-NAV-001 | DONE | Today Список/Календарь, убрать самостоятельную Calendar tab |
+| NATIVE-NAV-002 | TODO (назначен) | реальный раздел Предстоящее с List/Calendar над shared tasks |
 | NATIVE-007D | TODO (план) | перенос из «Без времени» в сетку, отдельный scope перед выдачей |
 | NATIVE-007E | TODO (план) | изменение длительности жестом |
 | NATIVE-007F | TODO (план) | плавная компоновка пересекающихся интервалов |
@@ -71,3 +71,5 @@ Cumulative review2026-10-14: NATIVE-007C9cefc4d independentiOSbuild/diffcheck PA
 Приоритет2026-10-14 уточнён пользователем: отдельный Calendar tab запрещён, Today и Upcoming должны иметь List/Calendar views. После закрытия007C→NAV001→NAV002→MIN5→drag/resize/overlap. Подробный bounded план /Users/atlhnv/Codex/orbit-outputs/NATIVE-NAV-plan.md; новые branches пока не выданы. Раньше объявленная очередь MIN5 immediately next заменена этим прямым уточнением.007C final build/review остаются про renderer, не acceptance неправильной продуктовой навигации.
 
 Итог2026-10-14:007C acceptedfinalfe8e58d/mainmergeb5608d1eaace8f4d8793c5eff36ed4caa1bc0e23, independentiOSbuildPASS, mainapple/identitytestedbranchPASS. Reportedrestart→deviceQA, pan/longpress/realdeviceнеподтверждены. Следующий назначенNAV001Todaymodes/removeCalendartab, sourcebaseb5608d1;NAV002realUpcomingпотом, неrenameCalendar. Минимум5/dragневыданы.
+
+Итог2026-10-14: NAV001 accepted58ae60a, main mergebe6d6abbffeefe9fc76a8fa2cbc43fb3bec86cec; independentiOSbuild/diffcheck PASS, mainapple identity testedbranch. P3 datecaption locale tracked NAV002. Следующий NAV002 realUpcoming: List7inclusive/calendarDay, owner selectedday+mode; near2199 list windowtruncate, nofakeCalendarTab/core changes/3days. Источникbasebe6d6abb; MIN5/drag не выданы.
