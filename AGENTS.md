@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-14
 
-NATIVE-TIME-WHEEL DONE productf1a952c, mainmergee4f304e3d5a133108bf5c870855d7d43f5e4c9dc. Independent iOSbuildPASS/coreunchanged, GUIbounds/overnight/realdeviceunverified. USERlatest: Startwheel0..59оставить, НЕstep5; durationwheelstep5. Futuremovinggesturestartsnap5; resizesduration5minimum+10/20/30… . Назначен толькоtasks/NATIVE-UI-MODE.md вtask/NATIVE-UI-MODE/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-UI-MODE: commonPickerplacement/одинcontour,3UIleafscreens+optionaloneheader/report. Workspace/core/store/grid/editor не менять, Projects/gesturesfuture. Отчётвфайл/чаткратко.
+NATIVE-UI-MODE NEEDS_FIXES: code2c33ac3/reportf3b9ce9, independent iOS build PASS, но screenshots/source подтверждают скачок mode control из-за navigation title только в списках. Header реально используется лишь списками. Назначен только tasks/NATIVE-UI-MODE-R1.md в task/NATIVE-UI-MODE/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-UI-MODE, correction start e323adf0e6e3efc9815ff363d8c01b59e12d1a6d. Один небольшой layout fix в3leafscreens/existingheader/report; workspace/core/grid/editors не менять. Без merge/Projects пока. Startwheel0..59 оставлен; future move snap5, resize5minimum+10/20/30. Отчёт в файл, чат кратко.
 
 # Orbit — правила координации
 

@@ -17,7 +17,7 @@
 | NATIVE-NAV-002 | DONE | реальный раздел Предстоящее с List/Calendar над shared tasks |
 | NATIVE-LIST-001 | DONE | меню даты/времени/длительности по tap, без иконок, компактнее обычные list строки |
 | NATIVE-MIN5 | DONE | core write минимум5минут, legacy1–4неперезаписывать/readgeometryсохранить |
-| NATIVE-UI-MODE | TODO (назначен) | единая позиция и оформление view switcher в Today/Upcoming обоих видах |
+| NATIVE-UI-MODE | NEEDS_FIXES (R1 назначен) | единая позиция и оформление view switcher в Today/Upcoming обоих видах |
 | NATIVE-TIME-WHEEL | DONE | начало/длительность нативными колёсиками, derived конец без нового storage |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
 | NATIVE-PRJ-002 | TODO (план) | настоящий экран списка/создания проектов и нижняя вкладка |
@@ -98,3 +98,5 @@ Review2026-10-14: NAV002185a19b independentiOSbuild/diffcheckPASS, но contextu
 Итог2026-10-14: MIN5accepted/mainmerge8e2abbd74c8bdbb6de66e9f2064b4a96feda2320, independent70tests/iOSbuildPASS/sourceidentityPASS. NextTIME-WHEEL UIonly. Прямоеlatestuserуточнение: durationminuteswheel ONLY0/5/10…55, hoursseparate; coreнестановитсякратностью5, old6/7readremain. LegacyoffgridUIexplicitchoice, no silentnormalization. Projects/header/gesturesневыданы.
 
 Итог2026-10-14: TIME-WHEEL принят/productf1a952c/mainmergee4f304e3d5a133108bf5c870855d7d43f5e4c9dc, independentiOSbuildPASS/sourceidentityPASS. NextUI-MODEтолькоswitcherplacement/doublecontour, no redrawвсехscreen. Startwheelstep5 userотменил:minutes0..59прежние. Futuredragstartstep5, resizeallowed5/10/20/30…; corewrite/readunchanged. ProjectsдалееотдельнымималенькимиTASK.
+
+Review2026-10-14: UI-MODE2c33ac3/reportf3b9ce9 independentiOSbuild/diffcheckPASS. Doublecontour закрыт, но actual4screens/source показывают скачок control: inline navigation title толькоList, Calendarbarсхлопывается; NativeModeHeader отсутствует вCalendar, дополнительныеinsetsUpcoming. Назначен один tasks/NATIVE-UI-MODE-R1.md в тойжеtaskветке, start e323adf0e6e3efc9815ff363d8c01b59e12d1a6d. Без merge/Projects.
