@@ -24,8 +24,8 @@
 | NATIVE-EDIT-001 | DONE | core rename/delete поUUID безпереписыванияschema |
 | NATIVE-ADD-003 | DONE | atomiccreateoptionalinterval вcore, безUI |
 | NATIVE-ADD-004 | DONE | editabledate/start/duration вsharedcreatesheet |
-| NATIVE-EDIT-002 | TODO (назначен) | native rename/delete UI сconfirm иCancel |
-| NATIVE-DEVICE-001 | TODO (план) | личныйiPhone install/основныеflows/finalsmallUIpolish |
+| NATIVE-EDIT-002 | DONE | native rename/delete UI сconfirm иCancel |
+| NATIVE-DEVICE-001 | TODO (назначен; ожидает iPhone/Team) | личныйiPhone install/основныеflows/finalsmallUIpolish |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
 | NATIVE-PRJ-002 | TODO (план) | настоящий экран списка/создания проектов и нижняя вкладка |
 | NATIVE-PRJ-003 | TODO (план) | назначить проект задаче и список задач проекта |
@@ -129,3 +129,5 @@ Review2026-10-14: EDIT00184f6048 independent36/iOSbuildPASS, одна R1publicse
 Review2026-10-15: ADD004867a0a1 independentiOSbuild/diffcheckPASS. SourceR1optionaldateonlyonChange: невозможноподтвердитьshownvalueбезпрокруткиInbox/reselectafterclear. Назначенtasks/NATIVE-ADD-004-R1.md, correctionstartd62df0c665b5c29bd22e46ac7c53b4d95f1af688; oneUIfix+report/targetedGUI/onebuild, безfullQA. No merge/EDIT002пока.
 
 Итог2026-10-15: ADD004591396faccepted/mainmerge9a16ea0041601eb12c15be040493453e8fd074d1. IndependentR1buildPASS/sourceidentityPASS; dateconfirmGUIexecutorreviewed/softwarekeyboardunverified. Назначен EDIT002sharedlistrowrename/deleteconfirmation, sourcebase9a16ea; CalendareditчерезList, безcontextmenuscope. ПослеacceptancefirstiPhoneQA, deadlines/remindersпозже.
+
+Итог2026-10-15: EDIT00279e180faccepted/mainmerge4c97c6da5e9e8726dc7d5edf5194ff69704f618f; independentiOSbuild/appleidentityPASS, executorGUIreviewed. НазначенDEVICE001docs/preflight/owner-assisteddeviceQA, sourcebase4c97c6da. Currentphysical0/projectTeamnone; noautomaticAppleID/signingsetup/appwipe. Перваяреальнаяустановкаещёнесостоялась.

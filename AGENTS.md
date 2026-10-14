@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-15
 
-ADD004DONEHEAD591396f/mainmerge9a16ea0041601eb12c15be040493453e8fd074d1. R1explicitdateconfirmclosed/independentiOSbuild/sourceidentityPASS, executorGUIreviewed; latestownGUI/softwarekeyboardrenderunverified. Назначен толькоtasks/NATIVE-EDIT-002.md/taskNATIVE-EDIT-002/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-EDIT-002: sharedLISTrowrename/deleteUI,3UIfiles+report. Calendarcontextmenuнерасширять; Calendarотражаетsharedmutations, editчерезСписок. Core/schema/create/date-timeeditors/header/gridне менять. ПослеacceptancefirstiPhoneQA; deadlines/reminders/notificationsпослепервойпроверки. Reportsfile/chatshort.
+EDIT002DONEHEAD79e180f/mainmerge4c97c6da5e9e8726dc7d5edf5194ff69704f618f. IndependentiOSbuild/sourceidentityPASS, executorsyntheticGUIreviewed/ownlatestGUIнеповторялся. Назначен толькоtasks/NATIVE-DEVICE-001.md/taskNATIVE-DEVICE-001/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-DEVICE-001: read-onlyphysicalpreflight/owner-assistedinstall/manualsmoke, docs/reportonly. Currentpreflightphysical0(simulated1), projectDEVELOPMENT_TEAMне задан. Безsamovolnyhsigning/AppleID/profiles/settings/appwipe. OwnerподключаетiPhone/выбираетTeamвXcode; доэтогоAWAITING_DEVICE/OWNER_SETUP, неDONE. Deadlines/reminders/notificationsпослеfirstphysicalcheck. Новыепродуктовыетаски/полишненазначены. Reportsfile/chatshort.
 
 # Orbit — правила координации
 
