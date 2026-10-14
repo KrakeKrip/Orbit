@@ -23,11 +23,13 @@ enum InboxSheetPresentation: Identifiable {
 }
 
 /// The one iOS Inbox screen: large title, compact rows with round completion
-/// circles and date/time actions, bottom composer above the keyboard and safe area.
+/// circles and date/time actions. NATIVE-ADD-002: creation moved from the
+/// removed bottom composer to the shared coral «+» with the one create sheet
+/// (always undated here); a write error stays visible as a banner above the
+/// content, next to the list or the empty state.
 struct InboxScreen: View {
     @State private var model: IOSInboxModel
     @State private var presentation: InboxSheetPresentation?
-    @FocusState private var titleFieldFocused: Bool
 
     init(model: IOSInboxModel) {
         _model = State(initialValue: model)
@@ -35,25 +37,23 @@ struct InboxScreen: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if model.listError != nil {
-                    listErrorView
-                } else if model.tasks.isEmpty {
-                    ContentUnavailableView {
-                        Label("Пока нет задач", systemImage: "tray")
-                    } description: {
-                        Text("Добавьте первую задачу в поле снизу.")
+            VStack(spacing: 0) {
+                if let writeError = model.writeError {
+                    writeErrorBanner(writeError)
+                }
+                Group {
+                    if model.listError != nil {
+                        listErrorView
+                    } else if model.tasks.isEmpty {
+                        emptyView
+                    } else {
+                        taskList
                     }
-                } else {
-                    taskList
                 }
             }
             .navigationTitle("Входящие")
             .navigationBarTitleDisplayMode(.large)
             .background(Color(.systemBackground))
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                composer
-            }
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):
@@ -63,6 +63,9 @@ struct InboxScreen: View {
                 }
             }
         }
+        // NATIVE-ADD-002: the shared «+» replaces the removed bottom composer;
+        // Inbox creation is always undated (nil preset).
+        .orbitCreateAction(model: model, datePreset: { nil })
     }
 
     private var taskList: some View {
@@ -93,6 +96,14 @@ struct InboxScreen: View {
         .listStyle(.plain)
     }
 
+    private var emptyView: some View {
+        ContentUnavailableView {
+            Label("Пока нет задач", systemImage: "tray")
+        } description: {
+            Text("Нажмите «+», чтобы добавить первую задачу.")
+        }
+    }
+
     private var listErrorView: some View {
         ContentUnavailableView {
             Label("Не удалось загрузить задачи", systemImage: "externaldrive.badge.exclamationmark")
@@ -105,54 +116,20 @@ struct InboxScreen: View {
         }
     }
 
-    /// Compact composer pinned to the bottom safe area; the keyboard raises it,
-    /// so it never covers the list rows.
-    private var composer: some View {
-        VStack(spacing: 8) {
-            if let writeError = model.writeError {
-                Text(writeError)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("write-error")
-            }
-            HStack(spacing: 12) {
-                TextField("Название задачи", text: $model.draft, prompt: Text("Название задачи"))
-                    .focused($titleFieldFocused)
-                    .submitLabel(.done)
-                    .onSubmit(submitDraft)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 11)
-                    .background(Color(.secondarySystemBackground), in: Capsule())
-                Button(action: submitDraft) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundStyle(isDraftBlank ? Color(.systemGray3) : Color.white)
-                        .frame(width: 44, height: 44)
-                        .background(
-                            Circle().fill(isDraftBlank ? Color(.tertiarySystemFill) : Color.orbitAccent)
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(isDraftBlank)
-                .accessibilityLabel("Добавить задачу")
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 10)
-        .background(.bar)
-    }
-
-    private var isDraftBlank: Bool {
-        model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private func submitDraft() {
-        model.addFromDraft()
-        if model.writeError == nil {
-            titleFieldFocused = true
-        }
+    /// A failed complete/reopen or date/interval write on this screen: the
+    /// shared model keeps `writeError` until the next successful mutation, so
+    /// the reason stays visible above the content without masking the list,
+    /// the empty state or a read failure. It is never shown inside the modal
+    /// create sheet, which reports its own attempts in the form.
+    private func writeErrorBanner(_ message: String) -> some View {
+        Text(message)
+            .font(.footnote)
+            .foregroundStyle(.red)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color(.secondarySystemBackground))
+            .accessibilityIdentifier("inbox-write-error")
     }
 }
 
