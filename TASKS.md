@@ -16,9 +16,9 @@
 | NATIVE-NAV-001 | DONE | Today Список/Календарь, убрать самостоятельную Calendar tab |
 | NATIVE-NAV-002 | DONE | реальный раздел Предстоящее с List/Calendar над shared tasks |
 | NATIVE-LIST-001 | DONE | меню даты/времени/длительности по tap, без иконок, компактнее обычные list строки |
-| NATIVE-MIN5 | TODO (назначен) | core write минимум5минут, legacy1–4неперезаписывать/readgeometryсохранить |
+| NATIVE-MIN5 | DONE | core write минимум5минут, legacy1–4неперезаписывать/readgeometryсохранить |
 | NATIVE-UI-MODE | TODO (план) | единая позиция и оформление view switcher в Today/Upcoming обоих видах |
-| NATIVE-TIME-WHEEL | TODO (план после MIN5) | начало/длительность нативными колёсиками, derived конец без нового storage |
+| NATIVE-TIME-WHEEL | TODO (назначен) | начало/длительность нативными колёсиками, derived конец без нового storage |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
 | NATIVE-PRJ-002 | TODO (план) | настоящий экран списка/создания проектов и нижняя вкладка |
 | NATIVE-PRJ-003 | TODO (план) | назначить проект задаче и список задач проекта |
@@ -94,3 +94,5 @@ Review2026-10-14: NAV002185a19b independentiOSbuild/diffcheckPASS, но contextu
 Итог2026-10-14: LIST001 acceptededf45db/mainmerge12fbee7dc651128fa1aa829570180f15c2cd92be, independentiOSbuildPASS/sourceidentityaftermergePASS. Native Menu/bodyhit/circle independent/undatedgating/dateflag/noicon reviewed, source+executorGUIexplicit. NextMIN5 sourcebase12fbee7, actualtasks/NATIVE-MIN5.md; Projects/commonheader/gestures планы не выданы.
 
 Уточнение2026-10-14: послеMIN5 маленькийUItimewheel editor вместоkeyboard, plan /Users/atlhnv/Codex/orbit-outputs/NATIVE-TIME-WHEEL-plan.md. MIN5scopeнерасширять, nonewcore schema. Doublecontour switcher поправитьвNATIVE-UI-MODE вместе сcommonplacement, existingplansнепотеряны.
+
+Итог2026-10-14: MIN5accepted/mainmerge8e2abbd74c8bdbb6de66e9f2064b4a96feda2320, independent70tests/iOSbuildPASS/sourceidentityPASS. NextTIME-WHEEL UIonly. Прямоеlatestuserуточнение: durationminuteswheel ONLY0/5/10…55, hoursseparate; coreнестановитсякратностью5, old6/7readremain. LegacyoffgridUIexplicitchoice, no silentnormalization. Projects/header/gesturesневыданы.

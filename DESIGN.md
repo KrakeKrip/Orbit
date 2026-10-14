@@ -75,3 +75,7 @@ Calendar — ВИД задач, не bottom tab. Сегодня: same-local-day 
 Пользователь попросил заменить текстовыйввод начала/длительности айфоновскимиколёсиками. StartHH:mm, durationчасы+минуты (не clockend), readonlyderived «Закончитсяв…» с (+1день). Core5…1440 послеMIN5, legacyreadбезавтоклампа, noUTC/DSTперезаписи. Save/Cancel/Clear безклавиатуры, nativeDynamicType/accessibility. Отдельный UI TASK NATIVE-TIME-WHEEL послеMIN5; core WIPнерасширять.
 
 Упомянутый пользователем doublecontour viewselector также включить вfutureNATIVE-UI-MODE: проверить source/systemtoolbar composition, один аккуратныйконтур/одноplacement обеихviews, не приниматьрастровое предположение за установленнуюпричину.
+
+### Шаг duration wheel — прямое уточнение2026-10-14
+
+ВЧАСОВОМколесе выбираетсяколичествочасов; вМИНУТНОМdurationwheel только0/5/10/15…55. Минимальнаяноваядлительность5мин, max24ч00. ЭтоUIшагduration, не coreкратность5 и неограничениеStartminute; acceptedread6/7/1…4 не округлятьмолча. Exactoffgridсохранённоеvalue показыватьreadable, новаяwheelдлительностьвыбираетсяявно. ScopeназначенногоTIME-WHEEL, no corechange.
