@@ -19,6 +19,8 @@
 | NATIVE-MIN5 | DONE | core write минимум5минут, legacy1–4неперезаписывать/readgeometryсохранить |
 | NATIVE-UI-MODE | NEEDS_FIXES (R1 назначен) | единая позиция и оформление view switcher в Today/Upcoming обоих видах |
 | NATIVE-TIME-WHEEL | DONE | начало/длительность нативными колёсиками, derived конец без нового storage |
+| NATIVE-ADD-001 | TODO (следом после UI-MODE, не назначен) | атомарное создание с optional date; маленький core prerequisite |
+| NATIVE-ADD-002 | TODO (план) | общий + и create sheet в Inbox/Today/Upcoming, убрать Inbox composer, спокойное empty Today |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
 | NATIVE-PRJ-002 | TODO (план) | настоящий экран списка/создания проектов и нижняя вкладка |
 | NATIVE-PRJ-003 | TODO (план) | назначить проект задаче и список задач проекта |
@@ -102,3 +104,5 @@ Review2026-10-14: NAV002185a19b independentiOSbuild/diffcheckPASS, но contextu
 Review2026-10-14: UI-MODE2c33ac3/reportf3b9ce9 independentiOSbuild/diffcheckPASS. Doublecontour закрыт, но actual4screens/source показывают скачок control: inline navigation title толькоList, Calendarbarсхлопывается; NativeModeHeader отсутствует вCalendar, дополнительныеinsetsUpcoming. Назначен один tasks/NATIVE-UI-MODE-R1.md в тойжеtaskветке, start e323adf0e6e3efc9815ff363d8c01b59e12d1a6d. Без merge/Projects.
 
 Уточнение пользователя2026-10-14 к UI-MODE-R1: Today List без верхнего заголовка «Сегодня»; control поднять в освобождённое место на уровень Calendar, дату сохранить. Обновлённый correction start449c8134f2a2fb521e8087b2fe6a409cd6728c6b; scope прежний.
+
+Приоритет пользователя2026-10-14: после UI-MODE-R1 создание из всех3разделов (Today/Upcoming обоихвидов), FAB+ над tabbar; Inbox composer убрать. Today preset local today, Inbox nil, Upcoming selectedDay предложено. Маленькие ADD001atomiccore→ADD002sharedUI/emptyToday, затемProjects. План /Users/atlhnv/Codex/orbit-outputs/NATIVE-ADD-plan.md; branches ещё не назначены, current WIP не расширять.
