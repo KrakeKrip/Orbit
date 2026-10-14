@@ -156,13 +156,21 @@ struct InboxScreen: View {
     }
 }
 
-/// One row: round completion control on the left, readable title (with an
-/// optional planned-date label and time-interval range) and date/time actions
-/// on the right. Titles wrap instead of being truncated; control hit areas
-/// are ≥ 44pt. The clock action exists only for dated tasks.
+/// One row: round completion control on the left and the tappable task body
+/// (title + metadata). NATIVE-LIST-001: the always-visible clock/calendar
+/// icons are gone — tapping the body opens a compact native menu with the
+/// existing date and time/duration editors, while the circle stays an
+/// independent complete/reopen control that never opens the menu. Titles
+/// wrap instead of being truncated; hit areas are ≥ 44pt; rows are lower
+/// through tighter vertical padding only.
 struct InboxRowView: View {
     let task: OrbitTask
     let model: IOSInboxModel
+    /// Row presentation flag (NATIVE-LIST-001): show the planned-date
+    /// subtitle. Default true (Inbox keeps the useful date); Today and the
+    /// day-grouped Upcoming sections pass false — their section headers
+    /// already carry the date. Presentation only, no metadata loss.
+    var showsDateLabel: Bool = true
     let onEditDate: () -> Void
     let onEditInterval: () -> Void
 
@@ -173,6 +181,8 @@ struct InboxRowView: View {
         return formatter
     }()
 
+    /// Kept for the existing interval editor caption; the row subtitle
+    /// itself is formatted view-locally in Russian (see `body`).
     static func dateLabel(_ civilDate: String) -> String {
         guard let date = TaskPlannedDate.date(fromCivilDateString: civilDate) else {
             return civilDate
@@ -203,48 +213,57 @@ struct InboxRowView: View {
             .accessibilityLabel(
                 task.isCompleted ? "Снова открыть: \(task.title)" : "Отметить выполненной: \(task.title)"
             )
+            taskBodyMenu
+        }
+        .padding(.vertical, 2)
+        .alignmentGuide(.listRowSeparatorLeading) { dimensions in
+            dimensions[.leading] + 44 + 14
+        }
+    }
+
+    /// The tappable body: a compact native menu over the existing editor
+    /// callbacks. Presentation only — opening/cancelling the menu never
+    /// mutates anything, and the circle never triggers it.
+    private var taskBodyMenu: some View {
+        Menu {
+            Button("Дата…") { onEditDate() }
+            timeMenuButton
+        } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
                     .font(.body)
                     .foregroundStyle(task.isCompleted ? Color.secondary : Color.primary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
-                if let plannedDate = task.plannedDate {
-                    Text(Self.dateLabel(plannedDate))
+                if showsDateLabel, let plannedDate = task.plannedDate {
+                    Text(RussianDateCaption.label(plannedDate))
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        // Semantic colors survive the Menu label tint;
+                        // hierarchical styles would render coral.
+                        .foregroundStyle(Color.secondary)
                 }
                 if let interval = Self.intervalLabel(task) {
                     Text(interval)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
-            Spacer(minLength: 0)
-            if task.plannedDate != nil {
-                Button(action: onEditInterval) {
-                    Image(systemName: "clock")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(Color(.secondaryLabel))
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Время задачи: \(task.title)")
-            }
-            Button(action: onEditDate) {
-                Image(systemName: "calendar")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(Color(.secondaryLabel))
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Дата задачи: \(task.title)")
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 6)
-        .alignmentGuide(.listRowSeparatorLeading) { dimensions in
-            dimensions[.leading] + 44 + 14
+        .accessibilityLabel(task.title)
+    }
+
+    /// Time/duration is offered only once the task has a planned date (the
+    /// interval editor requires one); an undated task starts with «Дата…» —
+    /// today is never assigned silently.
+    @ViewBuilder
+    private var timeMenuButton: some View {
+        if task.plannedDate != nil {
+            Button("Время и длительность…") { onEditInterval() }
+        } else {
+            Button("Время и длительность — сначала назначьте дату") { }
+                .disabled(true)
         }
     }
 }

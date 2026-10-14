@@ -75,7 +75,9 @@ struct TodayScreen: View {
             if !openTasks.isEmpty {
                 Section("Открытые") {
                     ForEach(openTasks) { task in
-                        InboxRowView(task: task, model: model) {
+                        // NATIVE-LIST-001: the section header already shows
+                        // the day — no repeated date subtitle in the row.
+                        InboxRowView(task: task, model: model, showsDateLabel: false) {
                             presentation = .date(task)
                         } onEditInterval: {
                             presentation = .interval(task)
@@ -86,7 +88,7 @@ struct TodayScreen: View {
             if !completedTasks.isEmpty {
                 Section("Завершённые") {
                     ForEach(completedTasks) { task in
-                        InboxRowView(task: task, model: model) {
+                        InboxRowView(task: task, model: model, showsDateLabel: false) {
                             presentation = .date(task)
                         } onEditInterval: {
                             presentation = .interval(task)
