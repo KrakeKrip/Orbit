@@ -19,8 +19,16 @@ public enum TaskTimeIntervalError: Error, Equatable {
 /// deterministic integer civil arithmetic — no `Calendar`, `TimeZone`, DST or
 /// locale input; the derived end is never stored.
 public enum TaskTimeInterval {
+    /// Read-compatibility lower bound: every value ever stored, including
+    /// legacy rows created before NATIVE-MIN5, stays readable and renderable.
     public static let minimumDurationMinutes = 1
     public static let maximumDurationMinutes = 1440
+    /// Write rule (NATIVE-MIN5): a NEW or changed interval must be whole
+    /// minutes 5...1440. The minimum is not a step — 5/6/7 are all allowed.
+    /// This gate applies to writes only; legacy stored 1...4 remain readable
+    /// through `isValidDuration`/`end`/the projector and are never rewritten
+    /// or hidden.
+    public static let minimumWritableDurationMinutes = 5
 
     /// Strict ASCII `HH:mm`, 00:00..23:59; 24:00 is not a valid start.
     public static func isValidTime(_ value: String) -> Bool {
@@ -35,10 +43,19 @@ public enum TaskTimeInterval {
         return hour < 24 && minute < 60
     }
 
-    /// Whole minutes, 1...1440; bounds are checked before any arithmetic, so
-    /// extreme inputs (e.g. Int.max) never reach the end calculation.
+    /// Pure read compatibility: whole minutes 1...1440, legacy rows included.
+    /// Bounds are checked before any arithmetic, so extreme inputs (e.g.
+    /// Int.max) never reach the end calculation.
     public static func isValidDuration(_ value: Int) -> Bool {
         (minimumDurationMinutes...maximumDurationMinutes).contains(value)
+    }
+
+    /// Write gate for NEW interval assignments (NATIVE-MIN5): whole minutes
+    /// 5...1440, no rounding or clamping. Read paths (`isValidDuration`,
+    /// `end`, the day projector) intentionally keep the wider 1...1440
+    /// compatibility so legacy 1...4 rows stay visible and correct.
+    public static func isWritableDuration(_ value: Int) -> Bool {
+        (minimumWritableDurationMinutes...maximumDurationMinutes).contains(value)
     }
 
     /// The interval is either fully absent (nil/nil) or fully present.

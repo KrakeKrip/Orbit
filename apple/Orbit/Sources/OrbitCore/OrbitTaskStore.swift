@@ -108,6 +108,13 @@ public final class OrbitTaskStore {
         if let durationMinutes, !TaskTimeInterval.isValidDuration(durationMinutes) {
             throw TaskTimeIntervalError.invalidDuration(durationMinutes)
         }
+        // NATIVE-MIN5 write minimum: a new or changed non-nil interval must
+        // be whole minutes 5...1440. The precheck runs before any property
+        // mutation or save; legacy stored 1...4 remain readable through the
+        // read validator above and are never rewritten by this gate.
+        if let durationMinutes, !TaskTimeInterval.isWritableDuration(durationMinutes) {
+            throw TaskTimeIntervalError.invalidDuration(durationMinutes)
+        }
         let descriptor = FetchDescriptor<OrbitTask>(predicate: #Predicate { $0.id == id })
         guard let task = try context.fetch(descriptor).first else {
             throw OrbitStoreError.taskNotFound(id: id)

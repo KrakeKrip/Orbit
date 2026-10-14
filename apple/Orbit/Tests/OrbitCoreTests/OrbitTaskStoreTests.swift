@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 import OrbitCore
 
@@ -386,6 +387,123 @@ struct OrbitTaskStoreTests {
         let stored = try store.tasks()
         #expect(stored.first?.plannedTime == "07:00")
         #expect(stored.first?.durationMinutes == 30)
+    }
+
+    @Test("NATIVE-MIN5: new writes below 5 minutes are rejected before mutation and keep the stored pair")
+    @MainActor
+    func writeMinimumRejectsBelowFive() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let task = try store.addTask(title: "Задача")
+        try store.setPlannedDate("2026-10-20", for: task.id)
+        try store.setPlannedInterval(plannedTime: "07:00", durationMinutes: 30, for: task.id)
+
+        for low in [1, 2, 3, 4] {
+            #expect(throws: TaskTimeIntervalError.invalidDuration(low)) {
+                try store.setPlannedInterval(plannedTime: "07:30", durationMinutes: low, for: task.id)
+            }
+        }
+        #expect(throws: TaskTimeIntervalError.invalidDuration(0)) {
+            try store.setPlannedInterval(plannedTime: "07:30", durationMinutes: 0, for: task.id)
+        }
+
+        // Every rejection happened before any mutation: the stored pair and
+        // the disk state are unchanged.
+        var stored = try store.tasks()
+        #expect(stored.first?.plannedTime == "07:00")
+        #expect(stored.first?.durationMinutes == 30)
+        let reopened = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+        #expect(try reopened.tasks().first?.durationMinutes == 30)
+
+        // The minimum is not a multiple-of-5 step: 5, 6 and 7 are accepted.
+        try store.setPlannedInterval(plannedTime: "08:00", durationMinutes: 5, for: task.id)
+        try store.setPlannedInterval(plannedTime: "09:00", durationMinutes: 6, for: task.id)
+        try store.setPlannedInterval(plannedTime: "09:30", durationMinutes: 7, for: task.id)
+        stored = try store.tasks()
+        #expect(stored.first?.plannedTime == "09:30")
+        #expect(stored.first?.durationMinutes == 7)
+
+        // Clear remains a normal operation.
+        try store.setPlannedInterval(plannedTime: nil, durationMinutes: nil, for: task.id)
+        stored = try store.tasks()
+        #expect(stored.first?.plannedTime == nil)
+        #expect(stored.first?.durationMinutes == nil)
+        #expect(stored.first?.plannedDate == "2026-10-20")
+    }
+
+    @Test("NATIVE-MIN5: legacy stored 1...4 stay readable after reopen; new writes stay gated")
+    @MainActor
+    func legacyShortDurationsRemainReadable() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let url = dir.appendingPathComponent("Orbit.store")
+
+        // Legacy rows are created through the SwiftData model in this
+        // isolated test context — no store-API bypass was added for the app.
+        let legacyOneID = UUID()
+        let legacyFourID = UUID()
+        let config = ModelConfiguration(url: url, cloudKitDatabase: .none)
+        let container = try ModelContainer(for: OrbitTask.self, configurations: config)
+        let context = ModelContext(container)
+        context.insert(OrbitTask(
+            id: legacyOneID,
+            title: "Легаси 1 минута",
+            createdAt: Date(timeIntervalSince1970: 0),
+            plannedDate: "2026-10-20",
+            plannedTime: "09:00",
+            durationMinutes: 1
+        ))
+        context.insert(OrbitTask(
+            id: legacyFourID,
+            title: "Легаси 4 минуты",
+            createdAt: Date(timeIntervalSince1970: 1),
+            plannedDate: "2026-10-20",
+            plannedTime: "10:00",
+            durationMinutes: 4
+        ))
+        try context.save()
+
+        // Reopen with the current core: short values survive on disk.
+        let store = try OrbitTaskStore(storeURL: url)
+        let tasks = try store.tasks()
+        #expect(tasks.count == 2)
+        let one = try #require(tasks.first { $0.id == legacyOneID })
+        #expect(one.plannedDate == "2026-10-20")
+        #expect(one.plannedTime == "09:00")
+        #expect(one.durationMinutes == 1)
+        let four = try #require(tasks.first { $0.id == legacyFourID })
+        #expect(four.plannedTime == "10:00")
+        #expect(four.durationMinutes == 4)
+
+        // Read end and positive projection segments for the legacy rows.
+        #expect(TaskTimeInterval.end(plannedDate: "2026-10-20", plannedTime: "09:00", durationMinutes: 1)?.time == "09:01")
+        let projection = TaskDayProjector.project(day: "2026-10-20", in: tasks)
+        #expect(projection.timedSegments.count == 2)
+        #expect(projection.timedSegments.allSatisfy { $0.endMinute > $0.startMinute })
+
+        // A new write on the legacy row is gated and changes nothing.
+        #expect(throws: TaskTimeIntervalError.invalidDuration(3)) {
+            try store.setPlannedInterval(plannedTime: "09:30", durationMinutes: 3, for: legacyOneID)
+        }
+
+        // Legacy date move and completion keep the short interval untouched.
+        try store.setPlannedDate("2026-10-21", for: legacyOneID)
+        try store.setCompleted(true, for: legacyOneID)
+        var stored = try store.tasks()
+        let moved = try #require(stored.first { $0.id == legacyOneID })
+        #expect(moved.plannedDate == "2026-10-21")
+        #expect(moved.plannedTime == "09:00")
+        #expect(moved.durationMinutes == 1)
+        #expect(moved.isCompleted)
+
+        // Legacy clear still works through the normal path.
+        try store.setPlannedInterval(plannedTime: nil, durationMinutes: nil, for: legacyOneID)
+        stored = try store.tasks()
+        let cleared = try #require(stored.first { $0.id == legacyOneID })
+        #expect(cleared.plannedTime == nil)
+        #expect(cleared.durationMinutes == nil)
     }
 
     @Test("interval without a planned date is rejected; undated clear is allowed")

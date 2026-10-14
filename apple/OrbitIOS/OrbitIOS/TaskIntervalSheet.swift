@@ -54,7 +54,7 @@ struct TaskIntervalSheet: View {
                 } header: {
                     Text("Время задачи")
                 } footer: {
-                    Text("Начало в формате ЧЧ:ММ (00:00–23:59), длительность — целое число минут от 1 до 1440. Конец может переходить через полночь.")
+                    Text("Начало в формате ЧЧ:ММ (00:00–23:59), длительность — целое число минут от \(TaskTimeInterval.minimumWritableDurationMinutes) до \(TaskTimeInterval.maximumDurationMinutes). Конец может переходить через полночь.")
                 }
 
                 Section {
