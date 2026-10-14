@@ -1,3 +1,5 @@
+Итог DONE,2026-10-14, product58ae60a8ff71264a5c9774f17dc28a86e5218985. Review reports/NATIVE-NAV-001.md. View-localRussian date caption — trackedsmallfollow-up вNAV002; нижеhistoricalassignment.
+
 # NATIVE-NAV-001 — «Сегодня»: Список / Календарь вместо отдельной вкладки
 
 ASSIGNED,2026-10-14. Один результат: переключение представления внутри реального Today. Это первый малый шаг исправленной пользователем навигации, не весь Upcoming/calendar roadmap. Sourcebase b5608d1eaace8f4d8793c5eff36ed4caa1bc0e23 — accepted007C renderer. Worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-NAV-001, branch task/NATIVE-NAV-001. StartingSHA assignmentHEAD изhandoff. Проверитьroot/branch/HEAD/status; AGENTS/PRODUCT/ARCHITECTURE/DESIGN/этотTASK; previous007C corrections не выполнять.
