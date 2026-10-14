@@ -58,6 +58,123 @@ struct OrbitTaskStoreTests {
         #expect(try store.tasks().isEmpty)
     }
 
+    // MARK: - NATIVE-ADD-001: atomic creation with an optional planned date
+
+    @Test("addTask with plannedDate creates the task and its date in one row")
+    @MainActor
+    func addDatedTask() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let at = Date(timeIntervalSince1970: 1_760_000_000)
+        let task = try store.addTask(title: "  Купить хлеб  ", now: at, plannedDate: "2026-10-14")
+
+        #expect(task.title == "Купить хлеб")
+        #expect(task.createdAt == at)
+        #expect(task.plannedDate == "2026-10-14")
+        #expect(task.completedAt == nil)
+        #expect(task.plannedTime == nil)
+        #expect(task.durationMinutes == nil)
+
+        let all = try store.tasks()
+        #expect(all.count == 1)
+        #expect(all.first?.id == task.id)
+        #expect(all.first?.plannedDate == "2026-10-14")
+    }
+
+    @Test("addTask without plannedDate keeps the previous undated semantics")
+    @MainActor
+    func addUndatedTask() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        let at = Date(timeIntervalSince1970: 1_760_000_000)
+        let implicit = try store.addTask(title: "Без даты", now: at)
+        let explicitNil = try store.addTask(title: "Явно без даты", now: at, plannedDate: nil)
+
+        for task in [implicit, explicitNil] {
+            #expect(task.plannedDate == nil)
+            #expect(task.completedAt == nil)
+            #expect(task.plannedTime == nil)
+            #expect(task.durationMinutes == nil)
+        }
+        #expect(try store.tasks().count == 2)
+    }
+
+    @Test("disk reopen keeps the created UUID and date with empty interval and completion")
+    @MainActor
+    func datedDiskReopen() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let storeURL = dir.appendingPathComponent("Orbit.store")
+
+        var firstStore: OrbitTaskStore? = try OrbitTaskStore(storeURL: storeURL)
+        let createdAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let created = try firstStore?.addTask(title: "Датированная", now: createdAt, plannedDate: "2026-10-14")
+        firstStore = nil
+
+        let second = try OrbitTaskStore(storeURL: storeURL)
+        let stored = try second.tasks()
+        #expect(stored.count == 1)
+        #expect(stored.first?.id == created?.id)
+        #expect(stored.first?.title == "Датированная")
+        #expect(stored.first?.createdAt == createdAt)
+        #expect(stored.first?.plannedDate == "2026-10-14")
+        #expect(stored.first?.completedAt == nil)
+        #expect(stored.first?.plannedTime == nil)
+        #expect(stored.first?.durationMinutes == nil)
+    }
+
+    @Test("invalid planned date is rejected before insert; existing rows stay and retry works")
+    @MainActor
+    func addDatedInvalidDateRejected() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        _ = try store.addTask(title: "Существующая задача", now: Date(timeIntervalSince1970: 100), plannedDate: "2026-01-02")
+
+        #expect(throws: TaskPlannedDateError.invalid("2026-13-40")) {
+            try store.addTask(title: "Новая", now: Date(timeIntervalSince1970: 200), plannedDate: "2026-13-40")
+        }
+
+        let all = try store.tasks()
+        #expect(all.count == 1)
+        #expect(all.first?.title == "Существующая задача")
+        #expect(all.first?.plannedDate == "2026-01-02")
+
+        // The store remains usable for a valid dated retry.
+        let retry = try store.addTask(title: "Новая", now: Date(timeIntervalSince1970: 200), plannedDate: "2026-10-14")
+        #expect(retry.plannedDate == "2026-10-14")
+        #expect(try store.tasks().count == 2)
+    }
+
+    @Test("invalid title with a date is rejected before insert; existing rows stay and retry works")
+    @MainActor
+    func addDatedInvalidTitleRejected() throws {
+        let dir = try TempDir.make()
+        defer { TempDir.remove(dir) }
+        let store = try OrbitTaskStore(storeURL: dir.appendingPathComponent("Orbit.store"))
+
+        _ = try store.addTask(title: "Существующая задача", now: Date(timeIntervalSince1970: 100), plannedDate: "2026-01-02")
+
+        #expect(throws: TaskTitleError.empty) {
+            try store.addTask(title: "   ", now: Date(timeIntervalSince1970: 200), plannedDate: "2026-10-14")
+        }
+
+        let all = try store.tasks()
+        #expect(all.count == 1)
+        #expect(all.first?.title == "Существующая задача")
+        #expect(all.first?.plannedDate == "2026-01-02")
+
+        let retry = try store.addTask(title: "Повтор", now: Date(timeIntervalSince1970: 200), plannedDate: "2026-10-14")
+        #expect(retry.title == "Повтор")
+        #expect(retry.plannedDate == "2026-10-14")
+        #expect(try store.tasks().count == 2)
+    }
+
     @Test("setCompleted completes and reopens with explicit dates")
     @MainActor
     func completeReopen() throws {
