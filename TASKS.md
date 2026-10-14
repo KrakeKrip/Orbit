@@ -23,7 +23,7 @@
 | NATIVE-ADD-002 | DONE | общий + и create sheet в Inbox/Today/Upcoming, убрать Inbox composer, спокойное empty Today |
 | NATIVE-EDIT-001 | DONE | core rename/delete поUUID безпереписыванияschema |
 | NATIVE-ADD-003 | DONE | atomiccreateoptionalinterval вcore, безUI |
-| NATIVE-ADD-004 | TODO (назначен) | editabledate/start/duration вsharedcreatesheet |
+| NATIVE-ADD-004 | NEEDS_FIXES (tinyR1) | editabledate/start/duration вsharedcreatesheet |
 | NATIVE-EDIT-002 | TODO (план) | native rename/delete UI сconfirm иCancel |
 | NATIVE-DEVICE-001 | TODO (план) | личныйiPhone install/основныеflows/finalsmallUIpolish |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
@@ -125,3 +125,5 @@ Review2026-10-14: EDIT00184f6048 independent36/iOSbuildPASS, одна R1publicse
 Итог2026-10-14: EDIT0012bccf59 принят/mainmerge84672116c6cb05c89f793e7113d81cc444ee64fb. R1internalsetter/source/iOSbuildPASS,36suite ранееR0PASS, повторне нужен. NextassignedADD003coreatomicintervalcreation, actualtasksfile/sourcebase84672116; ADD004UIследом, затемEDIT002/deviceQA.
 
 Итог2026-10-14: ADD00388207a3 accepted/mainmerge55ca03221ae23d938b9534e8c2a93b63696f888f; independent44/iOSbuildPASS/appleidentityPASS. НазначенADD004sharedcreateform editabledate/time/duration, sourcebase55ca032; scope2UIfiles+optionalhelper/report, core/existingeditorsне трогать. ДалееEDIT002/deviceQA, deadlines/notificationsпослеfirstiPhonecheck.
+
+Review2026-10-15: ADD004867a0a1 independentiOSbuild/diffcheckPASS. SourceR1optionaldateonlyonChange: невозможноподтвердитьshownvalueбезпрокруткиInbox/reselectafterclear. Назначенtasks/NATIVE-ADD-004-R1.md, correctionstartd62df0c665b5c29bd22e46ac7c53b4d95f1af688; oneUIfix+report/targetedGUI/onebuild, безfullQA. No merge/EDIT002пока.

@@ -1,6 +1,6 @@
-## Актуальный статус 2026-10-14
+## Актуальный статус 2026-10-15
 
-ADD003DONEHEAD88207a33758afe717edabc19254cf62466b17be8/mainmerge55ca03221ae23d938b9534e8c2a93b63696f888f. Independent44targeted/iOSbuild/sourceidentityPASS; runtime savefailureGUIunverified(UIне было). Назначен толькоtasks/NATIVE-ADD-004.md/taskNATIVE-ADD-004/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-ADD-004: editabledate/start/durationвsharedcreatesheet, TaskCreatePresentation/IOSInboxModel+optionaloneUIhelper/report. Core/schema/workspaces/FAB/header/grid/existingeditors не менять. ПослеacceptanceEDIT002UIrename/delete иfirstiPhoneQA. Deadlines/reminders/localnotifications послеfirstdevicecheck. Startwheelminutes0..59(НЕstep5); durationwheelstep5/min5/max1440; core6/7valid/readlegacyбезrounding. Reportsfile/chatshort.
+ADD004NEEDS_FIXESHEAD867a0a1, independentiOSbuild/diffcheckPASS. R1: optionaldateзаписываетсялишьonChangepickerDate, нетconfirmshownvalue; Inboxсегодняилиreselectпослеclear требуютненужнойпрокрутки. Назначен толькоtasks/NATIVE-ADD-004-R1.md/taskNATIVE-ADD-004/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-ADD-004, correctionstartd62df0c665b5c29bd22e46ac7c53b4d95f1af688. Tinyexplicitdateconfirm+report, targetedGUI/onebuild; model/core/time/othereditorsнетрогать. No merge/EDIT002пока. ДалееEDIT002UIrename/delete→firstiPhoneQA; deadlines/reminders/notificationsпозже. Reportsfile/chatshort.
 
 # Orbit — правила координации
 
