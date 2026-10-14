@@ -30,27 +30,53 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   `today-mode-switcher`). Выбранный вид — presentation-состояние:
   сохраняется при Today → Входящие → Today в рамках сессии, никогда не
   пишет задачи и не создаёт копий; оба вида работают над одним
-  `IOSInboxModel`/store. Самостоятельной нижней вкладки «Календарь» больше
-  нет — tabs только Сегодня/Входящие (фейковый Upcoming не создаётся,
-  настоящий добавляется отдельным NAV002).
+  `IOSInboxModel`/store.
+- `OrbitIOS/UpcomingWorkspaceScreen.swift` — контейнер раздела
+  «Предстоящее» (NATIVE-NAV-002, третья нижняя вкладка; отдельной вкладки
+  «Календарь» нет): единственный owner выбранного civil дня (старт —
+  локальный Gregorian today) и вида «Список / Календарь» (старт — Список,
+  identifier `upcoming-mode-switcher`). День и вид независимы от Today,
+  сохраняются при переключениях вкладок и видов в рамках сессии (не пишутся
+  в tasks/store/UserDefaults), reload модели на appear/active их не
+  сбрасывает; оба вида — sibling-экраны над тем же `IOSInboxModel`, без
+  nested NavigationStack.
+- `OrbitIOS/UpcomingListScreen.swift` — список «Предстоящее»
+  (NATIVE-NAV-002): inclusive-окно 7 дней от выбранного дня (арифметика
+  только через принятые Gregorian/noon-адаптеры с явным календарём),
+  задачи сгруппированы по своей valid plannedDate большими существующими
+  строками `InboxRowView` — open и completed остаются в своей дневной
+  группе в порядке модели, без новых list-правил; undated/невалидные вне
+  окна. На верхней границе 2199-12-31 окно обрезается до последней валидной
+  даты, caption показывает фактический диапазон по-русски. Компактные date
+  controls (Prev/Next/picker/«Сегодня» — пересчёт current day в момент
+  нажатия) под large-заголовком и честный empty state «В выбранном
+  диапазоне задач нет» с доступными контролами; те же editor sheets и
+  `writeError`-баннер.
 - `OrbitIOS/TodayScreen.swift` — список «Сегодня» (NATIVE-006/NAV-001):
   read-only срез задач на день из входа `day` через `TaskDaySelection`;
   те же строки/actions/editors, что в Inbox (complete/reopen, date/interval
   editors); заголовок «Сегодня» + видимая локальная дата; переключатель
   «Список / Календарь» в navigation bar; честный empty state «На сегодня
   задач нет» с действием «Добавить во Входящих» (переключает на живую
-  вкладку, не создаёт задачу). Без сетки/overdue/quick-add.
+  вкладку, не создаёт задачу). Без сетки/overdue/quick-add. Дата-подпись
+  раздела — по-русски через view-local `RussianDateCaption` (NAV-002 P3:
+  явный ru_RU/Gregorian форматтер в CalendarDayScreen.swift; системная
+  locale не меняется, `InboxRowView` не тронут — подписи дат внутри строк
+  остаются системными).
 - `OrbitIOS/CalendarDayScreen.swift` + `OrbitIOS/DayTimelineView.swift` +
   `OrbitIOS/CompactCalendarTaskRow.swift` — календарный вид дня
-  (NATIVE-007B/007C/007C-R2/007C-R3/NAV-001), переиспользуется в двух
+  (NATIVE-007B/007C/007C-R2/007C-R3/NAV-001/NAV-002), переиспользуется в двух
   контекстах: fixed-day внутри «Сегодня» (`fixedDay` != nil) — компактная
   шапка с русским caption текущего дня, переключателем «Список /
-  Календарь» и «⋯» меню, БЕЗ Prev/Next/picker/«Сегодня» (другие даты —
-  будущий Upcoming/NAV002); browsing-контекст по умолчанию (для NAV002) —
+  Календарь» и «⋯» меню, БЕЗ Prev/Next/picker/«Сегодня»; browsing-контекст
+  «Предстоящего» (`browsingDay` != nil, NAV-002) — владелец дня внешний:
   Prev/Next ±1 день с guard 1900–2199, «Сегодня», compact DatePicker с
-  view-local ru_RU locale (системная locale не меняется) и native «⋯»
-  меню («Меню календаря», hit ≥44pt); при
-  стандартном шрифте ряд может не помещаться — `ViewThatFits` переносит
+  view-local ru_RU locale (системная locale не меняется), переключатель
+  «Список / Календарь» раздела (identifier `upcoming-mode-switcher`) и
+  native «⋯» меню («Меню календаря», hit ≥44pt) пишут через binding
+  владельца — экран не держит второго owner выбора дня (write-through с
+  no-op-защитой от feedback loops, пикер следует за днём);
+  при стандартном шрифте ряд может не помещаться — `ViewThatFits` переносит
   «Сегодня» + «⋯» на вторую компактную строку, без возвращения large title.
   «⋯» содержит «Задачи дня» — реальные TIMED сегменты выбранного дня
   (полное source-название + диапазон с маркерами ↑/↓) с существующими
