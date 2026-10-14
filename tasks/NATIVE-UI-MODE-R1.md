@@ -1,0 +1,15 @@
+# NATIVE-UI-MODE-R1 — убрать оставшийся скачок переключателя
+
+Один результат: control «Список / Календарь» сохраняет физическое положение при смене вида в Today и Upcoming. Работать только /Users/atlhnv/Codex/orbit-worktrees/NATIVE-UI-MODE, ветка task/NATIVE-UI-MODE. Старт — coordinator SHA из prompt, исходный executor HEAD f3b9ce957d2b640db26f7685707f6f882ff825a6. Прочитать AGENTS.md, исходный TASK и reports/NATIVE-UI-MODE.md. Проверить root/branch/HEAD/clean status; чужое не перезаписывать.
+
+Причина подтверждена source и ui-01…ui-04: списки имеют inline navigation title над header, Calendar без title схлопывает bar; общий NativeModeHeader в Calendar не используется. Upcoming Calendar имеет дополнительные вложенные paddings. Double-contour уже устранён, не возвращать toolbar wrapper.
+
+Scope: TodayScreen.swift, UpcomingListScreen.swift, CalendarDayScreen.swift, существующий NativeModeHeader.swift и reports/NATIVE-UI-MODE-executor.md. Никаких новых product компонентов. Workspace mode/day owners, OrbitIOSApp, core/store/schema, rows/editors/grid/untimed и root docs не менять.
+
+1. Реально использовать одну общую mode-композицию во всех четырёх представлениях. В пределах разрешённых leaf screens обеспечить одинаковый native host относительно safe area: одинаковая политика верхнего navigation bar/title либо эквивалентная компактная композиция, не зависящая от схлопывания пустого bar. Выбрать минимальную правку. Не оставлять скачок как platform limitation. Не добавлять огромный верхний зазор, пустой bar/spacer фиксированной высоты, negative offsets, clipping или UIScreen hard width.
+2. Один одинаковый leading inset и style Picker, без двойных calendar paddings; trailing menu/date не двигают control. Existing calendar date controls/контекстная «Сегодня»/ellipsis и callbacks сохранить. На screen один Picker. Нет nested NavigationStack и второй ownership state.
+3. Исправить комментарии/отчёт: первоначально shared header был только в списках, placement не был выполнен. Подтверждать результат скриншотами, не заявлением об одинаковой relative content-row.
+
+Проверки: один iOS Simulator build own DerivedData, DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer, CODE_SIGNING_ALLOWED=NO. Четыре normal screenshots одного устройства/размера/шрифта: Today List→Calendar и Upcoming List→Calendar, с видимой одинаковой позицией control относительно safe area; возврат в List и смена tab сохраняют mode/day. Один краткий accessibility-large smoke шапки. Без full CRUD/core/web/legacy suites и без дополнительных циклов. Не менять системные часы/настройки. Только свои simulator/temp resources, cleanup. Не подтверждённые gestures/реальный iPhone честно UNVERIFIED.
+
+Обычный scoped commit, diff --check, чистое дерево. Подробный отчёт только в файл; чат 4–5 коротких строк status/full SHA/result/checks/report. Stop до Codex review. Projects/drag/resize/3days/Month/AI не начинать. Без merge/push/amend/rebase/reset/stash/clean/deploy/main/чужих worktrees/CRM/3000/hooks/xcode-select/signing/AppleID.
