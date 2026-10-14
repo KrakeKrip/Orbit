@@ -6,6 +6,8 @@
 
 Scope: TodayScreen.swift, UpcomingListScreen.swift, CalendarDayScreen.swift, существующий NativeModeHeader.swift и reports/NATIVE-UI-MODE-executor.md. Никаких новых product компонентов. Workspace mode/day owners, OrbitIOSApp, core/store/schema, rows/editors/grid/untimed и root docs не менять.
 
+Прямое уточнение пользователя: в Today List убрать верхний заголовок «Сегодня» и освободившуюся под него область. Поднять mode control на уровень Today Calendar сразу под safe area; календарь вниз ради выравнивания не опускать. Локальную дату списка сохранить. Название нижней вкладки «Сегодня» и контекстную кнопку перехода в Upcoming не менять. Это конкретный способ закрытия Today-части R1, а не дополнительный TASK.
+
 1. Реально использовать одну общую mode-композицию во всех четырёх представлениях. В пределах разрешённых leaf screens обеспечить одинаковый native host относительно safe area: одинаковая политика верхнего navigation bar/title либо эквивалентная компактная композиция, не зависящая от схлопывания пустого bar. Выбрать минимальную правку. Не оставлять скачок как platform limitation. Не добавлять огромный верхний зазор, пустой bar/spacer фиксированной высоты, negative offsets, clipping или UIScreen hard width.
 2. Один одинаковый leading inset и style Picker, без двойных calendar paddings; trailing menu/date не двигают control. Existing calendar date controls/контекстная «Сегодня»/ellipsis и callbacks сохранить. На screen один Picker. Нет nested NavigationStack и второй ownership state.
 3. Исправить комментарии/отчёт: первоначально shared header был только в списках, placement не был выполнен. Подтверждать результат скриншотами, не заявлением об одинаковой relative content-row.
