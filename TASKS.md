@@ -21,7 +21,9 @@
 | NATIVE-TIME-WHEEL | DONE | начало/длительность нативными колёсиками, derived конец без нового storage |
 | NATIVE-ADD-001 | DONE | атомарное создание с optional date; маленький core prerequisite |
 | NATIVE-ADD-002 | DONE | общий + и create sheet в Inbox/Today/Upcoming, убрать Inbox composer, спокойное empty Today |
-| NATIVE-EDIT-001 | NEEDS_FIXES (tinyR1) | core rename/delete поUUID безпереписыванияschema |
+| NATIVE-EDIT-001 | DONE | core rename/delete поUUID безпереписыванияschema |
+| NATIVE-ADD-003 | TODO (назначен) | atomiccreateoptionalinterval вcore, безUI |
+| NATIVE-ADD-004 | TODO (план) | editabledate/start/duration вsharedcreatesheet |
 | NATIVE-EDIT-002 | TODO (план) | native rename/delete UI сconfirm иCancel |
 | NATIVE-DEVICE-001 | TODO (план) | личныйiPhone install/основныеflows/finalsmallUIpolish |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
@@ -119,3 +121,5 @@ Review2026-10-14: UI-MODE2c33ac3/reportf3b9ce9 independentiOSbuild/diffcheckPASS
 Приоритетuser2026-10-14: после текущегоEDIT001 добавитьdate/start/durationприcreate (atomiccore prerequisite затемsharedUI, отдельноневыданныеTASK), затемEDIT002UI и перваяiPhoneпроверка. Дедлайны/date+optionaltime, reminderchoices/localiOSnotifications послепервойпроверки, serverне нужен. CurrentEDIT001нерасширять. План /Users/atlhnv/Codex/orbit-outputs/NATIVE-FIRST-IPHONE-plan.md.
 
 Review2026-10-14: EDIT00184f6048 independent36/iOSbuildPASS, одна R1publicsetTitle rawbypass противTASK. Убратьpublic/internalOrbitCore; store/tests unchanged, одинbuild послеfix. tasks/NATIVE-EDIT-001-R1.md, correctionstartbf53794fd610f75e58780c9bf4b7421fec598df4. Безmerge/nextassignedtask.
+
+Итог2026-10-14: EDIT0012bccf59 принят/mainmerge84672116c6cb05c89f793e7113d81cc444ee64fb. R1internalsetter/source/iOSbuildPASS,36suite ранееR0PASS, повторне нужен. NextassignedADD003coreatomicintervalcreation, actualtasksfile/sourcebase84672116; ADD004UIследом, затемEDIT002/deviceQA.
