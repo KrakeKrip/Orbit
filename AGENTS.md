@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-14
 
-NATIVE-UI-MODE DONE: codea9a4631/report47ce24a, mainmerge28aa41f9048991e6b2aafb571767e1aba6590c28. Independent iOSbuild/diffcheck/apple sourceidentity PASS; screenshots всех4modepositions reviewed, latest own GUI не повторялся/realdeviceunverified. Назначен только tasks/NATIVE-ADD-001.md: atomic optional-date create,2core/testfiles+report, task/NATIVE-ADD-001/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-ADD-001. Никакого UI в ADD001. Затем ADD002 shared FAB/form всех3разделов и убрать Inboxcomposer/emptyToday; Projects после. Startwheel0..59 оставить; future move snap5, resize5minimum+10/20/30. Отчёт файл/чат кратко.
+NATIVE-ADD-001 DONE: productf72890f50be3326e8b30a1090f9cf32cf021b10e, mainmerge7c543fe7f459a6721338b4033243f43257e6bd35. Independent targeted30/iOSbuild/diffcheck/appleidentity PASS; runtime savefailureunverified. Назначен только tasks/NATIVE-ADD-002.md/taskNATIVE-ADD-002/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-ADD-002: shared FAB/create UI Inbox/Today/Upcoming bothmodes, убрать Inboxcomposer, спокойное emptyToday. Core/schema/grid/editors не менять. UI-MODEDONE. Projects/rename/delete/gestures позднее, не расширять текущий TASK. Startwheel0..59; movefuture snap5, resize5minimum+10/20/30. Reportfile/chatshort.
 
 # Orbit — правила координации
 
