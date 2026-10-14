@@ -29,6 +29,24 @@ enum IOSInboxFormatting {
         "Не удалось добавить задачу. \(validationMessage(error))"
     }
 
+    /// NATIVE-ADD-004: user-facing message for a refused create candidate.
+    /// The accepted formatters stay the source of the wording: date and
+    /// interval errors use their specific texts (`plannedDateMessage`/
+    /// `intervalMessage`), title errors the shared `addMessage`; anything
+    /// else is an explicit store error, never silently generic.
+    static func createMessage(_ error: Error) -> String {
+        switch error {
+        case is TaskTimeIntervalError:
+            return "Не удалось добавить задачу. \(intervalMessage(error))"
+        case is TaskPlannedDateError:
+            return "Не удалось добавить задачу. \(plannedDateMessage(error))"
+        case is TaskTitleError:
+            return addMessage(error)
+        default:
+            return "Не удалось добавить задачу. \(storageMessage(error))"
+        }
+    }
+
     static func completionMessage(_ error: Error) -> String {
         "Не удалось сохранить изменение. \(storageMessage(error))"
     }
@@ -100,23 +118,35 @@ final class IOSInboxModel {
         }
     }
 
-    /// NATIVE-ADD-002: creates one task together with its fixed civil date
-    /// through the accepted single-save `addTask(title:plannedDate:)` — never
-    /// a create-then-edit sequence. Returns nil on success (the list reloads
-    /// from persisted truth; a subsequent read failure stays a list error and
-    /// is not reported back as a write failure); otherwise returns a
-    /// user-facing message for the create sheet, which stays open with its
-    /// draft for retry.
+    /// NATIVE-ADD-002/ADD-004: creates one task with its whole optional
+    /// candidate (civil date + optional time interval) through the accepted
+    /// single-save `addTask` — never a create-then-edit sequence and no
+    /// temporary OrbitTask/store insert for the draft. Returns nil on success
+    /// (the list reloads from persisted truth; a subsequent read failure
+    /// stays a list error and is not reported back as a write failure);
+    /// otherwise returns a user-facing message for the create sheet, which
+    /// stays open with all drafts for retry. The core validation is the
+    /// final gate, not a UI-only save gate.
     @discardableResult
-    func create(title: String, plannedDate: String?) -> String? {
+    func create(
+        title: String,
+        plannedDate: String?,
+        plannedTime: String? = nil,
+        durationMinutes: Int? = nil
+    ) -> String? {
         do {
-            _ = try store.addTask(title: title, plannedDate: plannedDate)
+            _ = try store.addTask(
+                title: title,
+                plannedDate: plannedDate,
+                plannedTime: plannedTime,
+                durationMinutes: durationMinutes
+            )
             writeError = nil
             reload()
             return nil
         } catch {
             reload()
-            return IOSInboxFormatting.addMessage(error)
+            return IOSInboxFormatting.createMessage(error)
         }
     }
 
