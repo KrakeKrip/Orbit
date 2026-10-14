@@ -151,6 +151,13 @@ struct InboxRowView: View {
     let onEditDate: () -> Void
     let onEditInterval: () -> Void
 
+    /// NATIVE-EDIT-002: the one rename/delete presentation invoked from this
+    /// row's menu, hosted on the stable row body — never on the ephemeral
+    /// menu content. Only one management editor/confirmation is active at a
+    /// time, and opening either writes nothing.
+    @State private var renamePresentation: TaskRenamePresentation?
+    @State private var deletePresentation: TaskDeletePresentation?
+
     private static let dateLabelFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -196,15 +203,32 @@ struct InboxRowView: View {
         .alignmentGuide(.listRowSeparatorLeading) { dimensions in
             dimensions[.leading] + 44 + 14
         }
+        .taskManagementHost(
+            model: model,
+            renamePresentation: $renamePresentation,
+            deletePresentation: $deletePresentation
+        )
     }
 
     /// The tappable body: a compact native menu over the existing editor
     /// callbacks. Presentation only — opening/cancelling the menu never
     /// mutates anything, and the circle never triggers it.
+    /// NATIVE-EDIT-002: the same shared menu gains «Переименовать…» and the
+    /// destructive «Удалить…» (date/time items unchanged, the completion
+    /// circle stays independent); from the calendar the list remains the edit
+    /// route, and a rename/delete here is at once visible in the calendar of
+    /// the same shared UUID.
     private var taskBodyMenu: some View {
         Menu {
             Button("Дата…") { onEditDate() }
             timeMenuButton
+            Divider()
+            Button("Переименовать…") {
+                renamePresentation = TaskRenamePresentation(task: task)
+            }
+            Button("Удалить…", role: .destructive) {
+                deletePresentation = TaskDeletePresentation(task: task)
+            }
         } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)

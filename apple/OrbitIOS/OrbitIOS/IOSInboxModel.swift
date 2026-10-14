@@ -51,6 +51,17 @@ enum IOSInboxFormatting {
         "Не удалось сохранить изменение. \(storageMessage(error))"
     }
 
+    /// NATIVE-EDIT-002: the accepted title formatter stays the source of the
+    /// wording for a refused rename (empty/too long), anything else is an
+    /// explicit store error, never silently generic.
+    static func renameMessage(_ error: Error) -> String {
+        "Не удалось переименовать задачу. \(validationMessage(error))"
+    }
+
+    static func deletionMessage(_ error: Error) -> String {
+        "Не удалось удалить задачу. \(storageMessage(error))"
+    }
+
     static func plannedDateMessage(_ error: Error) -> String {
         switch error {
         case TaskPlannedDateError.invalid:
@@ -147,6 +158,43 @@ final class IOSInboxModel {
         } catch {
             reload()
             return IOSInboxFormatting.createMessage(error)
+        }
+    }
+
+    /// NATIVE-EDIT-002: renames one task through the accepted validated
+    /// `store.renameTask` (trim + title rules; UUID/date/time/completion are
+    /// never touched and a normalized identical title is a store no-op — the
+    /// internal model setter is never called from UI). Returns nil on success
+    /// (the list reloads from persisted truth; a subsequent read failure
+    /// stays a list error and is not reported back as a write failure);
+    /// otherwise returns a user-facing message for the rename sheet, which
+    /// keeps the draft for retry.
+    func rename(title: String, for task: OrbitTask) -> String? {
+        do {
+            try store.renameTask(title: title, for: task.id)
+            reload()
+            return nil
+        } catch {
+            reload()
+            return IOSInboxFormatting.renameMessage(error)
+        }
+    }
+
+    /// NATIVE-EDIT-002: hard-deletes exactly one task; runs only from the
+    /// confirmed destructive button (the confirmation with the visible full
+    /// title lives in the shared management presentation). Follows the
+    /// accepted completion pattern: a refused delete keeps the reason in the
+    /// shared `writeError` — rendered on Inbox, Today and Upcoming alike, so
+    /// it stays visible after the confirmation dialog has closed — and a
+    /// retry always goes through a new explicit confirmation.
+    func delete(_ task: OrbitTask) {
+        do {
+            try store.deleteTask(for: task.id)
+            writeError = nil
+            reload()
+        } catch {
+            writeError = IOSInboxFormatting.deletionMessage(error)
+            reload()
         }
     }
 
