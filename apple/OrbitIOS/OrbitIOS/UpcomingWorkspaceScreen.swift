@@ -43,6 +43,11 @@ struct UpcomingWorkspaceScreen: View {
                 )
             }
         }
+        // NATIVE-ADD-002: one shared «+»/create sheet for both presentations.
+        // The preset is the section's existing selected day — the one
+        // selection owner is never duplicated, and creating never resets the
+        // selection or the mode.
+        .orbitCreateAction(model: model, datePreset: { selectedDay })
         .onAppear {
             // Keep the rows in sync after external changes; the selected day
             // and the mode are presentation state and are never reset here.

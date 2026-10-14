@@ -12,7 +12,6 @@ import OrbitCore
 /// Today → Inbox → Today within the session and never writes tasks.
 struct TodayWorkspaceScreen: View {
     let model: IOSInboxModel
-    let onGoToInbox: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showsCalendar = false
@@ -24,9 +23,14 @@ struct TodayWorkspaceScreen: View {
             if showsCalendar {
                 CalendarDayScreen(model: model, fixedDay: currentDay, todayMode: $showsCalendar)
             } else {
-                TodayScreen(model: model, day: currentDay, onGoToInbox: onGoToInbox, todayMode: $showsCalendar)
+                TodayScreen(model: model, day: currentDay, todayMode: $showsCalendar)
             }
         }
+        // NATIVE-ADD-002: one shared «+»/create sheet for both presentations.
+        // The preset is the actual local Gregorian day resolved at the moment
+        // of opening — never this workspace's possibly stale `currentDay` and
+        // never a UTC-derived value.
+        .orbitCreateAction(model: model, datePreset: { TaskDaySelection.currentDay() })
         .onAppear { refreshDay() }
         .onReceive(dayRefreshTimer) { _ in refreshDay(reloadTasks: false) }
         .onChange(of: currentDay) { _, _ in model.reload() }

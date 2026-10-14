@@ -3,7 +3,9 @@ import OrbitCore
 
 /// The «Сегодня» list: tasks planned on the device's current local civil
 /// date. Read-only slice over the shared model — the same rows, editors and
-/// sheets as the Inbox; creation stays in the Inbox composer.
+/// sheets as the Inbox; NATIVE-ADD-002: creation happens through the shared
+/// «+» hosted by `TodayWorkspaceScreen` with the current day preset, so this
+/// screen has no add action of its own.
 /// NATIVE-NAV-001: the current day is owned by `TodayWorkspaceScreen` and
 /// provided as the `day` input. NATIVE-UI-MODE/R1: there is no navigation
 /// title or bar on this screen — the compact «Список / Календарь» switcher
@@ -16,7 +18,6 @@ import OrbitCore
 struct TodayScreen: View {
     let model: IOSInboxModel
     let day: String
-    let onGoToInbox: () -> Void
     var todayMode: Binding<Bool>? = nil
 
     @State private var presentation: InboxSheetPresentation?
@@ -132,6 +133,11 @@ struct TodayScreen: View {
             .accessibilityIdentifier("today-write-error")
     }
 
+    /// NATIVE-ADD-002: the calm empty day — no tasks to do today. The local
+    /// day stays visible, and adding happens through the shared «+» with the
+    /// today preset, so there is no tab-switching action here. A day with
+    /// only completed tasks never reaches this state: the list keeps showing
+    /// its «Завершённые» history.
     private var emptyView: some View {
         VStack(spacing: 0) {
             // Local day stays visible even on a completely empty store.
@@ -142,17 +148,9 @@ struct TodayScreen: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
             ContentUnavailableView {
-                Label("На сегодня задач нет", systemImage: "sun.max")
+                Label("На сегодня всё", systemImage: "sun.max")
             } description: {
-                if model.tasks.isEmpty {
-                    Text("Добавьте задачу во Входящих.")
-                } else {
-                    Text("Задачи с датой \(dateCaption) отсутствуют.")
-                }
-            } actions: {
-                Button("Добавить во Входящих") { onGoToInbox() }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orbitAccent)
+                Text("Можно отдохнуть — или добавить новые планы.")
             }
             Spacer(minLength: 0)
         }

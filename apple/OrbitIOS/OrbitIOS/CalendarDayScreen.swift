@@ -8,7 +8,9 @@ import OrbitCore
 /// menu next to them holds «Задачи дня» — the timed segments of the day).
 /// Read-only slice over the shared model — taps and the context menu reuse
 /// the existing complete/reopen and date/interval editors for the source
-/// task; creation stays in the Inbox composer.
+/// task; NATIVE-ADD-002: creation happens through the shared «+» hosted by
+/// the section workspace (Today preset in the fixed-day context, the
+/// selected day in the browsing context), so this screen adds nothing itself.
 /// NATIVE-NAV-001 fixed-day context (`fixedDay` non-nil, used inside
 /// «Сегодня»): the shown day comes from the workspace's current local day
 /// input, the date browser (Prev/Next/picker/«Сегодня») is hidden and the
@@ -96,6 +98,9 @@ struct CalendarDayScreen: View {
                 if model.listError != nil {
                     listErrorView
                 } else {
+                    if isFixedDayMode && isProjectionEmpty {
+                        emptyProjectionCaption
+                    }
                     untimedSection
                     DayTimelineView(
                         segments: projection.timedSegments,
@@ -173,6 +178,31 @@ struct CalendarDayScreen: View {
 
     private var projection: TaskDayProjection {
         TaskDayProjector.project(day: selectedDay, in: model.tasks)
+    }
+
+    /// NATIVE-ADD-002: a truly empty projection — no untimed tasks and no
+    /// timed segments. A positive overnight continuation is a real segment,
+    /// so a day that a previous-day task flows into is never treated as
+    /// empty.
+    private var isProjectionEmpty: Bool {
+        projection.timedSegments.isEmpty && projection.untimedTaskIDs.isEmpty
+    }
+
+    /// The calm Today-calendar empty caption — the same words as the Today
+    /// list empty state — as a compact line above the intact grid. The grid,
+    /// its ruler and the shared «+» stay available; the browsing (Upcoming)
+    /// context never receives this Today-specific «всё выполнено» line.
+    private var emptyProjectionCaption: some View {
+        VStack(spacing: 2) {
+            Text("На сегодня всё")
+            Text("Можно отдохнуть — или добавить новые планы.")
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .accessibilityIdentifier("today-calendar-empty")
     }
 
     private func task(withID id: UUID) -> OrbitTask? {

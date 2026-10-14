@@ -39,13 +39,11 @@ struct OrbitIOSApp: App {
             switch launch {
             case .ready(let model):
                 TabView(selection: $selectedTab) {
-                    TodayWorkspaceScreen(model: model) {
-                        selectedTab = .inbox
-                    }
-                    .tabItem {
-                        Label("Сегодня", systemImage: "sun.max")
-                    }
-                    .tag(Tab.today)
+                    TodayWorkspaceScreen(model: model)
+                        .tabItem {
+                            Label("Сегодня", systemImage: "sun.max")
+                        }
+                        .tag(Tab.today)
                     InboxScreen(model: model)
                         .tabItem {
                             Label("Входящие", systemImage: "tray")
