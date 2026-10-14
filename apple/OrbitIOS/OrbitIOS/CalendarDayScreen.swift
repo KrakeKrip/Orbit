@@ -30,6 +30,11 @@ struct CalendarDayScreen: View {
     /// When set, every date control writes through to this binding; the
     /// fixed-day Today context (default nil) is unchanged.
     var browsingDay: Binding<String>? = nil
+    /// Browsing context (Upcoming): the refreshed current local Gregorian day
+    /// from the section owner (NATIVE-NAV-002-R1); gates the contextual
+    /// «Сегодня» jump. The fixed-day Today context (default nil) never gets
+    /// a jump.
+    var referenceDay: String? = nil
 
     @State private var presentation: InboxSheetPresentation?
     @State private var localSelectedDay: String = TaskDaySelection.currentDay()
@@ -247,31 +252,61 @@ struct CalendarDayScreen: View {
         RussianDateCaption.label(selectedDay)
     }
 
+    /// NATIVE-NAV-002-R1 browsing header: compact rows that actually fit the
+    /// viewport — the section mode switcher and the day menu on their own
+    /// top row, the date browser below. The contextual «Сегодня» jump exists
+    /// only while the selection differs from the owner's current local day
+    /// and reserves no space when hidden; `ViewThatFits` moves it to its own
+    /// row at narrow/accessibility widths instead of stretching the content
+    /// (which used to push the grid and hour labels past the viewport).
+    /// Nothing is clipped or offset; the grid/ruler are untouched.
     private var browserDayControls: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
-                browsingModeControl
-                prevDayButton
-                datePickerField
-                nextDayButton
-                Spacer(minLength: 0)
-                todayButton
-                calendarMenu
+            VStack(alignment: .leading, spacing: 0) {
+                browsingTopRow
+                browserDateRow(includesJump: true)
             }
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 8) {
-                    browsingModeControl
-                    prevDayButton
-                    datePickerField
-                    nextDayButton
-                }
-                HStack {
+                browsingTopRow
+                browserDateRow(includesJump: false)
+                if showsTodayJump {
                     todayButton
-                    Spacer(minLength: 0)
-                    calendarMenu
                 }
             }
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.bar)
+    }
+
+    private var browsingTopRow: some View {
+        HStack(spacing: 8) {
+            browsingModeControl
+            Spacer(minLength: 0)
+            calendarMenu
+        }
+    }
+
+    private func browserDateRow(includesJump: Bool) -> some View {
+        HStack(spacing: 8) {
+            prevDayButton
+            datePickerField
+            nextDayButton
+            if includesJump {
+                Spacer(minLength: 0)
+                if showsTodayJump {
+                    todayButton
+                }
+            }
+        }
+    }
+
+    /// The jump is visible only away from today, compared as canonical
+    /// civil-date strings through the owner's refreshed reference. The
+    /// fixed-day Today context has no `referenceDay` and never jumps.
+    private var showsTodayJump: Bool {
+        guard let referenceDay else { return false }
+        return selectedDay != referenceDay
     }
 
     private var prevDayButton: some View {

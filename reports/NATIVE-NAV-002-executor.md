@@ -77,3 +77,66 @@ READY_FOR_REVIEW (независимый Codex review — следующая с�
 ## Git
 
 - Ветка `task/NATIVE-NAV-002`; start `6442000f8e0097bcf3ea9cce5c4e2b6151664756`; коммит реализации `38770ec…` (полный SHA — в чате после финального коммита отчёта).
+
+---
+
+# NATIVE-NAV-002-R1 — дополнительный отчёт исполнителя (контекстный «Сегодня» + fitting шапка)
+
+## Статус
+
+READY_FOR_REVIEW (коррекция по NEEDS_FIXES reports/NATIVE-NAV-002.md, R1 [P2] + R2 [P1]).
+
+## Исходное состояние
+
+- Тот же worktree/ветка; **correction start `322b55761f6fcfb83c625e4a23d9874e784963d9`** (coordinator HEAD с review и TASK, дерево чистое, product-база `185a19b47f9d14bb5316dbb6bea1e9751b47a25b` — мой принятый к проверке код). Прочитаны reports/NATIVE-NAV-002.md, tasks/NATIVE-NAV-002-R1.md и прямое правило пользователя `/Users/atlhnv/Codex/orbit-outputs/NATIVE-NAV-002-today-button-prompt.txt`.
+
+## Изменения (ровно по scope R1)
+
+| Файл | Изменение |
+| --- | --- |
+| `apple/OrbitIOS/OrbitIOS/UpcomingWorkspaceScreen.swift` | owner refreshed reference day: `@State referenceDay` (старт `TaskDaySelection.currentDay()`), refresh on appear / scene active / лёгкий Timer ~30с (тот же Combine-паттерн, что принятый TodayWorkspace; добавлен `import Combine`). `refreshReferenceDay()` пишет ТОЛЬКО reference — manual selectedDay/mode никогда не сбрасываются. Reference уходит входом в оба вида (`referenceDay:`). |
+| `apple/OrbitIOS/OrbitIOS/UpcomingListScreen.swift` | новый вход `let referenceDay: String`; `showsTodayJump = selectedDay != referenceDay` (canonical civil-строки, не Date/UTC/не «today в окне»). Кнопка «Сегодня» теперь условная в ОБЕИХ ветках ViewThatFits (inline в ряду дат / отдельной компактной строкой при узкой ширине); после jump/ручного выбора today исчезает, пустой reserved-строки нет (Spacer minLength 0 схлопывается). Действие кнопки прежнее — свежий `TaskDaySelection.currentDay()` в момент нажатия. |
+| `apple/OrbitIOS/OrbitIOS/CalendarDayScreen.swift` | новый вход `var referenceDay: String? = nil` (default nil — fixed-day Today контекст без jump, TodayWorkspace/TodayScreen не менялись). Browsing-шапка перегруппирована (R2): ряд 1 `[mode switcher | Spacer | ⋯]`, ряд 2 `[‹ | picker | › | (контекстная «Сегодня»)]`; ViewThatFits-фолбэк уводит «Сегодня» на собственную строку при AXL/узкой ширине. Убран прежний слишком широкий fallback `[mode|‹|picker|›]` одним HStack, растягивавший content за viewport (обрезка «Список» и часовых меток). Никаких `.clipped()`/offset/UIScreen; grid/ruler/lane geometry не тронуты; 44pt hits и русская дата сохранены. |
+| `apple/OrbitIOS/README.md` | маленькая секция: reference day owner + контекстная «Сегодня» + перегруппированная browsing-шапка. |
+
+Не менялись: core/model/store, TodayWorkspaceScreen, TodayScreen, InboxScreen/rows, editors, DayTimelineView, CompactCalendarTaskRow, диапазон/membership, Xcode project, tests, root docs.
+
+## Команды и результаты
+
+| Команда | Результат |
+| --- | --- |
+| `xcodebuild … -derivedDataPath /tmp/orbit-nav2r1-dd CODE_SIGNING_ALLOWED=NO build` (DEVELOPER_DIR) | первый прогон: warning «'Combine' was not imported» на Timer.publish → добавлен `import Combine` (как в TodayWorkspaceScreen); повторный прогон **exit 0, BUILD SUCCEEDED** |
+| Core/web/full/legacy | НЕ повторялись (по TASK) |
+| Fixture | тот же синтетический набор (9 задач: вчера/today untimed+timed+completed/+1/+6/+7/undated), генератор вне дерева, удалён |
+| Simulator | свой `orbit-nav2r1-gui` iPhone 17 Pro / iOS 27.0 UDID EADA9816-…-1F0F4CC1AAD2, создан/удалён мной |
+| Ввод | Device Hub: AX-клики по элементам + координатные (сегменты switcher, tab bar) |
+
+## GUI evidence (`/Users/atlhnv/Codex/orbit-outputs/NATIVE-NAV-002/`, файлы r1-*)
+
+1. `r1-01-list-plus1-button.png` — Список на +1 (окно 15–21 окт): кнопка «Сегодня» присутствует в ряду дат (AX: `button Сегодня`).
+2. `r1-02-calendar-today-whole-header.png` — Календарь на today (14 окт): **кнопки «Сегодня» нет**, шапка двумя компактными рядами — [Список/Календарь (выбран) + «⋯»] и [‹ 14 окт. 2026 г. ›]; «Список» НЕ обрезан; untimed-карточки и часовые метки **08:00/09:00/10:00/11:00… полные**, блок 09:00–10:00 на месте — R2-дефект (обрезка mode-контрола и меток из screenshot04) устранён.
+3. `r1-03-calendar-plus1-button.png` — Календарь на +1: «Сегодня» появилась.
+4. `r1-04-axl-list-header.png` — Список при accessibility-extra-large: switcher/‹ дата ›/caption полностью видны, caption переносится, ничего не обрезано; «Сегодня» нет (at today).
+5. `r1-05-axl-calendar-header.png` — Календарь при AXL: шапка [mode+⋯ / ‹ 14.10.2026 ›] полностью в viewport, без clipping/overlap; «Сегодня» нет (at today).
+
+AX-подтверждения всех 3×2 состояний кнопки: **List** today→нет; +1 (Следующий день)→есть; jump→нет (окно вернулось 14–20 окт); **Calendar** today→нет (меню «Меню календаря» на месте); +1→есть; jump→нет (день 14 окт). После jump переключение mode Calendar→List: окно 14–20 окт, кнопки нет — selected/mode синхронизация прежняя. Manual selection при refresh reference не сбрасывается (переключения вкладок/видов в течение сессии; +1 выбор пережил обновления reference).
+
+## Readonly store
+
+`.dump` до GUI-прогона и после всех взаимодействий — **идентичны** (jump/контекстная кнопка/переключения видов и вкладок/AXL не пишут).
+
+## UNVERIFIED (честно)
+
+- Midnight/runtime-переход: таймер ~30с/appear/active обновляют reference по source-wiring; реальная смена system time не имитировалась (settings не трогались). Теоретический под-секундный race (tap «Сегодня» ровно на границе суток до ближайшего тика таймера) закрылся бы следующим тиком — в GUI не воспроизводился.
+- При AXL часовые метки ruler сокращаются до «0…»/«1…» — это собственное поведение принятого DayTimelineView (fixed lane 56pt, компонент не менялся), не следствие шапки; при normal-размере метки полные (см. r1-02).
+- Small-width устройство отдельно не проверялось (выполнен один AXL-smoke по TASK «один AXL/smallwidth»); ViewThatFits-фолбэк виден в коде обеих веток, реальный SE-класс/landscape — не проверялись.
+- Реальный iPhone, тёмная тема, RTL, VoiceOver — не проверялись.
+
+## Гигиена
+
+- Один новый scoped commit; `git diff --check` чисто; дерево чистое; без merge/push/amend/rebase/reset/stash/deploy; main/чужие worktrees/хранилища/hooks/xcode-select/signing/настройки не трогались; content size возвращён на `large`; свой simulator/temp удалены, Device Hub-сессия остановлена.
+- Stop: независимый Codex review; LIST001/MIN5/Projects/drag/resize/3дня/Месяц/AI не начинались.
+
+## Git (R1)
+
+- Коммит R1 — полный SHA в чате; база `322b55761f6fcfb83c625e4a23d9874e784963d9`.

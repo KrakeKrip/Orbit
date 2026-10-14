@@ -39,7 +39,10 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   сохраняются при переключениях вкладок и видов в рамках сессии (не пишутся
   в tasks/store/UserDefaults), reload модели на appear/active их не
   сбрасывает; оба вида — sibling-экраны над тем же `IOSInboxModel`, без
-  nested NavigationStack.
+  nested NavigationStack. С NAV-002-R1 здесь же живёт обновляемый reference
+  текущего локального дня (appear/scene active/лёгкий таймер ~30с), который
+  делает кнопку «Сегодня» контекстной; обновление reference никогда не
+  сбрасывает ручной выбор и вид.
 - `OrbitIOS/UpcomingListScreen.swift` — список «Предстоящее»
   (NATIVE-NAV-002): inclusive-окно 7 дней от выбранного дня (арифметика
   только через принятые Gregorian/noon-адаптеры с явным календарём),
@@ -48,10 +51,12 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   группе в порядке модели, без новых list-правил; undated/невалидные вне
   окна. На верхней границе 2199-12-31 окно обрезается до последней валидной
   даты, caption показывает фактический диапазон по-русски. Компактные date
-  controls (Prev/Next/picker/«Сегодня» — пересчёт current day в момент
-  нажатия) под large-заголовком и честный empty state «В выбранном
-  диапазоне задач нет» с доступными контролами; те же editor sheets и
-  `writeError`-баннер.
+  controls (Prev/Next/picker) под large-заголовком; «Сегодня» —
+  контекстная (NAV-002-R1): видна только когда выбранный день отличается
+  от текущего локального, после jump/ручного выбора today исчезает без
+  резерва пустой строки, при нажатии пересчитывает current day; честный
+  empty state «В выбранном диапазоне задач нет» с доступными контролами;
+  те же editor sheets и `writeError`-баннер.
 - `OrbitIOS/TodayScreen.swift` — список «Сегодня» (NATIVE-006/NAV-001):
   read-only срез задач на день из входа `day` через `TaskDaySelection`;
   те же строки/actions/editors, что в Inbox (complete/reopen, date/interval
@@ -75,7 +80,11 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   «Список / Календарь» раздела (identifier `upcoming-mode-switcher`) и
   native «⋯» меню («Меню календаря», hit ≥44pt) пишут через binding
   владельца — экран не держит второго owner выбора дня (write-through с
-  no-op-защитой от feedback loops, пикер следует за днём);
+  no-op-защитой от feedback loops, пикер следует за днём); с NAV-002-R1
+  browsing-шапка сгруппирована в компактные ряды, которые помещаются в
+  viewport (mode+«⋯» сверху, дата/arrows ниже, контекстная «Сегодня» —
+  только когда выбранный день не равен reference current day, без резерва
+  строки и без clipping/offset-маскировки), fixed-day контекст без jump;
   при стандартном шрифте ряд может не помещаться — `ViewThatFits` переносит
   «Сегодня» + «⋯» на вторую компактную строку, без возвращения large title.
   «⋯» содержит «Задачи дня» — реальные TIMED сегменты выбранного дня

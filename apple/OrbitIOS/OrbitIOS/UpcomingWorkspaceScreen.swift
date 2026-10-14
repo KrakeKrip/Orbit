@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import OrbitCore
 
@@ -11,12 +12,18 @@ import OrbitCore
 /// presentation state — never persisted into tasks/store/UserDefaults — and
 /// stay independent of the Today section's current day and mode.
 /// Appear/active reloads of the shared model never reset the manual
-/// selection.
+/// selection. NATIVE-NAV-002-R1: this view also owns the refreshed
+/// reference current local day (appear/scene active/lightweight timer) that
+/// drives the contextual «Сегодня» jump; refreshing the reference never
+/// resets the manual selection or the mode.
 struct UpcomingWorkspaceScreen: View {
     let model: IOSInboxModel
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showsCalendar = false
     @State private var selectedDay: String = TaskDaySelection.currentDay()
+    @State private var referenceDay: String = TaskDaySelection.currentDay()
+    private let dayRefreshTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
         Group {
@@ -24,13 +31,15 @@ struct UpcomingWorkspaceScreen: View {
                 CalendarDayScreen(
                     model: model,
                     todayMode: $showsCalendar,
-                    browsingDay: $selectedDay
+                    browsingDay: $selectedDay,
+                    referenceDay: referenceDay
                 )
             } else {
                 UpcomingListScreen(
                     model: model,
                     selectedDay: $selectedDay,
-                    showsCalendar: $showsCalendar
+                    showsCalendar: $showsCalendar,
+                    referenceDay: referenceDay
                 )
             }
         }
@@ -38,7 +47,24 @@ struct UpcomingWorkspaceScreen: View {
             // Keep the rows in sync after external changes; the selected day
             // and the mode are presentation state and are never reset here.
             model.reload()
+            refreshReferenceDay()
         }
+        .onReceive(dayRefreshTimer) { _ in
+            // Midnight/local-zone changes reach the jump visibility within
+            // half a minute without touching the user's selection.
+            refreshReferenceDay()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                refreshReferenceDay()
+            }
+        }
+    }
+
+    /// Refreshes the current local Gregorian day reference only. The manual
+    /// selection and the mode are the user's and are never rewritten here.
+    private func refreshReferenceDay() {
+        referenceDay = TaskDaySelection.currentDay()
     }
 }
 

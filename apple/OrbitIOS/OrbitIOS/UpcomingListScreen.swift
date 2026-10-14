@@ -15,6 +15,9 @@ struct UpcomingListScreen: View {
     @Binding var selectedDay: String
     /// The section's List/Calendar mode — owned by `UpcomingWorkspaceScreen`.
     @Binding var showsCalendar: Bool
+    /// The refreshed current local Gregorian day from the section owner
+    /// (NATIVE-NAV-002-R1): gates the contextual «Сегодня» jump.
+    let referenceDay: String
 
     @State private var presentation: InboxSheetPresentation?
     @State private var pickerDate: Date = TaskPlannedDate.date(
@@ -190,10 +193,12 @@ struct UpcomingListScreen: View {
 
     // MARK: - Date controls
 
-    /// Compact date controls directly under the navigation bar — the same
-    /// browsing pattern as this section's calendar view (without its day
-    /// menu). «Сегодня» recomputes the current local day at tap time. At
-    /// accessibility text sizes the row wraps instead of overflowing.
+    /// Compact date controls directly under the navigation bar. The
+    /// contextual «Сегодня» jump exists only while the selection differs
+    /// from the current local day and reserves no space when hidden; when
+    /// present it may share the date row or, at narrow/accessibility widths,
+    /// drop to its own compact row via `ViewThatFits`. «Сегодня» recomputes
+    /// the current local day at tap time.
     private var dateControls: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) {
@@ -201,7 +206,9 @@ struct UpcomingListScreen: View {
                 datePickerField
                 nextDayButton
                 Spacer(minLength: 0)
-                todayButton
+                if showsTodayJump {
+                    todayButton
+                }
             }
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 8) {
@@ -209,12 +216,20 @@ struct UpcomingListScreen: View {
                     datePickerField
                     nextDayButton
                 }
-                todayButton
+                if showsTodayJump {
+                    todayButton
+                }
             }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(.bar)
+    }
+
+    /// The jump is visible only away from today, compared as canonical
+    /// civil-date strings through the owner's refreshed reference.
+    private var showsTodayJump: Bool {
+        selectedDay != referenceDay
     }
 
     private var prevDayButton: some View {
