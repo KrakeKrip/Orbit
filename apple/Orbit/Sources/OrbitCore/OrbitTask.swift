@@ -50,6 +50,13 @@ public final class OrbitTask {
         completedAt = nil
     }
 
+    /// Assigns a new title. Validation (trim + scalar-length limit) lives in
+    /// `TaskTitle` and in the store, which rejects invalid candidates before
+    /// mutating; no second validator and no public raw bypass are added here.
+    public func setTitle(_ value: String) {
+        title = value
+    }
+
     /// Assigns, changes or clears (`nil`) the planned civil date.
     /// Validation of the `YYYY-MM-DD` contract lives in `TaskPlannedDate`
     /// and in the store, which rejects invalid values before mutating.

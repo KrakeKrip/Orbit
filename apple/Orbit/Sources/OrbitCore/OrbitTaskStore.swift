@@ -72,6 +72,54 @@ public final class OrbitTaskStore {
         }
     }
 
+    /// NATIVE-EDIT-001: renames one task in a single explicit save. The
+    /// accepted `TaskTitle.validated` check runs before any mutation; an
+    /// unknown UUID throws the existing `OrbitStoreError.taskNotFound`. Only
+    /// `title` changes — id, createdAt, completion, planned date and interval
+    /// are never touched. A normalized identical title is a no-op without
+    /// `context.save()`; a real change is one explicit save with the existing
+    /// rollback rethrowing a save failure. The calling UI (later EDIT task)
+    /// uses this store operation, not the raw model setter.
+    @discardableResult
+    public func renameTask(title rawTitle: String, for id: UUID) throws -> OrbitTask {
+        let title = try TaskTitle.validated(rawTitle)
+        let descriptor = FetchDescriptor<OrbitTask>(predicate: #Predicate { $0.id == id })
+        guard let task = try context.fetch(descriptor).first else {
+            throw OrbitStoreError.taskNotFound(id: id)
+        }
+        if task.title != title {
+            task.setTitle(title)
+            do {
+                try context.save()
+            } catch {
+                context.rollback()
+                throw error
+            }
+        }
+        return task
+    }
+
+    /// NATIVE-EDIT-001: hard-deletes exactly one task of the local prototype
+    /// store in a single explicit save. An unknown UUID throws the existing
+    /// `OrbitStoreError.taskNotFound`; only this task's row is removed — every
+    /// other task keeps all of its fields. No soft delete/archive/history and
+    /// no schema change; the calling UI (later EDIT task) is responsible for
+    /// asking the user for confirmation with the visible title before
+    /// invoking this.
+    public func deleteTask(for id: UUID) throws {
+        let descriptor = FetchDescriptor<OrbitTask>(predicate: #Predicate { $0.id == id })
+        guard let task = try context.fetch(descriptor).first else {
+            throw OrbitStoreError.taskNotFound(id: id)
+        }
+        context.delete(task)
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
+        }
+    }
+
     /// Assigns, changes or clears (`nil`) the civil planned date of one task.
     /// Invalid values are rejected before any mutation; completion, title, id
     /// and list order are never touched, and tasks with a date stay in the Inbox.
