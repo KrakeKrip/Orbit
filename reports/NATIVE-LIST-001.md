@@ -1,0 +1,9 @@
+# NATIVE-LIST-001 — ACCEPTED
+
+2026-10-14. Product `edf45db755390280f07511ec174a0dc546b73b2c`, base `7e017ac61dbd0d87a207373bb8d0a2b8145287a5`. Scope3UI files+README/report, tree/cumulative diffcheck clean. Independent generic iOS Simulator build ownDerivedData/CODE_SIGNING_ALLOWED=NO — BUILD SUCCEEDED/exit0. Core/store/editors/grid/timers/navigation unchanged, core/web/full/legacy не повторялись.
+
+Source review: shared row HStack состоит из независимого CompletionButton и native Menu label/body с minHeight44; nestedButton/overlappinghit нет. Menu date/time invokesacceptedcallbacks; undatedtime disabled без автодаты. DefaultshowsDateLabel true дляInbox, falseToday/Upcoming обоихcompleted/open paths; time arithmetic untouched. Russianmetadata usesacceptedUIhelper. Verticalpadding6→2, no maxHeight or clip, длинныйtitleрастётnatural. FinaloverallListrow включаетnativeListinsets; executor≈48pt — sourcebody estimate, не independent pixelmeasure totalrow. Это уменьшениеpadding/дубликатов, не гарантированная44–56pt полнаяrowheight всехданных.
+
+Actual screenshots l1-01Today иl1-05undatedmenu лично просмотрены: icon-free/date-freeToday, сохранёнstart–end, длинныйtitleчитабелен; disabledtime label видим. NativeMenu body access/fulltitle заданsource-level, realVoiceOver непроверен. EditorCancel/actualvalues/savecorrectUUID/complete+reopen — executorevidence/store diffs, ownlatestGUI не повторялся. Executor использовал одноразовые CGEvent-инструменты вместо недоступногоегоCUA; координатор не запускал этот tooling/не выдаёт его за собственныепроверки. Realdevice/dark/RTL/smallwidth/pan иhalf-detent Save visibility остаютсяreportedlimits/deviceQA, не scopeэтогоrowTASK.
+
+LIST001 принят вboundedrow/menu scope. NextNATIVE-MIN5: отдельныйcorewrite rule+UIcaption, legacyread1–4 сохраняются, no geometrychanges. Unifiedheader/Projects/gestures не потерянывочереди. No push/deploy.

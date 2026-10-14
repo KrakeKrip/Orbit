@@ -1,3 +1,5 @@
+Итог DONE,2026-10-14, productedf45db755390280f07511ec174a0dc546b73b2c. Review reports/NATIVE-LIST-001.md, ниже historicalassignment.
+
 # NATIVE-LIST-001 — меню по нажатию и компактные строки списков
 
 ASSIGNED,2026-10-14. Один UI результат для Today/Upcoming/Inbox, не redesign календаря. Source base `8547b026986aa563ef31751521f23587642cb51d` — accepted NAV002. Branch `task/NATIVE-LIST-001`, worktree `/Users/atlhnv/Codex/orbit-worktrees/NATIVE-LIST-001`. StartingSHA assignmentHEAD из prompt. Проверить root/branch/HEAD/status; прочитать AGENTS/PRODUCT/DESIGN и этот TASK. Старые corrections не выполнять.
