@@ -5,8 +5,12 @@ import OrbitCore
 /// date. Read-only slice over the shared model — the same rows, editors and
 /// sheets as the Inbox; creation stays in the Inbox composer.
 /// NATIVE-NAV-001: the current day is owned by `TodayWorkspaceScreen` and
-/// provided as the `day` input; the compact «Список / Календарь» switcher
-/// lives in the navigation bar. Task dates are never rewritten.
+/// provided as the `day` input. NATIVE-UI-MODE: the compact
+/// «Список / Календарь» switcher sits in the one common top mode row
+/// (`NativeModeHeader`) directly under the navigation bar — the same
+/// placement, insets and height as the calendar presentation — instead of a
+/// toolbar item, so the control never moves or gains a second contour when
+/// the view switches. Task dates are never rewritten.
 struct TodayScreen: View {
     let model: IOSInboxModel
     let day: String
@@ -18,6 +22,9 @@ struct TodayScreen: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                if let todayMode {
+                    NativeModeHeader(switcher: TodayModeSwitcher(showsCalendar: todayMode))
+                }
                 if let writeError = model.writeError {
                     writeErrorBanner(writeError)
                 }
@@ -32,15 +39,11 @@ struct TodayScreen: View {
                 }
             }
             .navigationTitle("Сегодня")
-            .navigationBarTitleDisplayMode(.large)
+            // NATIVE-UI-MODE: inline title keeps the common mode row at the
+            // same top position as the calendar presentation — the placement
+            // of the switcher must not depend on the title height.
+            .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemBackground))
-            .toolbar {
-                if let todayMode {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        TodayModeSwitcher(showsCalendar: todayMode)
-                    }
-                }
-            }
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):

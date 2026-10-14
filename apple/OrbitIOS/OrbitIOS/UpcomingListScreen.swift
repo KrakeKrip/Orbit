@@ -37,6 +37,10 @@ struct UpcomingListScreen: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // NATIVE-UI-MODE: the same leading top mode row as in the
+                // calendar presentation and the Today section, directly under
+                // the navigation bar — no toolbar item, no second contour.
+                NativeModeHeader(switcher: UpcomingModeSwitcher(showsCalendar: $showsCalendar))
                 dateControls
                 if let writeError = model.writeError {
                     writeErrorBanner(writeError)
@@ -52,13 +56,11 @@ struct UpcomingListScreen: View {
                 }
             }
             .navigationTitle("Предстоящее")
-            .navigationBarTitleDisplayMode(.large)
+            // NATIVE-UI-MODE: inline title keeps the common mode row at the
+            // same top position as the calendar presentation — the placement
+            // of the switcher must not depend on the title height.
+            .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemBackground))
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    UpcomingModeSwitcher(showsCalendar: $showsCalendar)
-                }
-            }
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):

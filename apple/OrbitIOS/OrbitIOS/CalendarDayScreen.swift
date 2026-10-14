@@ -231,20 +231,15 @@ struct CalendarDayScreen: View {
     }
 
     /// Browsing context (Upcoming) «Список / Календарь» switcher in the date
-    /// controls row: the same compact segmented native control as Today's,
-    /// with its own accessibility identifier so the two sections'
-    /// independent modes stay distinguishable. Presentation state only.
+    /// controls row: NATIVE-UI-MODE reuses the section's own
+    /// `UpcomingModeSwitcher` — the same control instance the list
+    /// presentation hosts in its common `NativeModeHeader` — so there is one
+    /// segmented control per section, never a duplicated `Picker` on one
+    /// screen. Presentation state only.
     @ViewBuilder
     private var browsingModeControl: some View {
         if let todayMode {
-            Picker("Вид", selection: todayMode) {
-                Text("Список").tag(false)
-                Text("Календарь").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .fixedSize()
-            .frame(minHeight: 44)
-            .accessibilityIdentifier("upcoming-mode-switcher")
+            UpcomingModeSwitcher(showsCalendar: todayMode)
         }
     }
 
