@@ -12,19 +12,38 @@ import OrbitCore
 /// NATIVE-NAV-001 fixed-day context (`fixedDay` non-nil, used inside
 /// «Сегодня»): the shown day comes from the workspace's current local day
 /// input, the date browser (Prev/Next/picker/«Сегодня») is hidden and the
-/// compact «Список / Календарь» switcher replaces it. The default browsing
-/// context (no `fixedDay`) stays untouched for the future Upcoming screens.
+/// compact «Список / Календарь» switcher replaces it. NATIVE-NAV-002
+/// browsing context (`browsingDay` non-nil, used inside «Предстоящее»):
+/// the shown day is owned externally and Prev/Next/picker/«Сегодня» write
+/// through to the owner's binding — this screen never keeps a second
+/// selection owner.
 struct CalendarDayScreen: View {
     let model: IOSInboxModel
     /// Fixed-day Today context: when non-nil the screen shows exactly this
     /// civil day and follows its changes from the current-day owner.
     var fixedDay: String? = nil
-    /// Today mode switcher binding; rendered in the fixed-day header when
-    /// provided (browsing contexts simply omit it).
+    /// Section mode switcher binding; rendered in the fixed-day header
+    /// (Today's own switcher) or, in the browsing context, in the date
+    /// controls row (the Upcoming section's switcher).
     var todayMode: Binding<Bool>? = nil
+    /// Browsing context (Upcoming): external owner of the shown civil day.
+    /// When set, every date control writes through to this binding; the
+    /// fixed-day Today context (default nil) is unchanged.
+    var browsingDay: Binding<String>? = nil
+    /// Browsing context (Upcoming): the refreshed current local Gregorian day
+    /// from the section owner (NATIVE-NAV-002-R1); gates the contextual
+    /// «Сегодня» jump. The fixed-day Today context (default nil) never gets
+    /// a jump.
+    var referenceDay: String? = nil
 
     @State private var presentation: InboxSheetPresentation?
-    @State private var selectedDay: String = TaskDaySelection.currentDay()
+    @State private var localSelectedDay: String = TaskDaySelection.currentDay()
+    /// The shown civil day — the external browsing owner's value when one is
+    /// provided, otherwise the local fixed-day state. One selection source
+    /// per context, never two independent owners.
+    private var selectedDay: String {
+        browsingDay?.wrappedValue ?? localSelectedDay
+    }
     @State private var pickerDate: Date = TaskPlannedDate.date(
         fromCivilDateString: TaskDaySelection.currentDay()
     ) ?? Date()
@@ -111,16 +130,22 @@ struct CalendarDayScreen: View {
                 // manually selected day is never reset here.
                 applyFixedDay()
                 model.reload()
+                // Browsing context: the external owner may already hold a
+                // manually selected day; the picker follows it.
+                syncPicker()
             }
             .onChange(of: fixedDay) { _, _ in
                 // The current-day owner moved midnight/timezone: follow it.
                 applyFixedDay()
             }
-            .onChange(of: selectedDay) { _, _ in
+            .onChange(of: selectedDay) { _, newDay in
                 // Day switch collapses the untimed area and drops its scroll
                 // state; the timeline subtree keeps its identity and offset.
+                // The picker follows the shown day in every context (writes
+                // of the same value are no-ops, so no feedback loop).
                 untimedExpanded = false
                 expandedContentHeight = nil
+                syncPicker(to: newDay)
             }
         }
     }
@@ -133,8 +158,8 @@ struct CalendarDayScreen: View {
     /// current local day (invalid values never change the state).
     private func applyFixedDay() {
         guard let fixedDay, TaskPlannedDate.isValid(fixedDay) else { return }
-        if selectedDay != fixedDay {
-            selectedDay = fixedDay
+        if localSelectedDay != fixedDay {
+            localSelectedDay = fixedDay
         }
     }
 
@@ -205,33 +230,83 @@ struct CalendarDayScreen: View {
         }
     }
 
-    private var fixedDayCaption: String {
-        InboxRowView.dateLabel(selectedDay)
+    /// Browsing context (Upcoming) «Список / Календарь» switcher in the date
+    /// controls row: the same compact segmented native control as Today's,
+    /// with its own accessibility identifier so the two sections'
+    /// independent modes stay distinguishable. Presentation state only.
+    @ViewBuilder
+    private var browsingModeControl: some View {
+        if let todayMode {
+            Picker("Вид", selection: todayMode) {
+                Text("Список").tag(false)
+                Text("Календарь").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .fixedSize()
+            .frame(minHeight: 44)
+            .accessibilityIdentifier("upcoming-mode-switcher")
+        }
     }
 
+    private var fixedDayCaption: String {
+        RussianDateCaption.label(selectedDay)
+    }
+
+    /// NATIVE-NAV-002-R1 browsing header: compact rows that actually fit the
+    /// viewport — the section mode switcher and the day menu on their own
+    /// top row, the date browser below. The contextual «Сегодня» jump exists
+    /// only while the selection differs from the owner's current local day
+    /// and reserves no space when hidden; `ViewThatFits` moves it to its own
+    /// row at narrow/accessibility widths instead of stretching the content
+    /// (which used to push the grid and hour labels past the viewport).
+    /// Nothing is clipped or offset; the grid/ruler are untouched.
     private var browserDayControls: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
-                prevDayButton
-                datePickerField
-                nextDayButton
-                Spacer(minLength: 0)
-                todayButton
-                calendarMenu
+            VStack(alignment: .leading, spacing: 0) {
+                browsingTopRow
+                browserDateRow(includesJump: true)
             }
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 8) {
-                    prevDayButton
-                    datePickerField
-                    nextDayButton
-                }
-                HStack {
+                browsingTopRow
+                browserDateRow(includesJump: false)
+                if showsTodayJump {
                     todayButton
-                    Spacer(minLength: 0)
-                    calendarMenu
                 }
             }
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.bar)
+    }
+
+    private var browsingTopRow: some View {
+        HStack(spacing: 8) {
+            browsingModeControl
+            Spacer(minLength: 0)
+            calendarMenu
+        }
+    }
+
+    private func browserDateRow(includesJump: Bool) -> some View {
+        HStack(spacing: 8) {
+            prevDayButton
+            datePickerField
+            nextDayButton
+            if includesJump {
+                Spacer(minLength: 0)
+                if showsTodayJump {
+                    todayButton
+                }
+            }
+        }
+    }
+
+    /// The jump is visible only away from today, compared as canonical
+    /// civil-date strings through the owner's refreshed reference. The
+    /// fixed-day Today context has no `referenceDay` and never jumps.
+    private var showsTodayJump: Bool {
+        guard let referenceDay else { return false }
+        return selectedDay != referenceDay
     }
 
     private var prevDayButton: some View {
@@ -347,11 +422,24 @@ struct CalendarDayScreen: View {
         return TaskPlannedDate.isValid(candidate) ? candidate : nil
     }
 
-    /// Guarded selection: an invalid candidate never changes the state.
+    /// Guarded selection: an invalid candidate never changes the state. In
+    /// the browsing context the change is written through to the external
+    /// owner; the fixed-day context keeps its local state.
     private func select(_ day: String) {
         guard TaskPlannedDate.isValid(day) else { return }
-        selectedDay = day
-        pickerDate = TaskPlannedDate.date(fromCivilDateString: day, calendar: gregorianNoon) ?? pickerDate
+        if let browsingDay {
+            browsingDay.wrappedValue = day
+        } else {
+            localSelectedDay = day
+        }
+        syncPicker(to: day)
+    }
+
+    /// The wheel always shows the currently selected civil day; writes of an
+    /// equal date are no-ops, so syncing back from the picker never loops.
+    private func syncPicker(to day: String? = nil) {
+        let target = day ?? selectedDay
+        pickerDate = TaskPlannedDate.date(fromCivilDateString: target, calendar: gregorianNoon) ?? pickerDate
     }
 
     // MARK: - Untimed area (compact chips, collapsible so many tasks never
@@ -532,5 +620,30 @@ struct CalendarDayScreen: View {
             .padding(.vertical, 10)
             .background(Color(.secondarySystemBackground))
             .accessibilityIdentifier("calendar-write-error")
+    }
+}
+
+/// View-local Russian captions for the section-level civil-date labels
+/// (NATIVE-NAV-002 P3 follow-up): explicit ru_RU/Gregorian formatting so the
+/// visible dates are Russian regardless of device settings — «14 окт. 2026 г.»
+/// instead of the system-locale «14 Oct 2026». The device locale is never
+/// changed, civil values are never rewritten, and the shared `InboxRowView`
+/// implementation stays untouched; invalid values come back unchanged.
+enum RussianDateCaption {
+    private static let formatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ru_RU")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = .current
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
+    static func label(_ civilDate: String) -> String {
+        guard let date = TaskPlannedDate.date(fromCivilDateString: civilDate) else {
+            return civilDate
+        }
+        return formatter.string(from: date)
     }
 }

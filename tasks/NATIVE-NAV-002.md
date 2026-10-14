@@ -1,3 +1,5 @@
+Итог DONE,2026-10-14, product8551416bac154d0b22197bf068fbe4a2aa82d7e6, review reports/NATIVE-NAV-002.md. Ниже historicalassignment. Commonmodeheaderposition — отдельныйlater UI plan.
+
 # NATIVE-NAV-002 — настоящий раздел «Предстоящее»: Список / Календарь
 
 ASSIGNED, 2026-10-14. Один результат: третья реальная вкладка с двумя видами над существующими задачами. Без новых полей/CRUD/календарных масштабов. База be6d6abbffeefe9fc76a8fa2cbc43fb3bec86cec — принят NAV001. Worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-NAV-002, branch task/NATIVE-NAV-002. Starting SHA — assignment HEAD из handoff. Проверить root/branch/HEAD/status; прочитать AGENTS/PRODUCT/ARCHITECTURE/DESIGN/этот TASK. Старые corrections не выполнять.

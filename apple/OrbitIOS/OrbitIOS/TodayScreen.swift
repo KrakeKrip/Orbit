@@ -151,7 +151,10 @@ struct TodayScreen: View {
         }
     }
 
+    /// NATIVE-NAV-002: the section-level date caption is formatted view-
+    /// locally in Russian (explicit ru_RU/Gregorian adapters), not through
+    /// the system-locale shared row label.
     private var dateCaption: String {
-        InboxRowView.dateLabel(day)
+        RussianDateCaption.label(day)
     }
 }
