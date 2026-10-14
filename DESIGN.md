@@ -53,3 +53,7 @@ Untimed visual cards ещё ниже (ориентир24–28pt normal font14–
 ## Навигация2026-10-14 — обязательное уточнение пользователя
 
 Calendar — ВИД задач, не bottom tab. Сегодня: same-local-day Список/Календарь; Предстоящее: Список/Календарь с выбранной датой/диапазоном, modes меняют представление same source UUID, не создают копии. Выбор вида отдельный для каждого раздела, state сохраняется при переключении bottom tabs, как минимум в текущей сессии. Today не превращается в date browser: другие даты доступны в Предстоящем. View mode control компактный native segmented/menu в верхней области; никакой ещё одной большой панели. Calendar compactcards/untimedtoggle/timeline/menu сохраняются. Старые screenshot tabs не целевое product поведение. 3days/Month не реализовывать вместе с перестройкой navigation.
+
+## Обычные list строки — уточнение2026-10-14
+
+По нажатию на название/тело task открывается компактное меню: дата, время/длительность через существующие editors. Clock/calendar icons постоянно настроке убрать, completioncircle независим. Строки Today/Upcoming/Inbox сделать ниже за счёт padding/insets; читабельность/DynamicType и sourceUUID сохранить, calendarpaint/duration не уменьшать. Повторнуюдату подстрокой вToday/day-groupedUpcoming можноскрыть, вInboxполезнаядатаостаётся. ScopeбудущийNATIVE-LIST-001 послеNAV002, не текущийWIP и не bigtaskdetail/save-redesign.

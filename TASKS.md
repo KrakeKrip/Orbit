@@ -15,6 +15,7 @@
 | NATIVE-007C | DONE | раскрываемая область «Без времени»: 3 строки / больше / внутренний scroll |
 | NATIVE-NAV-001 | DONE | Today Список/Календарь, убрать самостоятельную Calendar tab |
 | NATIVE-NAV-002 | TODO (назначен) | реальный раздел Предстоящее с List/Calendar над shared tasks |
+| NATIVE-LIST-001 | TODO (после NAV002) | меню даты/времени/длительности по tap, без иконок, компактнее обычные list строки |
 | NATIVE-007D | TODO (план) | перенос из «Без времени» в сетку, отдельный scope перед выдачей |
 | NATIVE-007E | TODO (план) | изменение длительности жестом |
 | NATIVE-007F | TODO (план) | плавная компоновка пересекающихся интервалов |
@@ -73,3 +74,5 @@ Cumulative review2026-10-14: NATIVE-007C9cefc4d independentiOSbuild/diffcheck PA
 Итог2026-10-14:007C acceptedfinalfe8e58d/mainmergeb5608d1eaace8f4d8793c5eff36ed4caa1bc0e23, independentiOSbuildPASS, mainapple/identitytestedbranchPASS. Reportedrestart→deviceQA, pan/longpress/realdeviceнеподтверждены. Следующий назначенNAV001Todaymodes/removeCalendartab, sourcebaseb5608d1;NAV002realUpcomingпотом, неrenameCalendar. Минимум5/dragневыданы.
 
 Итог2026-10-14: NAV001 accepted58ae60a, main mergebe6d6abbffeefe9fc76a8fa2cbc43fb3bec86cec; independentiOSbuild/diffcheck PASS, mainapple identity testedbranch. P3 datecaption locale tracked NAV002. Следующий NAV002 realUpcoming: List7inclusive/calendarDay, owner selectedday+mode; near2199 list windowtruncate, nofakeCalendarTab/core changes/3days. Источникbasebe6d6abb; MIN5/drag не выданы.
+
+Уточнение2026-10-14: пользователь назначил listrowmenu/no icons/lessheight. NAV002сейчасWIP (егофайлыкоординаторнетрогает); следующийпослеегоreview NATIVE-LIST-001, затемMIN5/drag. Boundedplan /Users/atlhnv/Codex/orbit-outputs/NATIVE-LIST-001.md, no assignedbranchyet. Этоlistrowheight, не taskduration/calendargeometry.
