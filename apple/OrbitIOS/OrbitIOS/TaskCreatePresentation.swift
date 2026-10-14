@@ -86,7 +86,9 @@ extension View {
 /// NATIVE-ADD-002/ADD-004: the one create sheet. The host's date preset only
 /// seeds a LOCAL editable draft (optional civil date + optional time pair);
 /// the user can assign, change or remove the date in any context before
-/// saving, and «Отмена»/swipe never write. While the date is unset the time
+/// saving — wheel writes assign live, and «Выбрать эту дату» explicitly
+/// confirms the shown wheel position even without spinning (R1) — while
+/// «Отмена»/swipe never write. While the date is unset the time
 /// toggle is disabled with «Сначала выберите дату» — nothing is silently
 /// dated today; clearing the date also disables the pair in the draft, so
 /// «Добавить» then sends nil/nil. Time is enabled explicitly by the user
@@ -229,6 +231,21 @@ struct TaskCreateSheet: View {
                 .onChange(of: pickerDate) { _, newDate in
                     draftDate = TaskPlannedDate.civilDateString(from: newDate)
                 }
+                // NATIVE-ADD-004-R1: explicit confirmation of the date the
+                // wheel currently shows — assigns the draft even when the
+                // wheel value did not change. This covers the undated Inbox
+                // opening (today already centered) and re-selecting after
+                // «Убрать дату» (the wheel keeps its last position). Opening
+                // or closing the group alone never assigns anything.
+                Button {
+                    draftDate = TaskPlannedDate.civilDateString(from: pickerDate)
+                } label: {
+                    Label("Выбрать эту дату", systemImage: "calendar.badge.checkmark")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orbitAccent)
+                .accessibilityIdentifier("create-confirm-date")
                 if draftDate != nil {
                     Button(role: .destructive) {
                         // Clearing the date disables the pair in the draft;
