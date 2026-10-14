@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-14
 
-EDIT001DONEHEAD2bccf59736d35096d461a59df6c625fe87dc3d73/mainmerge84672116c6cb05c89f793e7113d81cc444ee64fb. InternalsetterR1closed, independentiOSbuildPASS/36testsR0/sourceidentityPASS. Назначен толькоtasks/NATIVE-ADD-003.md/taskNATIVE-ADD-003/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-ADD-003: atomiccreateoptionalinterval(title/date/start/duration),2core/testfiles+report, noUI/schemachanges. ПотомADD004createformdate/time/duration, EDIT002UIrename/delete, firstiPhoneQA. Deadlines/reminders/localnotifications послеfirstdevicecheck; Projects/gesturesfuture. Startwheel0..59; coreduration5..1440НЕstep5(6/7valid), UIwheelstep5. Reportsfile/chatshort.
+ADD003DONEHEAD88207a33758afe717edabc19254cf62466b17be8/mainmerge55ca03221ae23d938b9534e8c2a93b63696f888f. Independent44targeted/iOSbuild/sourceidentityPASS; runtime savefailureGUIunverified(UIне было). Назначен толькоtasks/NATIVE-ADD-004.md/taskNATIVE-ADD-004/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-ADD-004: editabledate/start/durationвsharedcreatesheet, TaskCreatePresentation/IOSInboxModel+optionaloneUIhelper/report. Core/schema/workspaces/FAB/header/grid/existingeditors не менять. ПослеacceptanceEDIT002UIrename/delete иfirstiPhoneQA. Deadlines/reminders/localnotifications послеfirstdevicecheck. Startwheelminutes0..59(НЕstep5); durationwheelstep5/min5/max1440; core6/7valid/readlegacyбезrounding. Reportsfile/chatshort.
 
 # Orbit — правила координации
 
