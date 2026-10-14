@@ -20,7 +20,10 @@
 | NATIVE-UI-MODE | DONE | единая позиция и оформление view switcher в Today/Upcoming обоих видах |
 | NATIVE-TIME-WHEEL | DONE | начало/длительность нативными колёсиками, derived конец без нового storage |
 | NATIVE-ADD-001 | DONE | атомарное создание с optional date; маленький core prerequisite |
-| NATIVE-ADD-002 | TODO (назначен) | общий + и create sheet в Inbox/Today/Upcoming, убрать Inbox composer, спокойное empty Today |
+| NATIVE-ADD-002 | DONE | общий + и create sheet в Inbox/Today/Upcoming, убрать Inbox composer, спокойное empty Today |
+| NATIVE-EDIT-001 | TODO (назначен) | core rename/delete поUUID безпереписыванияschema |
+| NATIVE-EDIT-002 | TODO (план) | native rename/delete UI сconfirm иCancel |
+| NATIVE-DEVICE-001 | TODO (план) | личныйiPhone install/основныеflows/finalsmallUIpolish |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
 | NATIVE-PRJ-002 | TODO (план) | настоящий экран списка/создания проектов и нижняя вкладка |
 | NATIVE-PRJ-003 | TODO (план) | назначить проект задаче и список задач проекта |
@@ -110,3 +113,5 @@ Review2026-10-14: UI-MODE2c33ac3/reportf3b9ce9 independentiOSbuild/diffcheckPASS
 Итог2026-10-14: UI-MODE accepteda9a4631/report47ce24a, mainmerge28aa41f9048991e6b2aafb571767e1aba6590c28, independentiOSbuildPASS/mainappleidentityPASS. Header/title/padding R1 закрыт; realdevice/VoiceOver/scrollstates непроверены. Назначен только ADD001 optional-date atomic create, scope2core/testfiles; sourcebase28aa41f. ADD002 shared UI следующим после приёмки; Projects ещё не назначен.
 
 Итог2026-10-14: ADD001f72890f принят, mainmerge7c543fe7f459a6721338b4033243f43257e6bd35; independenttargeted30/iOSbuildPASS/appleidentityPASS. Назначен только tasks/NATIVE-ADD-002.md (shared FAB/form+Inboxcomposer removal+emptyToday), sourcebase7c543fe7. Core/prj/gestures не расширять. Следом для личной рабочей версии rename/delete и realdeviceQA по отдельным заданиям; Projects после базового личного прототипа либо по новому приоритету пользователя.
+
+Итог2026-10-14: ADD0028b5aea6 принят/mainmerge5cf43a9b7ab6a762c498e505d37bf07bea84112d, independentiOSbuild/ownCUAkeyboardretryCancelAXL/sourceidentityPASS. Датывсехсекций/persistenceexecutor evidence reviewed; densebottom/realdeviceUNVERIFIED. НазначенEDIT001coreCRUD только3files, UIconfirmationпотомEDIT002. FinalQA включаетFAB/footerreachability, Upcomingemptycopy иREADMEheaderdocs.

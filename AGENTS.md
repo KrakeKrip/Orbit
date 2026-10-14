@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-14
 
-NATIVE-ADD-001 DONE: productf72890f50be3326e8b30a1090f9cf32cf021b10e, mainmerge7c543fe7f459a6721338b4033243f43257e6bd35. Independent targeted30/iOSbuild/diffcheck/appleidentity PASS; runtime savefailureunverified. Назначен только tasks/NATIVE-ADD-002.md/taskNATIVE-ADD-002/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-ADD-002: shared FAB/create UI Inbox/Today/Upcoming bothmodes, убрать Inboxcomposer, спокойное emptyToday. Core/schema/grid/editors не менять. UI-MODEDONE. Projects/rename/delete/gestures позднее, не расширять текущий TASK. Startwheel0..59; movefuture snap5, resize5minimum+10/20/30. Reportfile/chatshort.
+ADD002DONEproduct8b5aea6/mainmerge5cf43a9b7ab6a762c498e505d37bf07bea84112d. IndependentiOSbuild/sourceidentityPASS; own CUA normalkeyboard blank→retry→oneTodaytask+Cancel/AXLkeyboardPASS; realdevice/diskfailure/densebottominteractionunverified. Назначен толькоtasks/NATIVE-EDIT-001.md/taskNATIVE-EDIT-001/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-EDIT-001: core rename/deleteUUID,3files+report. UIconfirmation отдельноEDIT002, затемrealdeviceQA дляличногопрототипа; Projects после либо directreprioritization. Coredate/schema/interval нерасширять. Reportsfile/chatshort. Startwheel0..59, futuremovesnap5/resizeduration5minimum+10/20/30.
 
 # Orbit — правила координации
 
