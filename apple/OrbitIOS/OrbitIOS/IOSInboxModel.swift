@@ -77,7 +77,6 @@ final class IOSInboxModel {
     private(set) var tasks: [OrbitTask] = []
     private(set) var listError: String?
     private(set) var writeError: String?
-    var draft: String = ""
 
     init(store: OrbitTaskStore) {
         self.store = store
@@ -101,15 +100,23 @@ final class IOSInboxModel {
         }
     }
 
-    func addFromDraft() {
+    /// NATIVE-ADD-002: creates one task together with its fixed civil date
+    /// through the accepted single-save `addTask(title:plannedDate:)` — never
+    /// a create-then-edit sequence. Returns nil on success (the list reloads
+    /// from persisted truth; a subsequent read failure stays a list error and
+    /// is not reported back as a write failure); otherwise returns a
+    /// user-facing message for the create sheet, which stays open with its
+    /// draft for retry.
+    @discardableResult
+    func create(title: String, plannedDate: String?) -> String? {
         do {
-            _ = try store.addTask(title: draft)
-            draft = ""
+            _ = try store.addTask(title: title, plannedDate: plannedDate)
             writeError = nil
             reload()
+            return nil
         } catch {
-            writeError = IOSInboxFormatting.addMessage(error)
             reload()
+            return IOSInboxFormatting.addMessage(error)
         }
     }
 
