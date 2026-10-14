@@ -65,3 +65,7 @@ Calendar — ВИД задач, не bottom tab. Сегодня: same-local-day 
 ### «Проекты» в нижней навигации,2026-10-14
 
 Пользователь явно добавил раздел: Сегодня · Входящие · Предстоящее · Проекты. Проекты — настоящийnative list/create/rename экран с owncorestorage, не fake emptyroute; привязка задач/списоквнутрипроекта отдельныйследующийшаг. Native пустое/ошибка/creation, no huge sidebar/navigation rewrite или servercontrols. ТекущийNAV002scopeнерасширять.
+
+### Единый переключатель видов — отложенное уточнение2026-10-14
+
+Пользователь отметил разнуюposition/size viewmode вList/Calendar. БудущийboundedNATIVE-UI-MODE: commonheader с одинаковымplacement/controlappearance вToday иUpcoming приswitch, безjumpUI. Пользователь попросил дождаться текущейGLMкоррекции; NAV002 принят, LIST001 делаеттолькостроки/меню, unifiedheaderнерасширятьвнего.
