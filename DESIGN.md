@@ -69,3 +69,9 @@ Calendar — ВИД задач, не bottom tab. Сегодня: same-local-day 
 ### Единый переключатель видов — отложенное уточнение2026-10-14
 
 Пользователь отметил разнуюposition/size viewmode вList/Calendar. БудущийboundedNATIVE-UI-MODE: commonheader с одинаковымplacement/controlappearance вToday иUpcoming приswitch, безjumpUI. Пользователь попросил дождаться текущейGLMкоррекции; NAV002 принят, LIST001 делаеттолькостроки/меню, unifiedheaderнерасширятьвнего.
+
+### Нативные wheel controls времени,2026-10-14
+
+Пользователь попросил заменить текстовыйввод начала/длительности айфоновскимиколёсиками. StartHH:mm, durationчасы+минуты (не clockend), readonlyderived «Закончитсяв…» с (+1день). Core5…1440 послеMIN5, legacyreadбезавтоклампа, noUTC/DSTперезаписи. Save/Cancel/Clear безклавиатуры, nativeDynamicType/accessibility. Отдельный UI TASK NATIVE-TIME-WHEEL послеMIN5; core WIPнерасширять.
+
+Упомянутый пользователем doublecontour viewselector также включить вfutureNATIVE-UI-MODE: проверить source/systemtoolbar composition, один аккуратныйконтур/одноplacement обеихviews, не приниматьрастровое предположение за установленнуюпричину.
