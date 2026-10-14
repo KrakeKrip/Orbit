@@ -22,9 +22,10 @@ struct CalendarDayScreen: View {
     /// Fixed-day Today context: when non-nil the screen shows exactly this
     /// civil day and follows its changes from the current-day owner.
     var fixedDay: String? = nil
-    /// Section mode switcher binding; rendered in the fixed-day header
-    /// (Today's own switcher) or, in the browsing context, in the date
-    /// controls row (the Upcoming section's switcher).
+    /// Section mode switcher binding; rendered through the one common
+    /// `NativeModeHeader` in both contexts — the fixed-day Today header
+    /// (Today's own switcher) and the browsing header (the Upcoming
+    /// section's switcher) — the same mode row the list presentations host.
     var todayMode: Binding<Bool>? = nil
     /// Browsing context (Upcoming): external owner of the shown civil day.
     /// When set, every date control writes through to this binding; the
@@ -107,6 +108,11 @@ struct CalendarDayScreen: View {
                 }
             }
             .background(Color(.systemBackground))
+            // NATIVE-UI-MODE/R1: the previously empty (collapsible) navigation
+            // bar is hidden — the common mode row is the deterministic top row
+            // directly under the safe area in both contexts, matching the
+            // list presentations.
+            .toolbar(.hidden, for: .navigationBar)
             .background(
                 // Adaptive sizing source: the real height of this content area
                 // (safe areas applied), never fixed UIScreen values.
@@ -175,10 +181,10 @@ struct CalendarDayScreen: View {
 
     // MARK: - Day controls
 
-    /// Compact header right under the safe area. At accessibility text sizes
-    /// the single row no longer fits the screen width; `ViewThatFits` then
-    /// moves «Сегодня» to its own line so nothing overflows and shifts the
-    /// rest of the content sideways.
+    /// Compact header directly under the safe area. NATIVE-UI-MODE/R1: both
+    /// contexts lead with the one common `NativeModeHeader` (same insets,
+    /// height and band as the list presentations); each branch brings its own
+    /// band so there are no nested paddings around the mode row.
     private var dayControls: some View {
         Group {
             if isFixedDayMode {
@@ -187,64 +193,52 @@ struct CalendarDayScreen: View {
                 browserDayControls
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(.bar)
     }
 
-    /// Fixed-day Today context header: the Russian current-day caption, the
-    /// compact «Список / Календарь» switcher and the existing «⋯» menu — no
-    /// Prev/Next/picker/«Сегодня» date browsing (that belongs to the future
-    /// Upcoming section). Adaptive like the browsing header.
+    /// Fixed-day Today context header: the common mode row with the section
+    /// switcher leading and the Russian current-day caption plus the existing
+    /// «⋯» menu trailing — no Prev/Next/picker/«Сегодня» date browsing. At
+    /// narrow widths the caption drops to its own line under the mode row
+    /// (same adaptive shape as before R1).
     private var fixedDayControls: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
-                modeControl
-                Spacer(minLength: 8)
-                Text(fixedDayCaption)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                calendarMenu
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    modeControl
-                    Spacer(minLength: 0)
-                    calendarMenu
-                }
-                Text(fixedDayCaption)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var modeControl: some View {
         Group {
             if let todayMode {
-                TodayModeSwitcher(showsCalendar: todayMode)
+                ViewThatFits(in: .horizontal) {
+                    NativeModeHeader(switcher: TodayModeSwitcher(showsCalendar: todayMode)) {
+                        HStack(spacing: 8) {
+                            Text(fixedDayCaption)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            calendarMenu
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 0) {
+                        NativeModeHeader(switcher: TodayModeSwitcher(showsCalendar: todayMode)) {
+                            calendarMenu
+                        }
+                        Text(fixedDayCaption)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.top, 2)
+                            .padding(.bottom, 6)
+                            .background(.bar)
+                    }
+                }
             } else {
-                Color.clear.frame(height: 0)
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    Text(fixedDayCaption)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    calendarMenu
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(.bar)
             }
-        }
-    }
-
-    /// Browsing context (Upcoming) «Список / Календарь» switcher in the date
-    /// controls row: the same compact segmented native control as Today's,
-    /// with its own accessibility identifier so the two sections'
-    /// independent modes stay distinguishable. Presentation state only.
-    @ViewBuilder
-    private var browsingModeControl: some View {
-        if let todayMode {
-            Picker("Вид", selection: todayMode) {
-                Text("Список").tag(false)
-                Text("Календарь").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .fixedSize()
-            .frame(minHeight: 44)
-            .accessibilityIdentifier("upcoming-mode-switcher")
         }
     }
 
@@ -252,38 +246,50 @@ struct CalendarDayScreen: View {
         RussianDateCaption.label(selectedDay)
     }
 
-    /// NATIVE-NAV-002-R1 browsing header: compact rows that actually fit the
-    /// viewport — the section mode switcher and the day menu on their own
-    /// top row, the date browser below. The contextual «Сегодня» jump exists
-    /// only while the selection differs from the owner's current local day
-    /// and reserves no space when hidden; `ViewThatFits` moves it to its own
-    /// row at narrow/accessibility widths instead of stretching the content
-    /// (which used to push the grid and hour labels past the viewport).
-    /// Nothing is clipped or offset; the grid/ruler are untouched.
+    /// NATIVE-UI-MODE/R1 browsing header: the common `NativeModeHeader` (the
+    /// section switcher plus the «⋯» menu) is the mode row; the date browser
+    /// below keeps its own matching band, exactly like the Upcoming list's
+    /// mode row above its date controls. The contextual «Сегодня» jump exists
+    /// only while the selection differs from the owner's current local day;
+    /// `ViewThatFits` moves it to its own row at narrow/accessibility widths
+    /// instead of stretching the content. Nothing is clipped or offset; the
+    /// grid/ruler are untouched.
     private var browserDayControls: some View {
-        ViewThatFits(in: .horizontal) {
-            VStack(alignment: .leading, spacing: 0) {
-                browsingTopRow
+        VStack(alignment: .leading, spacing: 0) {
+            browsingModeHeader
+            ViewThatFits(in: .horizontal) {
                 browserDateRow(includesJump: true)
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                browsingTopRow
-                browserDateRow(includesJump: false)
-                if showsTodayJump {
-                    todayButton
+                VStack(alignment: .leading, spacing: 0) {
+                    browserDateRow(includesJump: false)
+                    if showsTodayJump {
+                        todayButton
+                    }
                 }
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(.bar)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(.bar)
     }
 
-    private var browsingTopRow: some View {
-        HStack(spacing: 8) {
-            browsingModeControl
-            Spacer(minLength: 0)
-            calendarMenu
+    /// The browsing context mode row: the same `NativeModeHeader`
+    /// composition the Upcoming list hosts, with the existing «⋯» menu
+    /// trailing. Standalone use without a mode binding keeps only the menu.
+    private var browsingModeHeader: some View {
+        Group {
+            if let todayMode {
+                NativeModeHeader(switcher: UpcomingModeSwitcher(showsCalendar: todayMode)) {
+                    calendarMenu
+                }
+            } else {
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    calendarMenu
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(.bar)
+            }
         }
     }
 

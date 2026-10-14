@@ -50,8 +50,12 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
   строками `InboxRowView` — open и completed остаются в своей дневной
   группе в порядке модели, без новых list-правил; undated/невалидные вне
   окна. На верхней границе 2199-12-31 окно обрезается до последней валидной
-  даты, caption показывает фактический диапазон по-русски. Компактные date
-  controls (Prev/Next/picker) под large-заголовком; «Сегодня» —
+  даты, caption показывает фактический диапазон по-русски. NATIVE-UI-MODE:
+  компактная верхняя mode-строка (`NativeModeHeader` с существующим
+  `UpcomingModeSwitcher`, identifier `upcoming-mode-switcher`) сразу под
+  navigation bar (заголовок inline — mode-строка не зависит от высоты
+  заголовка), под ней прежние date controls (Prev/Next/picker);
+  «Сегодня» —
   контекстная (NAV-002-R1): видна только когда выбранный день отличается
   от текущего локального, после jump/ручного выбора today исчезает без
   резерва пустой строки, при нажатии пересчитывает current day; честный
@@ -60,14 +64,31 @@ CloudKit (`cloudKitDatabase: .none` уже в core), без новых зави�
 - `OrbitIOS/TodayScreen.swift` — список «Сегодня» (NATIVE-006/NAV-001):
   read-only срез задач на день из входа `day` через `TaskDaySelection`;
   те же строки/actions/editors, что в Inbox (complete/reopen, date/interval
-  editors); заголовок «Сегодня» + видимая локальная дата; переключатель
-  «Список / Календарь» в navigation bar; честный empty state «На сегодня
+  editors); заголовок «Сегодня» + видимая локальная дата; NATIVE-UI-MODE:
+  переключатель «Список / Календарь» в общей верхней mode-строке
+  (`NativeModeHeader` с существующим `TodayModeSwitcher`, identifier
+  `today-mode-switcher`) сразу под navigation bar — то же место/insets/
+  высота, что в календарном виде, без toolbar-обёртки и двойного контура
+  (заголовок inline, чтобы mode-строка не зависела от высоты заголовка);
+  честный empty state «На сегодня
   задач нет» с действием «Добавить во Входящих» (переключает на живую
   вкладку, не создаёт задачу). Без сетки/overdue/quick-add. Дата-подпись
   раздела — по-русски через view-local `RussianDateCaption` (NAV-002 P3:
   явный ru_RU/Gregorian форматтер в CalendarDayScreen.swift; системная
   locale не меняется, `InboxRowView` не тронут — подписи дат внутри строк
   остаются системными).
+- `OrbitIOS/NativeModeHeader.swift` — NATIVE-UI-MODE: одна общая
+  композиция верхней mode-строки для всех четырёх листовых видов
+  (Today/Upcoming × Список/Календарь): существующий segmented switcher
+  раздела ведущим в одной top-строке с теми же insets (8/6), высотой
+  (44pt минимум контрола) и `.bar`-фоном, что и календарные date controls,
+  сразу под navigation bar; опциональный trailing (в списках пусто) не
+  смещает контрол; никакого toolbar item/второго контура вокруг
+  segmented control. В календарных видах ту же строку образуют
+  существующие day controls, а browsing-контекст переиспользует
+  `UpcomingModeSwitcher` (по одному определению контрола на раздел, без
+  дублирующих `Picker` на экране). Binding — прежний workspace mode,
+  состояние presentation-only.
 - `OrbitIOS/CalendarDayScreen.swift` + `OrbitIOS/DayTimelineView.swift` +
   `OrbitIOS/CompactCalendarTaskRow.swift` — календарный вид дня
   (NATIVE-007B/007C/007C-R2/007C-R3/NAV-001/NAV-002), переиспользуется в двух

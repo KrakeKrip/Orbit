@@ -5,8 +5,14 @@ import OrbitCore
 /// date. Read-only slice over the shared model — the same rows, editors and
 /// sheets as the Inbox; creation stays in the Inbox composer.
 /// NATIVE-NAV-001: the current day is owned by `TodayWorkspaceScreen` and
-/// provided as the `day` input; the compact «Список / Календарь» switcher
-/// lives in the navigation bar. Task dates are never rewritten.
+/// provided as the `day` input. NATIVE-UI-MODE/R1: there is no navigation
+/// title or bar on this screen — the compact «Список / Календарь» switcher
+/// sits in the one common top mode row (`NativeModeHeader`) directly under
+/// the safe area, the same host as the calendar presentation, so the control
+/// keeps its physical position when the view switches (user clarification:
+/// the former «Сегодня» title area is freed; the section's local date
+/// caption below stays, the bottom tab name is unchanged). Task dates are
+/// never rewritten.
 struct TodayScreen: View {
     let model: IOSInboxModel
     let day: String
@@ -18,6 +24,9 @@ struct TodayScreen: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                if let todayMode {
+                    NativeModeHeader(switcher: TodayModeSwitcher(showsCalendar: todayMode))
+                }
                 if let writeError = model.writeError {
                     writeErrorBanner(writeError)
                 }
@@ -31,16 +40,12 @@ struct TodayScreen: View {
                     }
                 }
             }
-            .navigationTitle("Сегодня")
-            .navigationBarTitleDisplayMode(.large)
+            // NATIVE-UI-MODE/R1: no navigation title/bar in any section view —
+            // the common mode row is the deterministic top row directly under
+            // the safe area in the list and calendar alike, so the switcher
+            // never moves (the former «Сегодня» title area is freed).
+            .toolbar(.hidden, for: .navigationBar)
             .background(Color(.systemBackground))
-            .toolbar {
-                if let todayMode {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        TodayModeSwitcher(showsCalendar: todayMode)
-                    }
-                }
-            }
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):
