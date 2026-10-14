@@ -16,6 +16,9 @@
 | NATIVE-NAV-001 | DONE | Today Список/Календарь, убрать самостоятельную Calendar tab |
 | NATIVE-NAV-002 | TODO (назначен) | реальный раздел Предстоящее с List/Calendar над shared tasks |
 | NATIVE-LIST-001 | TODO (после NAV002) | меню даты/времени/длительности по tap, без иконок, компактнее обычные list строки |
+| NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
+| NATIVE-PRJ-002 | TODO (план) | настоящий экран списка/создания проектов и нижняя вкладка |
+| NATIVE-PRJ-003 | TODO (план) | назначить проект задаче и список задач проекта |
 | NATIVE-007D | TODO (план) | перенос из «Без времени» в сетку, отдельный scope перед выдачей |
 | NATIVE-007E | TODO (план) | изменение длительности жестом |
 | NATIVE-007F | TODO (план) | плавная компоновка пересекающихся интервалов |
@@ -78,3 +81,5 @@ Cumulative review2026-10-14: NATIVE-007C9cefc4d independentiOSbuild/diffcheck PA
 Уточнение2026-10-14: пользователь назначил listrowmenu/no icons/lessheight. NAV002сейчасWIP (егофайлыкоординаторнетрогает); следующийпослеегоreview NATIVE-LIST-001, затемMIN5/drag. Boundedplan /Users/atlhnv/Codex/orbit-outputs/NATIVE-LIST-001.md, no assignedbranchyet. Этоlistrowheight, не taskduration/calendargeometry.
 
 Прямое уточнениеNAV0022026-10-14: contextual «Сегодня» тольконавыбранномнесегодняшнемдне вList/Calendar. Supplementalprompt /Users/atlhnv/Codex/orbit-outputs/NATIVE-NAV-002-today-button-prompt.txt. Никакихproductправоккоординатором/WIPперезаписей, branchscopeпрежний.
+
+Приоритет2026-10-14: пользователь добавил bottomProjects. Подготовлен /Users/atlhnv/Codex/orbit-outputs/NATIVE-PROJECTS-plan.md, splitcore→realUI→taskassignment. ПослеNAV002/listrow/MIN5 выдатьпоодномуPRJtask передgesturepolish; currentNAV002нерасширяется/schemaнеправитсявегоWIP. No fakeProjects tab/большойTASKвесьprojectroadmap.

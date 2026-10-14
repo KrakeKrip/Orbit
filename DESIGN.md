@@ -61,3 +61,7 @@ Calendar — ВИД задач, не bottom tab. Сегодня: same-local-day 
 ### Contextual jump «Сегодня»,2026-10-14
 
 В Предстоящем (List/Calendar) кнопка «Сегодня» видна только если selected civil day != current localGregorian day. Послеjump/ручного выбораtoday исчезает, беззарезервированнойпустойпанели. Reference day обновляется lifecycle/clock, manuallyselectedday/mode не сбрасывается; фиксированныйToday screen jump не получает. Уточнение текущегоNAV002, не отдельнаяfeatureзадача.
+
+### «Проекты» в нижней навигации,2026-10-14
+
+Пользователь явно добавил раздел: Сегодня · Входящие · Предстоящее · Проекты. Проекты — настоящийnative list/create/rename экран с owncorestorage, не fake emptyroute; привязка задач/списоквнутрипроекта отдельныйследующийшаг. Native пустое/ошибка/creation, no huge sidebar/navigation rewrite или servercontrols. ТекущийNAV002scopeнерасширять.
