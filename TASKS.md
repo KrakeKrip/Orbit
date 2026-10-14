@@ -100,3 +100,5 @@ Review2026-10-14: NAV002185a19b independentiOSbuild/diffcheckPASS, но contextu
 Итог2026-10-14: TIME-WHEEL принят/productf1a952c/mainmergee4f304e3d5a133108bf5c870855d7d43f5e4c9dc, independentiOSbuildPASS/sourceidentityPASS. NextUI-MODEтолькоswitcherplacement/doublecontour, no redrawвсехscreen. Startwheelstep5 userотменил:minutes0..59прежние. Futuredragstartstep5, resizeallowed5/10/20/30…; corewrite/readunchanged. ProjectsдалееотдельнымималенькимиTASK.
 
 Review2026-10-14: UI-MODE2c33ac3/reportf3b9ce9 independentiOSbuild/diffcheckPASS. Doublecontour закрыт, но actual4screens/source показывают скачок control: inline navigation title толькоList, Calendarbarсхлопывается; NativeModeHeader отсутствует вCalendar, дополнительныеinsetsUpcoming. Назначен один tasks/NATIVE-UI-MODE-R1.md в тойжеtaskветке, start e323adf0e6e3efc9815ff363d8c01b59e12d1a6d. Без merge/Projects.
+
+Уточнение пользователя2026-10-14 к UI-MODE-R1: Today List без верхнего заголовка «Сегодня»; control поднять в освобождённое место на уровень Calendar, дату сохранить. Обновлённый correction start449c8134f2a2fb521e8087b2fe6a409cd6728c6b; scope прежний.
