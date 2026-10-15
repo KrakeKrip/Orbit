@@ -1,3 +1,7 @@
+## Актуальный статус 2026-10-16
+
+Пользователь разрешил продолжить очередь, замечания UI передаст отдельно. Codex самостоятельно выполнил NATIVE-PRJ-001 (core проектов, без UI/assignment), self-check: 98/98 core, previous-source disk upgrade, iOS build PASS. Отчёт reports/NATIVE-PRJ-001-executor.md. Следующий bounded scope подготовлен в tasks/NATIVE-PRJ-002.md; GLM сейчас не назначен. Историческое «schema/core не менять» ниже относится к UI-FEEDBACK scope и не запрещает явно назначенный PRJ001 additive upgrade. Личные stores/iPhone не использовались; автоматический push и установка этой schema-версии не выполнялись.
+
 ## Актуальный статус 2026-10-15
 
 Пользователь подтвердил запуск Orbit на личном iPhone после NATIVE-DEVICE-001. Это подтверждение запуска, не полный physical smoke. По прямому поручению пользователя Codex самостоятельно выполняет NATIVE-UI-FEEDBACK-001: интерфейс и баги из пользовательского ZIP. GLM сейчас не назначен. Core/schema/личные данные/подпись не менять; крупные функции из архива сохранены в docs/NATIVE-FEEDBACK-BACKLOG.md. Подробности проверок и ограничения — reports/NATIVE-UI-FEEDBACK-001-executor.md. Полный физический smoke, haptics и hold остаются отдельной проверкой владельца. Reports в файл, чат коротко.

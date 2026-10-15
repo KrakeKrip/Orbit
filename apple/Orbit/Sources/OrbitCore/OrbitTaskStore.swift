@@ -11,10 +11,50 @@ public final class OrbitTaskStore {
     public init(storeURL: URL) throws {
         self.storeURL = storeURL
         let configuration = ModelConfiguration(url: storeURL, cloudKitDatabase: .none)
-        self.container = try ModelContainer(for: OrbitTask.self, configurations: configuration)
+        self.container = try ModelContainer(for: OrbitTask.self, OrbitProject.self, configurations: configuration)
         let context = ModelContext(container)
         context.autosaveEnabled = false
         self.context = context
+    }
+
+    /// Stable local order, independent of store collation; duplicate names allowed.
+    public func projects() throws -> [OrbitProject] {
+        let fetched = try context.fetch(FetchDescriptor<OrbitProject>())
+        return fetched.sorted { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }
+    }
+
+    @discardableResult
+    public func addProject(name rawName: String, now: Date = .now) throws -> OrbitProject {
+        let name = try ProjectName.validated(rawName)
+        let project = OrbitProject(name: name, createdAt: now)
+        context.insert(project)
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
+        }
+        return project
+    }
+
+    /// Changes only the name. Validation precedes mutation; identical is a no-op.
+    @discardableResult
+    public func renameProject(name rawName: String, for id: UUID) throws -> OrbitProject {
+        let name = try ProjectName.validated(rawName)
+        let descriptor = FetchDescriptor<OrbitProject>(predicate: #Predicate { $0.id == id })
+        guard let project = try context.fetch(descriptor).first else {
+            throw OrbitProjectStoreError.projectNotFound(id: id)
+        }
+        if project.name != name {
+            project.setName(name)
+            do {
+                try context.save()
+            } catch {
+                context.rollback()
+                throw error
+            }
+        }
+        return project
     }
 
     public func tasks() throws -> [OrbitTask] {
