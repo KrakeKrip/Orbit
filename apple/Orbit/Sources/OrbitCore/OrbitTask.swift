@@ -4,6 +4,7 @@ import SwiftData
 @Model
 public final class OrbitTask {
     public private(set) var id: UUID
+    public private(set) var projectID: UUID?
     public private(set) var title: String
     public private(set) var createdAt: Date
     public private(set) var completedAt: Date?
@@ -25,8 +26,10 @@ public final class OrbitTask {
         completedAt: Date? = nil,
         plannedDate: String? = nil,
         plannedTime: String? = nil,
-        durationMinutes: Int? = nil
+        durationMinutes: Int? = nil,
+        projectID: UUID? = nil
     ) {
+        self.projectID = projectID
         self.id = id
         self.title = title
         self.createdAt = createdAt
@@ -35,6 +38,8 @@ public final class OrbitTask {
         self.plannedTime = plannedTime
         self.durationMinutes = durationMinutes
     }
+
+    func setProject(_ id: UUID?) { projectID = id }
 
     public var isCompleted: Bool {
         completedAt != nil
