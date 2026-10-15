@@ -55,6 +55,17 @@ enum OrbitHaptics {
     static var enabled: Bool {
         UserDefaults.standard.object(forKey: "orbit.ui.haptics") as? Bool ?? true
     }
+    private static let timelineGenerator = UISelectionFeedbackGenerator()
+    static func prepareTimeline() {
+        guard enabled else { return }
+        timelineGenerator.prepare()
+    }
+    /// A light tick for a newly snapped time/duration, rather than every pan frame.
+    static func timelineStep() {
+        guard enabled else { return }
+        timelineGenerator.selectionChanged()
+        timelineGenerator.prepare()
+    }
     static func selection() {
         guard enabled else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred(intensity: 0.85)
@@ -154,7 +165,7 @@ struct OrbitSettingsButton: View {
             OrbitHaptics.selection()
             showsSettings = true
         } label: {
-            Image(systemName: "line.3.horizontal")
+            Image(systemName: "gearshape")
                 .font(.system(size: 18, weight: .medium))
                 .frame(width: 28, height: 28)
         }

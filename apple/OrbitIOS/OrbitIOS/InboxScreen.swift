@@ -39,13 +39,9 @@ struct InboxScreen: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                HStack {
-                    Text("Входящие").font(.title2.bold())
-                    Spacer()
-                    OrbitSettingsButton()
+                NativeModeHeader(switcher: EmptyView()) {
+                    Text("Входящие").font(.title2.bold()).lineLimit(1)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
                 if let writeError = model.writeError {
                     writeErrorBanner(writeError)
                 }
@@ -231,7 +227,7 @@ struct InboxRowView: View {
     /// shared UUIDs, so mutations are reflected across both presentations.
     private var taskBodyMenu: some View {
         TaskActionPopoverButton(
-            task: task,
+            model: model, task: task,
             range: Self.intervalLabel(task) ?? task.plannedDate.map(RussianDateCaption.label) ?? "Без даты",
             previewWidth: 300
         ) { action in

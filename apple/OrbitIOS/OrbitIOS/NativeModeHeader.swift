@@ -19,7 +19,7 @@ struct NativeModeHeader<Switcher: View, Trailing: View>: View {
             switcher
             OrbitSettingsButton()
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 16)
         .padding(.vertical, 6)
         .background(appearance.canvas)
     }

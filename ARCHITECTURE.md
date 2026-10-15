@@ -46,3 +46,7 @@ Bottom sections Today/Inbox/Upcoming, Calendar не отдельная section. 
 ## Локальная основа проектов, NATIVE-PRJ-001 (2026-10-16)
 
 OrbitProject добавляется в тот же ModelContainer рядом с неизменённой OrbitTask. UUID/name/createdAt, validated list/create/rename через OrbitTaskStore; отдельный OrbitProjectStoreError не меняет task error enum и его UI switches. Существующий task-only store обновляется SwiftData additive migration, без reset/пересоздания. Assignment/relationship, удаление проекта и UI не входят в этот этап. Проверка upgrade обязательна до интеграции; downgrade старым бинарником не поддерживается.
+
+## PRJ003/004 — проектные папки (2026-10-16)
+
+OrbitTask.projectID — optional UUID с nil для upgrade; assignment через store, не SwiftData relationship/cascade. Store валидирует project existence до insert/mutation, nil clears, identical no-op, один save/rollback. CalendarDayScreen принимает optional projectID/header, projector получает filtered tasks; source UUID callbacks по-прежнему shared. ProjectWorkspaceScreen владеет selected day/mode и не создаёт другой store или nested NavigationStack. Общий create sheet получает preset project, локальный draft и whole-candidate save. Непроектные views не фильтруются автоматически. Живой GUI gate завершён на собственном Simulator, ограничения в отчёте. Floating action placement общий для task/project create; в индексе проектов создаётся проект, внутри папки задача.

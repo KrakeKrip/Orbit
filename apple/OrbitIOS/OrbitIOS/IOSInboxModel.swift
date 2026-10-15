@@ -132,6 +132,17 @@ final class IOSInboxModel {
         }
     }
 
+    func assignProject(_ projectID: UUID?, to task: OrbitTask) -> String? {
+        do {
+            try store.setProject(projectID, for: task.id)
+            reload()
+            return nil
+        } catch {
+            reload()
+            return "Не удалось изменить проект. \(error.localizedDescription)"
+        }
+    }
+
     func reloadProjects() {
         do {
             projects = try store.projects()
@@ -181,14 +192,16 @@ final class IOSInboxModel {
         title: String,
         plannedDate: String?,
         plannedTime: String? = nil,
-        durationMinutes: Int? = nil
+        durationMinutes: Int? = nil,
+        projectID: UUID? = nil
     ) -> String? {
         do {
             _ = try store.addTask(
                 title: title,
                 plannedDate: plannedDate,
                 plannedTime: plannedTime,
-                durationMinutes: durationMinutes
+                durationMinutes: durationMinutes,
+                projectID: projectID
             )
             writeError = nil
             reload()

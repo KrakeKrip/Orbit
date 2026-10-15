@@ -1,3 +1,7 @@
+## Текущая работа 2026-10-16 — папки проектов / общий Settings
+
+PRJ003/004 выполнены Codex (self-check): принадлежность задач, проектные List/Calendar, общий Settings и нижний «+». Core101/101, previous-source upgrade, финальная iOS-сборка и живой GUI PASS. CUA после восстановления окна снова доставляет действия; прежний блокер закрыт. Подробные сценарии и ограничения — reports/NATIVE-PRJ-003-004-executor.md. Вибрация на физическом устройстве ещё требует проверки владельца.
+
 ## Последний этап 2026-10-16 — NATIVE-PRJ-002
 
 По «делаем» Codex выполнил вкладку Проекты и shared-store create/rename UI. Self-check: iOS builds + synthetic Simulator Cyrillic/validation/Cancel/tab/dark/AXL/relaunch и read-only store diff PASS. Core/schema не менялись, предыдущие98 tests не повторялись. Swipe не доставляется CUA — UNVERIFIED. reports/NATIVE-PRJ-002-executor.md. Следующий маленький core scope tasks/NATIVE-PRJ-003.md; GLM не назначен. Личный iPhone/push не выполнялись.

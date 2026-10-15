@@ -8,6 +8,7 @@ enum OrbitTaskAction {
 /// Tap presents a card above the actions, rather than a native Menu which
 /// hides its label while open. The calendar rectangle keeps its exact height.
 struct TaskActionPopoverButton<Content: View>: View {
+    let model: IOSInboxModel
     let task: OrbitTask
     let range: String
     let previewWidth: CGFloat
@@ -17,6 +18,8 @@ struct TaskActionPopoverButton<Content: View>: View {
     @ViewBuilder let label: () -> Content
     @Environment(\.orbitAppearance) private var appearance
     @State private var isPresented = false
+    @State private var wantsProject = false
+    @State private var showsProject = false
     @State private var pendingAction: OrbitTaskAction?
 
     var body: some View {
@@ -39,7 +42,8 @@ struct TaskActionPopoverButton<Content: View>: View {
                             onEditDate: { choose(.date) },
                             onEditInterval: { choose(.interval) },
                             onRename: { choose(.rename) },
-                            onDelete: { choose(.delete) }
+                            onDelete: { choose(.delete) },
+                            onEditProject: { wantsProject = true; isPresented = false }
                         )
                     }
                     .buttonStyle(OrbitTaskActionStyle())
@@ -52,11 +56,17 @@ struct TaskActionPopoverButton<Content: View>: View {
                 .onDisappear {
                     // Present editors/confirmation only after the popover is
                     // gone. Tapping outside leaves pendingAction nil.
+                    if wantsProject {
+                        wantsProject = false
+                        showsProject = true
+                        return
+                    }
                     guard let action = pendingAction else { return }
                     pendingAction = nil
                     onAction(action)
                 }
             }
+            .sheet(isPresented: $showsProject) { TaskProjectSheet(model: model, task: task) }
     }
 
     private func choose(_ action: OrbitTaskAction) {
