@@ -6,6 +6,7 @@ import OrbitCore
 struct DayTimelineView: View {
     @Environment(\.orbitAppearance) private var appearance
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let model: IOSInboxModel
     let segments: [TaskDayIntervalSegment]
     /// Resolves a projected task UUID to the live shared-model task object.
     let task: (UUID) -> OrbitTask?
@@ -143,7 +144,7 @@ struct DayTimelineView: View {
         let endTimeText = segment.endMinute == 1440 ? "24:00" : clockString(segment.endMinute)
         let range = "\(clockString(segment.startMinute))–\(endTimeText)\(continuationMarkers(segment))"
 
-        return TaskActionPopoverButton(task: task, range: range,
+        return TaskActionPopoverButton(model: model, task: task, range: range,
                                          previewWidth: min(300, max(160, containerWidth - 32)),
                                          opensOnHold: false,
                                          canOpen: { editing == nil && Date.now.timeIntervalSince(lastGestureFinish) > 0.25 }) { action in
@@ -306,10 +307,13 @@ struct DayTimelineView: View {
                                       dayOffset: segment.continuesFromPreviousDay ? -1440 : 0,
                                       edge: edge, directMove: directMove)
         OrbitHaptics.longPress()
+        OrbitHaptics.prepareTimeline()
     }
 
     private func update(_ translation: CGFloat) {
         guard var edit = editing else { return }
+        let previousTime = edit.candidate?.time ?? edit.time
+        let previousDuration = edit.candidate?.duration ?? edit.duration
         if abs(translation) < 2 {
             edit.candidate = nil
         } else if let candidate = TaskTimelineAdjustment.candidate(
@@ -318,6 +322,10 @@ struct DayTimelineView: View {
             let start = candidate.startMinute + edit.dayOffset
             guard start < 1440, start + candidate.duration > 0 else { return }
             edit.candidate = candidate
+        }
+        if (edit.candidate?.time ?? edit.time) != previousTime ||
+            (edit.candidate?.duration ?? edit.duration) != previousDuration {
+            OrbitHaptics.timelineStep()
         }
         editing = edit
     }

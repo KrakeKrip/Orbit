@@ -22,6 +22,8 @@ import OrbitCore
 struct CalendarDayScreen: View {
     @Environment(\.orbitAppearance) private var appearance
     let model: IOSInboxModel
+    var projectID: UUID? = nil
+    var projectHeader: AnyView? = nil
     /// Fixed-day Today context: when non-nil the screen shows exactly this
     /// civil day and follows its changes from the current-day owner.
     var fixedDay: String? = nil
@@ -40,6 +42,7 @@ struct CalendarDayScreen: View {
     /// a jump.
     var referenceDay: String? = nil
 
+    @State private var projectTask: OrbitTask?
     @State private var presentation: InboxSheetPresentation?
     @State private var renamePresentation: TaskRenamePresentation?
     @State private var deletePresentation: TaskDeletePresentation?
@@ -106,6 +109,7 @@ struct CalendarDayScreen: View {
                     }
                     untimedSection
                     DayTimelineView(
+                        model: model,
                         segments: projection.timedSegments,
                         task: { taskID in model.tasks.first { $0.id == taskID } },
                         onEditInterval: { task in presentation = .interval(task) },
@@ -135,6 +139,7 @@ struct CalendarDayScreen: View {
                         .onChange(of: proxy.size.height) { _, height in contentHeight = height }
                 }
             )
+            .sheet(item: $projectTask) { TaskProjectSheet(model: model, task: $0) }
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):
@@ -186,8 +191,13 @@ struct CalendarDayScreen: View {
 
     // MARK: - Projection
 
+    private var scopedTasks: [OrbitTask] {
+        guard let projectID else { return model.tasks }
+        return model.tasks.filter { $0.projectID == projectID }
+    }
+
     private var projection: TaskDayProjection {
-        TaskDayProjector.project(day: selectedDay, in: model.tasks)
+        TaskDayProjector.project(day: selectedDay, in: scopedTasks)
     }
 
     /// NATIVE-ADD-002: a truly empty projection — no untimed tasks and no
@@ -317,7 +327,9 @@ struct CalendarDayScreen: View {
     /// trailing. Standalone use without a mode binding keeps only the menu.
     private var browsingModeHeader: some View {
         Group {
-            if let todayMode {
+            if let projectHeader {
+                projectHeader
+            } else if let todayMode {
                 NativeModeHeader(switcher: UpcomingModeSwitcher(showsCalendar: todayMode)) {
                     calendarMenu
                 }
@@ -430,7 +442,8 @@ struct CalendarDayScreen: View {
                                     onEditDate: { presentation = .date(timed) },
                                     onEditInterval: { presentation = .interval(timed) },
                                     onRename: { renamePresentation = TaskRenamePresentation(task: timed) },
-                                    onDelete: { deletePresentation = TaskDeletePresentation(task: timed) }
+                                    onDelete: { deletePresentation = TaskDeletePresentation(task: timed) },
+                                    onEditProject: { projectTask = timed }
                                 )
                             }
                         }

@@ -36,7 +36,7 @@ xcodebuild \
 | `OrbitIOS/UpcomingWorkspaceScreen.swift` | Выбранный день и независимый вид «Предстоящего». |
 | `OrbitIOS/CalendarDayScreen.swift` | Дата, область задач без времени и календарь дня. |
 | `OrbitIOS/DayTimelineView.swift` | Шкала, overlap-колонки, выделение, перенос и resize. |
-| `OrbitIOS/ProjectsScreen.swift` | Список проектов и общая create/rename форма, без task FAB. |
+| `OrbitIOS/ProjectsScreen.swift` | Индекс проектов, create/rename и нижний FAB создания проекта. |
 | `OrbitIOS/TaskActionPopover.swift` | Общая карточка и меню действий по задаче. |
 | `OrbitIOS/TaskCreatePresentation.swift` | Общая кнопка «+» и форма создания с локальным черновиком. |
 | `OrbitIOS/TaskDateSheet.swift`, `TaskIntervalSheet.swift` | Редакторы даты и времени существующей задачи. |
@@ -52,7 +52,7 @@ xcodebuild \
 - Жест редактирует черновик; запись выполняется на отпускании. Тап в свободное место снимает выделение.
 - Дата, время, rename и delete используют существующий shared store; ошибки не выдаются за успешную запись.
 
-Проекты используют тот же `IOSInboxModel`/store; tap строки открывает редактирование имени. Принадлежность задач и список внутри проекта пока не реализованы. [Проверки проекта](../../reports/NATIVE-PRJ-002-executor.md).
+Проекты используют тот же `IOSInboxModel`/store. Tap открывает `ProjectWorkspaceScreen` со списком/календарём; rename доступен в context menu индекса. Нижний плюс создаёт проект в индексе и задачу внутри папки. Проект выбирается при создании или через меню существующей задачи. [Проверки папок](../../reports/NATIVE-PRJ-003-004-executor.md).
 
 ## Хранение и проверки
 

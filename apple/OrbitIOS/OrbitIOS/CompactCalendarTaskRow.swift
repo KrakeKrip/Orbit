@@ -49,7 +49,7 @@ struct CompactCalendarTaskRow: View {
                 task.isCompleted ? "Снова открыть: \(task.title)" : "Отметить выполненной: \(task.title)"
             )
 
-            TaskActionPopoverButton(task: task,
+            TaskActionPopoverButton(model: model, task: task,
                                     range: task.plannedDate.map(RussianDateCaption.label) ?? "Без даты",
                                     previewWidth: 300) { action in
                 switch action {

@@ -7,32 +7,29 @@ private struct ProjectEditorPresentation: Identifiable {
     var name = ""
 }
 
-/// Project metadata only: opening a row edits its name until task membership exists.
+/// Project folders over the shared task store; rename stays in the row menu.
 struct ProjectsScreen: View {
     let model: IOSInboxModel
     @Environment(\.orbitAppearance) private var appearance
+    @State private var selectedProject: OrbitProject?
     @State private var editor: ProjectEditorPresentation?
 
     var body: some View {
+        Group {
+            if let selectedProject {
+                ProjectWorkspaceScreen(model: model, project: selectedProject) { self.selectedProject = nil }
+            } else {
+                projectIndex
+            }
+        }
+    }
+
+    private var projectIndex: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    Text("Проекты").font(.title2.bold())
-                    Spacer(minLength: 8)
-                    Button {
-                        OrbitHaptics.selection()
-                        editor = ProjectEditorPresentation()
-                    } label: {
-                        Image(systemName: "plus").font(.system(size: 18, weight: .medium))
-                            .frame(width: 28, height: 28)
-                    }
-                    .orbitIconStyle()
-                    .accessibilityLabel("Создать проект")
-                    .accessibilityIdentifier("project-create")
-                    OrbitSettingsButton()
+                NativeModeHeader(switcher: EmptyView()) {
+                    Text("Проекты").font(.title2.bold()).lineLimit(1)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
                 if let error = model.projectListError {
                     ContentUnavailableView {
                         Label("Проекты недоступны", systemImage: "exclamationmark.triangle")
@@ -55,7 +52,7 @@ struct ProjectsScreen: View {
                     List {
                         ForEach(model.projects) { project in
                             Button {
-                                editor = ProjectEditorPresentation(projectID: project.id, name: project.name)
+                                selectedProject = project
                             } label: {
                                 HStack(spacing: 14) {
                                     Image(systemName: "folder")
@@ -64,15 +61,20 @@ struct ProjectsScreen: View {
                                         .foregroundStyle(.primary)
                                         .fixedSize(horizontal: false, vertical: true)
                                     Spacer(minLength: 8)
-                                    Image(systemName: "pencil").foregroundStyle(.secondary)
+                                    Image(systemName: "chevron.right").foregroundStyle(.secondary)
                                 }
                                 .frame(minHeight: 44, alignment: .leading)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(project.name)
-                            .accessibilityHint("Переименовать проект")
+                            .accessibilityHint("Открыть задачи проекта")
                             .accessibilityIdentifier("project-row-\(project.id.uuidString)")
+                            .contextMenu {
+                                Button("Переименовать…", systemImage: "pencil") {
+                                    editor = ProjectEditorPresentation(projectID: project.id, name: project.name)
+                                }
+                            }
                             .listRowBackground(appearance.canvas)
                         }
                     }
@@ -86,6 +88,10 @@ struct ProjectsScreen: View {
             .sheet(item: $editor) { item in
                 ProjectNameSheet(presentation: item, model: model)
             }
+        }
+        .orbitFloatingAction(label: "Создать проект", identifier: "project-create", enabled: editor == nil) {
+            OrbitHaptics.selection()
+            editor = ProjectEditorPresentation()
         }
         .onAppear { model.reloadProjects() }
     }

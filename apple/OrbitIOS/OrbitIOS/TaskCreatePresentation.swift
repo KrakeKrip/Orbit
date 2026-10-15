@@ -13,6 +13,8 @@ import OrbitCore
 /// `addTask`; task detail/Projects stay out.
 struct OrbitCreateButton: View {
     let action: () -> Void
+    var label = "Добавить задачу"
+    var identifier = "create-task-fab"
 
     var body: some View {
         Group {
@@ -28,8 +30,8 @@ struct OrbitCreateButton: View {
                     .tint(.orbitAccent)
             }
         }
-        .accessibilityLabel("Добавить задачу")
-        .accessibilityIdentifier("create-task-fab")
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(identifier)
     }
 
     private var symbol: some View {
@@ -46,6 +48,7 @@ private struct TaskCreateSheetPresentation: Identifiable {
     let id = UUID()
     /// The civil date fixed for this opening (`nil` = undated Inbox task).
     let datePreset: String?
+    var projectPreset: UUID? = nil
 }
 
 private struct OrbitCreateHostModifier: ViewModifier {
@@ -53,36 +56,51 @@ private struct OrbitCreateHostModifier: ViewModifier {
     /// Evaluated at tap time so the preset is the day at the moment of
     /// opening, never a value captured earlier by the host.
     let datePreset: () -> String?
+    var projectPreset: UUID? = nil
 
     @State private var presentation: TaskCreateSheetPresentation?
 
     func body(content: Content) -> some View {
         content
-            // The button lives in the bottom safe-area region: it always sits
-            // just above the native tab bar on every device, the inset comes
-            // from the real safe area, and modal sheets/keyboard (presented
-            // over the whole screen) can never be overlapped by it.
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear
-                    .frame(height: 0)
-                    .overlay(alignment: .bottomTrailing) {
-                        OrbitCreateButton {
-                            OrbitHaptics.selection()
-                            presentation = TaskCreateSheetPresentation(datePreset: datePreset())
-                        }
-                        .allowsHitTesting(presentation == nil)
-                        .accessibilityHidden(presentation != nil)
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 16)
-                    }
+            .orbitFloatingAction(enabled: presentation == nil) {
+                OrbitHaptics.selection()
+                presentation = TaskCreateSheetPresentation(datePreset: datePreset(), projectPreset: projectPreset)
             }
             .sheet(item: $presentation) { item in
-                TaskCreateSheet(model: model, datePreset: item.datePreset)
+                TaskCreateSheet(model: model, datePreset: item.datePreset, projectPreset: item.projectPreset)
             }
     }
 }
 
+/// One safe-area placement shared by task and project creation.
+private struct OrbitFloatingActionModifier: ViewModifier {
+    let label: String
+    let identifier: String
+    let enabled: Bool
+    let action: () -> Void
+    func body(content: Content) -> some View {
+        content.safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: 0)
+                .overlay(alignment: .bottomTrailing) {
+                    OrbitCreateButton(action: action, label: label, identifier: identifier)
+                        .allowsHitTesting(enabled)
+                        .accessibilityHidden(!enabled)
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 16)
+                }
+        }
+    }
+}
+
 extension View {
+    func orbitFloatingAction(label: String = "Добавить задачу",
+                             identifier: String = "create-task-fab",
+                             enabled: Bool = true,
+                             action: @escaping () -> Void) -> some View {
+        modifier(OrbitFloatingActionModifier(label: label, identifier: identifier,
+                                             enabled: enabled, action: action))
+    }
+
     /// Hosts the shared «+» and create sheet over a section view. Applied
     /// once per section host (Inbox, Today workspace, Upcoming workspace) so
     /// the list and calendar presentations share the same composition.
@@ -136,6 +154,7 @@ struct TaskCreateSheet: View {
     @State private var created = false
 
     /// Local draft: optional civil date `YYYY-MM-DD` (nil = undated).
+    @State private var draftProjectID: UUID?
     @State private var draftDate: String?
     /// Resting position of the date wheel; only wheel writes touch the
     /// draft. An unset/invalid preset leaves the draft undated while the
@@ -154,9 +173,10 @@ struct TaskCreateSheet: View {
     private static let rangeLowerBound = TaskPlannedDate.date(fromCivilDateString: "1900-01-01") ?? Date.distantPast
     private static let rangeUpperBound = TaskPlannedDate.date(fromCivilDateString: "2199-12-31") ?? Date.distantFuture
 
-    init(model: IOSInboxModel, datePreset: String?) {
+    init(model: IOSInboxModel, datePreset: String?, projectPreset: UUID? = nil) {
         self.model = model
         self.datePreset = datePreset
+        _draftProjectID = State(initialValue: projectPreset)
         // The preset seeds the draft only when it is a valid civil date; an
         // invalid preset is never silently replaced by today.
         let seeded = datePreset.flatMap { TaskPlannedDate.isValid($0) ? $0 : nil }
@@ -170,6 +190,13 @@ struct TaskCreateSheet: View {
         NavigationStack {
             Form {
                 Section { titleField }
+                Section {
+                    Picker("Проект", selection: $draftProjectID) {
+                        Text("Без проекта").tag(nil as UUID?)
+                        ForEach(model.projects) { Text($0.name).tag(Optional($0.id)) }
+                    }
+                    .accessibilityIdentifier("create-project-picker")
+                }
                 Section { dateSection }
                 Section { timeSection }
                 Section {
@@ -471,7 +498,8 @@ struct TaskCreateSheet: View {
             title: trimmedTitle,
             plannedDate: draftDate,
             plannedTime: sendInterval ? startString : nil,
-            durationMinutes: sendInterval ? draftDurationTotal : nil
+            durationMinutes: sendInterval ? draftDurationTotal : nil,
+            projectID: draftProjectID
         ) {
             // The sheet and every draft stay up for retry; the list itself
             // was rolled back to persisted truth by the model.

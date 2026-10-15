@@ -87,7 +87,8 @@ public final class OrbitTaskStore {
         now: Date = .now,
         plannedDate: String? = nil,
         plannedTime: String? = nil,
-        durationMinutes: Int? = nil
+        durationMinutes: Int? = nil,
+        projectID: UUID? = nil
     ) throws -> OrbitTask {
         let title = try TaskTitle.validated(rawTitle)
         if let plannedDate, !TaskPlannedDate.isValid(plannedDate) {
@@ -119,12 +120,14 @@ public final class OrbitTaskStore {
                 throw TaskTimeIntervalError.endOutOfRange
             }
         }
+        try validateProject(projectID)
         let task = OrbitTask(
             title: title,
             createdAt: now,
             plannedDate: plannedDate,
             plannedTime: plannedTime,
-            durationMinutes: durationMinutes
+            durationMinutes: durationMinutes,
+            projectID: projectID
         )
         context.insert(task)
         do {
@@ -134,6 +137,26 @@ public final class OrbitTaskStore {
             throw error
         }
         return task
+    }
+
+    private func validateProject(_ id: UUID?) throws {
+        guard let id else { return }
+        let descriptor = FetchDescriptor<OrbitProject>(predicate: #Predicate { $0.id == id })
+        guard try context.fetch(descriptor).first != nil else {
+            throw OrbitProjectStoreError.projectNotFound(id: id)
+        }
+    }
+
+    public func setProject(_ projectID: UUID?, for id: UUID) throws {
+        let descriptor = FetchDescriptor<OrbitTask>(predicate: #Predicate { $0.id == id })
+        guard let task = try context.fetch(descriptor).first else {
+            throw OrbitStoreError.taskNotFound(id: id)
+        }
+        try validateProject(projectID)
+        guard task.projectID != projectID else { return }
+        task.setProject(projectID)
+        do { try context.save() }
+        catch { context.rollback(); throw error }
     }
 
     public func setCompleted(_ isCompleted: Bool, for id: UUID, at date: Date = .now) throws {
