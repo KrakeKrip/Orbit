@@ -113,7 +113,10 @@ struct CalendarDayScreen: View {
                         onReopen: { task in model.setCompleted(false, for: task) },
                         onEditDate: { task in presentation = .date(task) },
                         onRename: { task in renamePresentation = TaskRenamePresentation(task: task) },
-                        onDelete: { task in deletePresentation = TaskDeletePresentation(task: task) }
+                        onDelete: { task in deletePresentation = TaskDeletePresentation(task: task) },
+                        onCommitInterval: { task, time, duration in
+                            model.setPlannedInterval(plannedTime: time, durationMinutes: duration, for: task)
+                        }
                     )
                 }
             }

@@ -1,20 +1,8 @@
 import SwiftUI
 import OrbitCore
 
-/// The 00:00–24:00 day timeline for one selected civil day: hour rulers,
-/// timed blocks projected via `TaskDayProjector`, and a minimal local greedy
-/// lane layout so overlapping tasks stay visible side by side.
-///
-/// Painted block height is the exact interval duration
-/// (`(end − start) / 60 × hourHeight`, e.g. one minute ≈ 1.07pt at 64pt/hour)
-/// — no stretching to a fake block size. Tap and long-press (context menu)
-/// act on the painted stripe itself. For tiny/dense intervals the native
-/// «⋯» → «Задачи дня» menu next to the date controls in `CalendarDayScreen`
-/// is the accessible selection path: it lists only the real segments of the
-/// selected day with the existing callbacks (interval editor, date editor,
-/// complete/reopen).
-/// Full title/range stay in the accessibility labels. No resize/drag, no
-/// stored layout, no new core API.
+/// Civil day timeline: tap for actions, hold-and-drag to move, handles to resize.
+/// A gesture edits only a local frozen draft; one validated write on release.
 struct DayTimelineView: View {
     @Environment(\.orbitAppearance) private var appearance
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -27,6 +15,11 @@ struct DayTimelineView: View {
     let onEditDate: (OrbitTask) -> Void
     let onRename: (OrbitTask) -> Void
     let onDelete: (OrbitTask) -> Void
+    let onCommitInterval: (OrbitTask, String, Int) -> String?
+    @State private var selectedTaskID: UUID?
+    @State private var editing: TimelineGestureEdit?
+    @State private var gestureError: String?
+    @GestureState private var gestureActive = false
 
     /// Uniform linear hour height.
     private let hourHeight: CGFloat = 64
@@ -40,18 +33,34 @@ struct DayTimelineView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     ZStack(alignment: .topLeading) {
-                        ruler
+                        ruler.onTapGesture { selectedTaskID = nil }
                         blocks(containerWidth: geometry.size.width)
-                            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: segments)
+                            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: displaySegments)
                     }
                     .frame(width: geometry.size.width, height: 24 * hourHeight + 24)
                     .background(appearance.canvas)
+                    .coordinateSpace(name: "orbit-timeline")
+                }
+                .scrollDisabled(editing != nil)
+                .overlay(alignment: .top) {
+                    if let gestureError {
+                        Text(gestureError).font(.footnote).foregroundStyle(.red)
+                            .padding(10).background(appearance.canvas)
+                            .onTapGesture { self.gestureError = nil }
+                    }
                 }
                 .onAppear {
                     proxy.scrollTo("hour-8", anchor: .top)
                 }
             }
         }
+        .onChange(of: gestureActive) { _, active in
+            if !active {
+                // Also clears drafts for recognizer cancellation, after onEnded.
+                DispatchQueue.main.async { if !gestureActive { editing = nil } }
+            }
+        }
+        .onDisappear { editing = nil; selectedTaskID = nil }
     }
 
     // MARK: - Hour ruler
@@ -95,7 +104,7 @@ struct DayTimelineView: View {
     // MARK: - Blocks
 
     private func blocks(containerWidth: CGFloat) -> some View {
-        let layout = laneLayout(for: segments)
+        let layout = laneLayout(for: displaySegments)
         return ForEach(layout, id: \.segment.taskID) { item in
             if let task = task(item.segment.taskID) {
                 timelineBlock(
@@ -110,7 +119,7 @@ struct DayTimelineView: View {
     }
 
     private func timelineBlock(
-        for segment: TaskDayIntervalSegment,
+        for segment: TimelineSegment,
         task: OrbitTask,
         laneIndex: Int,
         laneCount: Int,
@@ -124,8 +133,9 @@ struct DayTimelineView: View {
         let endTimeText = segment.endMinute == 1440 ? "24:00" : clockString(segment.endMinute)
         let range = "\(clockString(segment.startMinute))–\(endTimeText)\(continuationMarkers(segment))"
 
-        return CalendarTaskPopoverButton(task: task, range: range,
-                                         previewWidth: min(300, max(160, containerWidth - 32))) { action in
+        return TaskActionPopoverButton(task: task, range: range,
+                                         previewWidth: min(300, max(160, containerWidth - 32)),
+                                         opensOnHold: false) { action in
             switch action {
             case .toggle: if task.isCompleted { onReopen(task) } else { onComplete(task) }
             case .date: onEditDate(task)
@@ -176,34 +186,35 @@ struct DayTimelineView: View {
             alignment: .top
         )
         .clipped()
-        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 6))
-        .contextMenu {
-            menuActions(for: task)
-        } preview: {
-            CalendarTaskPreview(task: task, range: range)
-                .frame(width: min(300, max(160, containerWidth - 32)))
+        .highPriorityGesture(moveGesture(task: task, segment: segment))
+        .overlay {
+            if selectedTaskID == task.id {
+                RoundedRectangle(cornerRadius: 3).stroke(.white, lineWidth: 2)
+                    .allowsHitTesting(false)
+            }
         }
-        .orbitLongPressFeedback()
+        .overlay(alignment: .topTrailing) {
+            if selectedTaskID == task.id && !segment.continuesFromPreviousDay {
+                resizeHandle(.start, task: task, segment: segment).offset(x: 8, y: -16)
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if selectedTaskID == task.id && !segment.continuesIntoNextDay {
+                resizeHandle(.end, task: task, segment: segment).offset(x: -8, y: 16)
+            }
+        }
+        .zIndex(selectedTaskID == task.id ? 2 : 0)
+        .transaction { if editing?.taskID == task.id { $0.animation = nil } }
         .orbitMenuFeedback()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(task.title), \(range)")
-        .accessibilityHint("Открывает меню задачи; меню в шапке — полный список")
+        .accessibilityHint("Нажмите для меню; удерживайте для переноса и изменения границ")
         .accessibilityAddTraits(task.isCompleted ? [.isSelected] : [])
-        // Position outside the interactive source: the menu's local source
-        // rect no longer includes a translated, origin-based snapshot.
+        // Position is outside the local gesture and popover source.
         .position(
             x: blockX(laneIndex: laneIndex, laneCount: laneCount, containerWidth: containerWidth)
                 + laneWidth(laneCount: laneCount, containerWidth: containerWidth) / 2,
             y: startOffset + paintedHeight / 2
-        )
-    }
-
-    private func menuActions(for task: OrbitTask) -> some View {
-        OrbitTaskMenuActions(
-            task: task,
-            onToggle: { if task.isCompleted { onReopen(task) } else { onComplete(task) } },
-            onEditDate: { onEditDate(task) }, onEditInterval: { onEditInterval(task) },
-            onRename: { onRename(task) }, onDelete: { onDelete(task) }
         )
     }
 
@@ -221,24 +232,160 @@ struct DayTimelineView: View {
         String(format: "%02d:%02d", minute / 60, minute % 60)
     }
 
-    private func continuationMarkers(_ segment: TaskDayIntervalSegment) -> String {
+    private func continuationMarkers(_ segment: TimelineSegment) -> String {
         var markers = ""
         if segment.continuesFromPreviousDay { markers += " ↑" }
         if segment.continuesIntoNextDay { markers += " ↓" }
         return markers
     }
 
+    private struct TimelineSegment: Equatable {
+        let taskID: UUID
+        let day: String
+        var startMinute: Int
+        var endMinute: Int
+        var continuesFromPreviousDay: Bool
+        var continuesIntoNextDay: Bool
+        init(_ segment: TaskDayIntervalSegment) {
+            taskID = segment.taskID; day = segment.day
+            startMinute = segment.startMinute; endMinute = segment.endMinute
+            continuesFromPreviousDay = segment.continuesFromPreviousDay
+            continuesIntoNextDay = segment.continuesIntoNextDay
+        }
+    }
+
+    private struct TimelineGestureEdit {
+        let taskID: UUID
+        let date: String
+        let time: String
+        let duration: Int
+        let dayOffset: Int
+        let edge: TaskTimelineAdjustment.Edge
+        let directMove: Bool
+        var candidate: TaskTimelineAdjustment.Candidate?
+    }
+
+    private var displaySegments: [TimelineSegment] {
+        segments.map { source in
+            var segment = TimelineSegment(source)
+            if let edit = editing, edit.taskID == source.taskID, let candidate = edit.candidate {
+                let start = candidate.startMinute + edit.dayOffset
+                let end = start + candidate.duration
+                segment.startMinute = max(0, min(1439, start))
+                segment.endMinute = max(segment.startMinute + 1, min(1440, end))
+                segment.continuesFromPreviousDay = start < 0
+                segment.continuesIntoNextDay = end > 1440
+            }
+            return segment
+        }.sorted {
+            if $0.startMinute != $1.startMinute { return $0.startMinute < $1.startMinute }
+            if $0.endMinute != $1.endMinute { return $0.endMinute < $1.endMinute }
+            return $0.taskID.uuidString < $1.taskID.uuidString
+        }
+    }
+
+    private func begin(_ edge: TaskTimelineAdjustment.Edge, task: OrbitTask, segment: TimelineSegment) {
+        guard editing == nil, let date = task.plannedDate,
+              let time = task.plannedTime, let duration = task.durationMinutes else { return }
+        let directMove = selectedTaskID == task.id
+        selectedTaskID = task.id
+        gestureError = nil
+        editing = TimelineGestureEdit(taskID: task.id, date: date, time: time,
+                                      duration: duration,
+                                      dayOffset: segment.continuesFromPreviousDay ? -1440 : 0,
+                                      edge: edge, directMove: directMove)
+        OrbitHaptics.longPress()
+    }
+
+    private func update(_ translation: CGFloat) {
+        guard var edit = editing else { return }
+        if abs(translation) < 2 {
+            edit.candidate = nil
+        } else if let candidate = TaskTimelineAdjustment.candidate(
+            date: edit.date, time: edit.time, duration: edit.duration,
+            deltaMinutes: Double(translation / hourHeight * 60), edge: edit.edge) {
+            let start = candidate.startMinute + edit.dayOffset
+            guard start < 1440, start + candidate.duration > 0 else { return }
+            edit.candidate = candidate
+        }
+        editing = edit
+    }
+
+    private func finish() {
+        guard let edit = editing else { return }
+        editing = nil
+        guard let candidate = edit.candidate,
+              candidate.time != edit.time || candidate.duration != edit.duration else { return }
+        guard let current = task(edit.taskID), current.plannedDate == edit.date,
+              current.plannedTime == edit.time, current.durationMinutes == edit.duration else {
+            gestureError = "Задача изменилась. Повторите действие."
+            selectedTaskID = nil
+            return
+        }
+        gestureError = onCommitInterval(current, candidate.time, candidate.duration)
+        if gestureError != nil { selectedTaskID = nil }
+        else { OrbitHaptics.selection() }
+    }
+
+    private func moveGesture(task: OrbitTask, segment: TimelineSegment) -> AnyGesture<Void> {
+        if editing?.taskID == task.id ? editing?.directMove == true : selectedTaskID == task.id {
+            return AnyGesture(
+                DragGesture(minimumDistance: 3, coordinateSpace: .named("orbit-timeline"))
+                    .updating($gestureActive) { _, state, _ in state = true }
+                    .onChanged { value in
+                        begin(.move, task: task, segment: segment)
+                        update(value.translation.height)
+                    }
+                    .onEnded { _ in finish() }
+                    .map { _ in () }
+            )
+        }
+        return AnyGesture(LongPressGesture(minimumDuration: 0.4, maximumDistance: 10)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("orbit-timeline")))
+            .updating($gestureActive) { _, state, _ in state = true }
+            .onChanged { value in
+                switch value {
+                case .first(true): begin(.move, task: task, segment: segment)
+                case .second(true, let drag):
+                    begin(.move, task: task, segment: segment)
+                    if let drag { update(drag.translation.height) }
+                default: break
+                }
+            }
+            .onEnded { _ in finish() }
+            .map { _ in () })
+    }
+
+    private func resizeHandle(_ edge: TaskTimelineAdjustment.Edge,
+                              task: OrbitTask, segment: TimelineSegment) -> some View {
+        Circle().fill(.white)
+            .overlay(Circle().stroke(Color.orbitAccent, lineWidth: 2))
+            .frame(width: 18, height: 18)
+            .frame(width: 32, height: 32)
+            .contentShape(Rectangle())
+            .accessibilityLabel(edge == .start ? "Изменить начало" : "Изменить конец")
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .named("orbit-timeline"))
+                    .updating($gestureActive) { _, state, _ in state = true }
+                    .onChanged { value in
+                        begin(edge, task: task, segment: segment)
+                        update(value.translation.height)
+                    }
+                    .onEnded { _ in finish() }
+            )
+    }
+
     // MARK: - Greedy lane layout (local, minimal)
 
     private struct LaidOutSegment {
-        let segment: TaskDayIntervalSegment
+        let segment: TimelineSegment
         let lane: Int
         let laneCount: Int
     }
 
-    private func laneLayout(for segments: [TaskDayIntervalSegment]) -> [LaidOutSegment] {
+    private func laneLayout(for segments: [TimelineSegment]) -> [LaidOutSegment] {
         var lanes: [(end: Int, cluster: Int)] = []
-        var assigned: [(segment: TaskDayIntervalSegment, lane: Int, cluster: Int)] = []
+        var assigned: [(segment: TimelineSegment, lane: Int, cluster: Int)] = []
         var clusterEnd = -1
         var cluster = 0
 
@@ -266,90 +413,5 @@ struct DayTimelineView: View {
         return assigned.map { item in
             LaidOutSegment(segment: item.segment, lane: item.lane, laneCount: lanesPerCluster[item.cluster] ?? 1)
         }
-    }
-}
-
-
-private enum CalendarTaskAction {
-    case toggle, date, interval, rename, delete
-}
-
-/// Tap presents a card above the actions, rather than a native Menu which
-/// hides its label while open. The calendar rectangle keeps its exact height.
-private struct CalendarTaskPopoverButton<Content: View>: View {
-    let task: OrbitTask
-    let range: String
-    let previewWidth: CGFloat
-    let onAction: (CalendarTaskAction) -> Void
-    @ViewBuilder let label: () -> Content
-    @Environment(\.orbitAppearance) private var appearance
-    @State private var isPresented = false
-    @State private var pendingAction: CalendarTaskAction?
-
-    var body: some View {
-        Button { isPresented = true } label: { label() }
-            .popover(isPresented: $isPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-                VStack(spacing: 0) {
-                    CalendarTaskPreview(task: task, range: range)
-                        .padding(10)
-                    VStack(spacing: 0) {
-                        OrbitTaskMenuActions(
-                            task: task,
-                            onToggle: { choose(.toggle) },
-                            onEditDate: { choose(.date) },
-                            onEditInterval: { choose(.interval) },
-                            onRename: { choose(.rename) },
-                            onDelete: { choose(.delete) }
-                        )
-                    }
-                    .buttonStyle(CalendarTaskActionStyle())
-                    .padding(.bottom, 6)
-                }
-                .frame(width: previewWidth)
-                .background(appearance.canvas)
-                .presentationBackground(appearance.canvas)
-                .presentationCompactAdaptation(.popover)
-                .onDisappear {
-                    // Present editors/confirmation only after the popover is
-                    // gone. Tapping outside leaves pendingAction nil.
-                    guard let action = pendingAction else { return }
-                    pendingAction = nil
-                    onAction(action)
-                }
-            }
-    }
-
-    private func choose(_ action: CalendarTaskAction) {
-        pendingAction = action
-        isPresented = false
-    }
-}
-
-private struct CalendarTaskPreview: View {
-    let task: OrbitTask
-    let range: String
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(task.title).font(.headline).lineLimit(3)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(range).font(.subheadline.monospacedDigit())
-        }
-        .foregroundStyle(.white)
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(task.isCompleted ? Color.gray : Color.orbitAccent,
-                    in: RoundedRectangle(cornerRadius: 10))
-        .accessibilityIdentifier("calendar-task-menu-preview")
-    }
-}
-
-private struct CalendarTaskActionStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .padding(.horizontal, 16)
-            .foregroundStyle(configuration.role == .destructive ? Color.red : Color.primary)
-            .contentShape(Rectangle())
-            .background(configuration.isPressed ? Color.primary.opacity(0.08) : .clear)
     }
 }

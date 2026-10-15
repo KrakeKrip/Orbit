@@ -1,0 +1,91 @@
+import SwiftUI
+import OrbitCore
+
+enum OrbitTaskAction {
+    case toggle, date, interval, rename, delete
+}
+
+/// Tap presents a card above the actions, rather than a native Menu which
+/// hides its label while open. The calendar rectangle keeps its exact height.
+struct TaskActionPopoverButton<Content: View>: View {
+    let task: OrbitTask
+    let range: String
+    let previewWidth: CGFloat
+    var opensOnHold = true
+    let onAction: (OrbitTaskAction) -> Void
+    @ViewBuilder let label: () -> Content
+    @Environment(\.orbitAppearance) private var appearance
+    @State private var isPresented = false
+    @State private var pendingAction: OrbitTaskAction?
+
+    var body: some View {
+        Button { isPresented = true } label: { label() }
+            .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                OrbitHaptics.longPress()
+                isPresented = true
+            }, including: opensOnHold ? .all : .none)
+            .popover(isPresented: $isPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                VStack(spacing: 0) {
+                    TaskActionPreview(task: task, range: range)
+                        .padding(10)
+                    VStack(spacing: 0) {
+                        OrbitTaskMenuActions(
+                            task: task,
+                            onToggle: { choose(.toggle) },
+                            onEditDate: { choose(.date) },
+                            onEditInterval: { choose(.interval) },
+                            onRename: { choose(.rename) },
+                            onDelete: { choose(.delete) }
+                        )
+                    }
+                    .buttonStyle(OrbitTaskActionStyle())
+                    .padding(.bottom, 6)
+                }
+                .frame(width: previewWidth)
+                .background(appearance.canvas)
+                .presentationBackground(appearance.canvas)
+                .presentationCompactAdaptation(.popover)
+                .onDisappear {
+                    // Present editors/confirmation only after the popover is
+                    // gone. Tapping outside leaves pendingAction nil.
+                    guard let action = pendingAction else { return }
+                    pendingAction = nil
+                    onAction(action)
+                }
+            }
+    }
+
+    private func choose(_ action: OrbitTaskAction) {
+        pendingAction = action
+        isPresented = false
+    }
+}
+
+struct TaskActionPreview: View {
+    let task: OrbitTask
+    let range: String
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(task.title).font(.headline).lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(range).font(.subheadline.monospacedDigit())
+        }
+        .foregroundStyle(.white)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(task.isCompleted ? Color.gray : Color.orbitAccent,
+                    in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityIdentifier("calendar-task-menu-preview")
+    }
+}
+
+private struct OrbitTaskActionStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.horizontal, 16)
+            .foregroundStyle(configuration.role == .destructive ? Color.red : Color.primary)
+            .contentShape(Rectangle())
+            .background(configuration.isPressed ? Color.primary.opacity(0.08) : .clear)
+    }
+}

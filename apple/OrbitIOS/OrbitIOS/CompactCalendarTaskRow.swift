@@ -49,8 +49,16 @@ struct CompactCalendarTaskRow: View {
                 task.isCompleted ? "Снова открыть: \(task.title)" : "Отметить выполненной: \(task.title)"
             )
 
-            Menu {
-                menuActions
+            TaskActionPopoverButton(task: task,
+                                    range: task.plannedDate.map(RussianDateCaption.label) ?? "Без даты",
+                                    previewWidth: 300) { action in
+                switch action {
+                case .toggle: model.setCompleted(!task.isCompleted, for: task)
+                case .date: onEditDate()
+                case .interval: onEditInterval()
+                case .rename: onRename()
+                case .delete: onDelete()
+                }
             } label: {
                 Text(task.title)
                     .font(.subheadline)
@@ -73,16 +81,6 @@ struct CompactCalendarTaskRow: View {
             )
         )
         .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 7))
-        .orbitLongPressFeedback()
-        .contextMenu { menuActions }
     }
 
-    private var menuActions: some View {
-        OrbitTaskMenuActions(
-            task: task,
-            onToggle: { model.setCompleted(!task.isCompleted, for: task) },
-            onEditDate: onEditDate, onEditInterval: onEditInterval,
-            onRename: onRename, onDelete: onDelete
-        )
-    }
 }

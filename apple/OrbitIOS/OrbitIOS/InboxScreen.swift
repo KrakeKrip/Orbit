@@ -229,20 +229,19 @@ struct InboxRowView: View {
     /// destructive «Удалить…» (date/time items unchanged, the completion
     /// circle stays independent). Calendar cards use the same actions and
     /// shared UUIDs, so mutations are reflected across both presentations.
-    private var taskMenuActions: some View {
-        OrbitTaskMenuActions(
-            task: task,
-            onToggle: { model.setCompleted(!task.isCompleted, for: task) },
-            onEditDate: onEditDate,
-            onEditInterval: onEditInterval,
-            onRename: { renamePresentation = TaskRenamePresentation(task: task) },
-            onDelete: { deletePresentation = TaskDeletePresentation(task: task) }
-        )
-    }
-
     private var taskBodyMenu: some View {
-        Menu {
-            taskMenuActions
+        TaskActionPopoverButton(
+            task: task,
+            range: Self.intervalLabel(task) ?? task.plannedDate.map(RussianDateCaption.label) ?? "Без даты",
+            previewWidth: 300
+        ) { action in
+            switch action {
+            case .toggle: model.setCompleted(!task.isCompleted, for: task)
+            case .date: onEditDate()
+            case .interval: onEditInterval()
+            case .rename: renamePresentation = TaskRenamePresentation(task: task)
+            case .delete: deletePresentation = TaskDeletePresentation(task: task)
+            }
         } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
@@ -266,8 +265,6 @@ struct InboxRowView: View {
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .contextMenu { taskMenuActions }
-        .orbitLongPressFeedback()
         .orbitMenuFeedback()
         .accessibilityLabel(task.title)
     }
