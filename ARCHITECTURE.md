@@ -42,3 +42,7 @@ Bottom sections Today/Inbox/Upcoming, Calendar не отдельная section. 
 ## Назначенный NATIVE-MIN5: write minimum vs legacy read
 
 Новая запись/изменение interval —5…1440; уже существующие1…4 остаются вstore/end/projector и не мигрируются автоматически. Отдельный маленький writevalidator вacceptedTaskTimeInterval, storeprecheck beforemutation; pureend/isValidDuration сохраняютreadcompatibility1…1440. Schema неизменна, minimumнеравенкратности5, clear/dateMove/complete legacydataпрежние. Это назначенныйконтракт, доreviewнеimplementedPASS.
+
+## Локальная основа проектов, NATIVE-PRJ-001 (2026-10-16)
+
+OrbitProject добавляется в тот же ModelContainer рядом с неизменённой OrbitTask. UUID/name/createdAt, validated list/create/rename через OrbitTaskStore; отдельный OrbitProjectStoreError не меняет task error enum и его UI switches. Существующий task-only store обновляется SwiftData additive migration, без reset/пересоздания. Assignment/relationship, удаление проекта и UI не входят в этот этап. Проверка upgrade обязательна до интеграции; downgrade старым бинарником не поддерживается.
