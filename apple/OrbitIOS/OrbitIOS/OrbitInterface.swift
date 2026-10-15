@@ -102,6 +102,7 @@ private struct OrbitEditorSurface: ViewModifier {
             // An opaque semantic surface prevents the coral FAB underneath
             // from bleeding into a half-height editor and changing its colors.
             .presentationBackground(appearance.canvas)
+            .preferredColorScheme(appearance.colorScheme)
     }
 }
 private struct OrbitLongPressFeedback: ViewModifier {
@@ -167,6 +168,9 @@ struct OrbitSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("orbit.ui.appearance") private var appearanceRaw = OrbitAppearance.system.rawValue
     @AppStorage("orbit.ui.haptics") private var haptics = true
+    private var selectedAppearance: OrbitAppearance {
+        OrbitAppearance(rawValue: appearanceRaw) ?? .system
+    }
     var body: some View {
         NavigationStack {
             Form {
@@ -206,5 +210,7 @@ struct OrbitSettingsSheet: View {
                 }
             }
         }
+        .environment(\.orbitAppearance, selectedAppearance)
+        .preferredColorScheme(selectedAppearance.colorScheme)
     }
 }

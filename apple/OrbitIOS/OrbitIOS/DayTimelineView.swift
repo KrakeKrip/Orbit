@@ -33,7 +33,16 @@ struct DayTimelineView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     ZStack(alignment: .topLeading) {
-                        ruler.onTapGesture { selectedTaskID = nil }
+                        // A real hit surface covers empty spaces between hour
+                        // lines too; the decorative ruler does not consume taps.
+                        Rectangle().fill(appearance.canvas)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                guard editing == nil else { return }
+                                selectedTaskID = nil
+                            }
+                            .accessibilityHidden(true)
+                        ruler.allowsHitTesting(false)
                         blocks(containerWidth: geometry.size.width)
                             .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: displaySegments)
                     }
@@ -359,8 +368,8 @@ struct DayTimelineView: View {
     private func resizeHandle(_ edge: TaskTimelineAdjustment.Edge,
                               task: OrbitTask, segment: TimelineSegment) -> some View {
         Circle().fill(.white)
-            .overlay(Circle().stroke(Color.orbitAccent, lineWidth: 2))
-            .frame(width: 18, height: 18)
+            .overlay(Circle().stroke(Color.orbitAccent, lineWidth: 1.5))
+            .frame(width: 12, height: 12)
             .frame(width: 32, height: 32)
             .contentShape(Rectangle())
             .accessibilityLabel(edge == .start ? "Изменить начало" : "Изменить конец")
