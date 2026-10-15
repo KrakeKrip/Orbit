@@ -48,6 +48,16 @@ struct UpcomingWorkspaceScreen: View {
         // selection owner is never duplicated, and creating never resets the
         // selection or the mode.
         .orbitCreateAction(model: model, datePreset: { selectedDay })
+        .onChange(of: showsCalendar) { _, _ in OrbitHaptics.selection() }
+        .onChange(of: selectedDay) { _, _ in OrbitHaptics.selection() }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 40).onEnded { value in
+                let dx = value.translation.width
+                let dy = value.translation.height
+                guard abs(dx) > 70, abs(dx) > abs(dy) * 1.6 else { return }
+                moveDay(dx < 0 ? 1 : -1)
+            }
+        )
         .onAppear {
             // Keep the rows in sync after external changes; the selected day
             // and the mode are presentation state and are never reset here.
@@ -66,6 +76,16 @@ struct UpcomingWorkspaceScreen: View {
         }
     }
 
+    private func moveDay(_ offset: Int) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        guard let current = TaskPlannedDate.date(fromCivilDateString: selectedDay, calendar: calendar),
+              let next = calendar.date(byAdding: .day, value: offset, to: current) else { return }
+        let candidate = TaskPlannedDate.civilDateString(from: next, calendar: calendar)
+        guard TaskPlannedDate.isValid(candidate) else { return }
+        selectedDay = candidate
+    }
+
     /// Refreshes the current local Gregorian day reference only. The manual
     /// selection and the mode are the user's and are never rewritten here.
     private func refreshReferenceDay() {
@@ -73,22 +93,12 @@ struct UpcomingWorkspaceScreen: View {
     }
 }
 
-/// Compact «Список / Календарь» mode switcher for the Upcoming section —
-/// the same segmented native control as Today's, with its own accessibility
-/// identifier so the two sections' independent modes stay distinguishable.
-/// Presentation state only — switching never clones, migrates or creates
-/// tasks.
+/// Compact native view menu; the icon follows the workspace's current mode.
+/// Its binding remains owned by the section and survives tab changes.
 struct UpcomingModeSwitcher: View {
     @Binding var showsCalendar: Bool
 
     var body: some View {
-        Picker("Вид", selection: $showsCalendar) {
-            Text("Список").tag(false)
-            Text("Календарь").tag(true)
-        }
-        .pickerStyle(.segmented)
-        .fixedSize()
-        .frame(minHeight: 44)
-        .accessibilityIdentifier("upcoming-mode-switcher")
+        OrbitViewModeMenu(showsCalendar: $showsCalendar, identifier: "upcoming-mode-switcher")
     }
 }

@@ -16,6 +16,8 @@ struct OrbitIOSApp: App {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var launch: Launch
+    @AppStorage("orbit.ui.appearance") private var appearanceRaw = OrbitAppearance.system.rawValue
+    private var appearance: OrbitAppearance { OrbitAppearance(rawValue: appearanceRaw) ?? .system }
     @State private var selectedTab: Tab = .today
 
     init() {
@@ -56,6 +58,9 @@ struct OrbitIOSApp: App {
                         .tag(Tab.upcoming)
                 }
                 .tint(.orbitAccent)
+                .environment(\.orbitAppearance, appearance)
+                .preferredColorScheme(appearance.colorScheme)
+                .onChange(of: selectedTab) { _, _ in OrbitHaptics.selection() }
                 .onChange(of: scenePhase) { _, phase in
                     // Returning to the foreground re-reads the shared store so
                     // all tabs reflect persisted truth.

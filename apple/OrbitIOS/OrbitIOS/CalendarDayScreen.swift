@@ -20,6 +20,7 @@ import OrbitCore
 /// through to the owner's binding — this screen never keeps a second
 /// selection owner.
 struct CalendarDayScreen: View {
+    @Environment(\.orbitAppearance) private var appearance
     let model: IOSInboxModel
     /// Fixed-day Today context: when non-nil the screen shows exactly this
     /// civil day and follows its changes from the current-day owner.
@@ -40,6 +41,8 @@ struct CalendarDayScreen: View {
     var referenceDay: String? = nil
 
     @State private var presentation: InboxSheetPresentation?
+    @State private var renamePresentation: TaskRenamePresentation?
+    @State private var deletePresentation: TaskDeletePresentation?
     @State private var localSelectedDay: String = TaskDaySelection.currentDay()
     /// The shown civil day — the external browsing owner's value when one is
     /// provided, otherwise the local fixed-day state. One selection source
@@ -108,11 +111,13 @@ struct CalendarDayScreen: View {
                         onEditInterval: { task in presentation = .interval(task) },
                         onComplete: { task in model.setCompleted(true, for: task) },
                         onReopen: { task in model.setCompleted(false, for: task) },
-                        onEditDate: { task in presentation = .date(task) }
+                        onEditDate: { task in presentation = .date(task) },
+                        onRename: { task in renamePresentation = TaskRenamePresentation(task: task) },
+                        onDelete: { task in deletePresentation = TaskDeletePresentation(task: task) }
                     )
                 }
             }
-            .background(Color(.systemBackground))
+            .background(appearance.canvas)
             // NATIVE-UI-MODE/R1: the previously empty (collapsible) navigation
             // bar is hidden — the common mode row is the deterministic top row
             // directly under the safe area in both contexts, matching the
@@ -135,6 +140,8 @@ struct CalendarDayScreen: View {
                     TaskIntervalSheet(task: task, model: model)
                 }
             }
+            .taskManagementHost(model: model, renamePresentation: $renamePresentation,
+                                deletePresentation: $deletePresentation)
             .onAppear {
                 // Reactive model updates already refresh the rows; this reload
                 // keeps the day view in sync after external changes. The
@@ -253,7 +260,7 @@ struct CalendarDayScreen: View {
                             .padding(.horizontal, 8)
                             .padding(.top, 2)
                             .padding(.bottom, 6)
-                            .background(.bar)
+                            .background(appearance.canvas)
                     }
                 }
             } else {
@@ -267,7 +274,7 @@ struct CalendarDayScreen: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
-                .background(.bar)
+                .background(appearance.canvas)
             }
         }
     }
@@ -298,7 +305,7 @@ struct CalendarDayScreen: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .background(.bar)
+            .background(appearance.canvas)
         }
     }
 
@@ -318,7 +325,7 @@ struct CalendarDayScreen: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
-                .background(.bar)
+                .background(appearance.canvas)
             }
         }
     }
@@ -384,6 +391,7 @@ struct CalendarDayScreen: View {
         // View-local Russian date only for this control («14 окт. 2026 г.»
         // instead of «Oct»); the device/system locale is never changed.
         .environment(\.locale, Locale(identifier: "ru_RU"))
+        .environment(\.calendar, Calendar.orbitCivil)
         .onChange(of: pickerDate) { _, newDate in
             select(TaskPlannedDate.civilDateString(from: newDate, calendar: gregorianNoon))
         }
@@ -413,11 +421,14 @@ struct CalendarDayScreen: View {
                     ForEach(projection.timedSegments, id: \.taskID) { segment in
                         if let timed = task(withID: segment.taskID) {
                             Menu(dayTaskMenuTitle(segment)) {
-                                Button("Редактировать время…") { presentation = .interval(timed) }
-                                Button("Дата задачи…") { presentation = .date(timed) }
-                                Button(timed.isCompleted ? "Снова открыть" : "Завершить") {
-                                    model.setCompleted(!timed.isCompleted, for: timed)
-                                }
+                                OrbitTaskMenuActions(
+                                    task: timed,
+                                    onToggle: { model.setCompleted(!timed.isCompleted, for: timed) },
+                                    onEditDate: { presentation = .date(timed) },
+                                    onEditInterval: { presentation = .interval(timed) },
+                                    onRename: { renamePresentation = TaskRenamePresentation(task: timed) },
+                                    onDelete: { deletePresentation = TaskDeletePresentation(task: timed) }
+                                )
                             }
                         }
                     }
@@ -550,7 +561,7 @@ struct CalendarDayScreen: View {
             }
             Divider()
         }
-        .background(Color(.systemBackground))
+        .background(appearance.canvas)
     }
 
     private func untimedRow(_ id: UUID) -> some View {
@@ -560,6 +571,10 @@ struct CalendarDayScreen: View {
                     presentation = .date(task)
                 } onEditInterval: {
                     presentation = .interval(task)
+                } onRename: {
+                    renamePresentation = TaskRenamePresentation(task: task)
+                } onDelete: {
+                    deletePresentation = TaskDeletePresentation(task: task)
                 }
             }
         }

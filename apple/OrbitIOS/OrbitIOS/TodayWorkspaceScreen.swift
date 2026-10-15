@@ -31,6 +31,7 @@ struct TodayWorkspaceScreen: View {
         // of opening — never this workspace's possibly stale `currentDay` and
         // never a UTC-derived value.
         .orbitCreateAction(model: model, datePreset: { TaskDaySelection.currentDay() })
+        .onChange(of: showsCalendar) { _, _ in OrbitHaptics.selection() }
         .onAppear { refreshDay() }
         .onReceive(dayRefreshTimer) { _ in refreshDay(reloadTasks: false) }
         .onChange(of: currentDay) { _, _ in model.reload() }
@@ -54,20 +55,12 @@ struct TodayWorkspaceScreen: View {
     }
 }
 
-/// Compact «Список / Календарь» mode switcher for the Today section:
-/// segmented native control with an obvious selected state. Presentation
-/// state only — switching never clones, migrates or creates tasks.
+/// Compact native view menu; the icon follows the workspace's current mode.
+/// Its binding remains owned by the section and survives tab changes.
 struct TodayModeSwitcher: View {
     @Binding var showsCalendar: Bool
 
     var body: some View {
-        Picker("Вид", selection: $showsCalendar) {
-            Text("Список").tag(false)
-            Text("Календарь").tag(true)
-        }
-        .pickerStyle(.segmented)
-        .fixedSize()
-        .frame(minHeight: 44)
-        .accessibilityIdentifier("today-mode-switcher")
+        OrbitViewModeMenu(showsCalendar: $showsCalendar, identifier: "today-mode-switcher")
     }
 }

@@ -15,6 +15,8 @@ struct CompactCalendarTaskRow: View {
     let model: IOSInboxModel
     let onEditDate: () -> Void
     let onEditInterval: () -> Void
+    let onRename: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
@@ -47,7 +49,9 @@ struct CompactCalendarTaskRow: View {
                 task.isCompleted ? "Снова открыть: \(task.title)" : "Отметить выполненной: \(task.title)"
             )
 
-            Button(action: onEditDate) {
+            Menu {
+                menuActions
+            } label: {
                 Text(task.title)
                     .font(.subheadline)
                     .foregroundStyle(task.isCompleted ? Color.secondary : Color.primary)
@@ -60,19 +64,25 @@ struct CompactCalendarTaskRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(task.title)
-            .accessibilityHint("Открывает редактор даты; контекстное меню — время и завершение")
+            .accessibilityHint("Открывает меню задачи")
+            .orbitMenuFeedback()
         }
         .background(
             RoundedRectangle(cornerRadius: 7).fill(
                 task.isCompleted ? Color(.tertiarySystemFill) : Color(.secondarySystemBackground)
             )
         )
-        .contextMenu {
-            Button("Дата задачи…") { onEditDate() }
-            Button("Время задачи…") { onEditInterval() }
-            Button(task.isCompleted ? "Снова открыть" : "Завершить") {
-                model.setCompleted(!task.isCompleted, for: task)
-            }
-        }
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 7))
+        .orbitLongPressFeedback()
+        .contextMenu { menuActions }
+    }
+
+    private var menuActions: some View {
+        OrbitTaskMenuActions(
+            task: task,
+            onToggle: { model.setCompleted(!task.isCompleted, for: task) },
+            onEditDate: onEditDate, onEditInterval: onEditInterval,
+            onRename: onRename, onDelete: onDelete
+        )
     }
 }

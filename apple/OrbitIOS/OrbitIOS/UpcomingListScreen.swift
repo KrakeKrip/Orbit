@@ -10,6 +10,7 @@ import OrbitCore
 /// never part of the window. At the 2199-12-31 upper bound the window is
 /// clipped to the last valid day and the caption shows the actual range.
 struct UpcomingListScreen: View {
+    @Environment(\.orbitAppearance) private var appearance
     let model: IOSInboxModel
     /// The section's selected civil day — owned by `UpcomingWorkspaceScreen`.
     @Binding var selectedDay: String
@@ -60,7 +61,7 @@ struct UpcomingListScreen: View {
             // deterministic top row directly under the safe area, so the
             // switcher keeps its position when the view switches.
             .toolbar(.hidden, for: .navigationBar)
-            .background(Color(.systemBackground))
+            .background(appearance.canvas)
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):
@@ -148,6 +149,7 @@ struct UpcomingListScreen: View {
             }
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     /// Honest empty window: the message plus the actual range; the date and
@@ -163,7 +165,7 @@ struct UpcomingListScreen: View {
             ContentUnavailableView {
                 Label("В выбранном диапазоне задач нет", systemImage: "calendar")
             } description: {
-                Text("Выберите другую дату или добавьте задачу во Входящих.")
+                Text("Выберите другую дату или добавьте задачу кнопкой «+».")
             }
             Spacer(minLength: 0)
         }
@@ -227,7 +229,7 @@ struct UpcomingListScreen: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(.bar)
+        .background(appearance.canvas)
     }
 
     /// The jump is visible only away from today, compared as canonical
@@ -275,6 +277,7 @@ struct UpcomingListScreen: View {
         // View-local Russian date only for this control; the device/system
         // locale is never changed.
         .environment(\.locale, Locale(identifier: "ru_RU"))
+        .environment(\.calendar, Calendar.orbitCivil)
         .onChange(of: pickerDate) { _, newDate in
             select(TaskPlannedDate.civilDateString(from: newDate, calendar: gregorianNoon))
         }

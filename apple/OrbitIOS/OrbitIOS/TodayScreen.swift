@@ -16,6 +16,7 @@ import OrbitCore
 /// caption below stays, the bottom tab name is unchanged). Task dates are
 /// never rewritten.
 struct TodayScreen: View {
+    @Environment(\.orbitAppearance) private var appearance
     let model: IOSInboxModel
     let day: String
     var todayMode: Binding<Bool>? = nil
@@ -46,7 +47,7 @@ struct TodayScreen: View {
             // the safe area in the list and calendar alike, so the switcher
             // never moves (the former «Сегодня» title area is freed).
             .toolbar(.hidden, for: .navigationBar)
-            .background(Color(.systemBackground))
+            .background(appearance.canvas)
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):
@@ -77,6 +78,7 @@ struct TodayScreen: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .listRowSeparator(.hidden)
+                    .listRowBackground(appearance.canvas)
             }
             if !openTasks.isEmpty {
                 Section("Открытые") {
@@ -104,6 +106,7 @@ struct TodayScreen: View {
             }
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     private var listErrorView: some View {

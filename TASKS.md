@@ -25,7 +25,8 @@
 | NATIVE-ADD-003 | DONE | atomiccreateoptionalinterval вcore, безUI |
 | NATIVE-ADD-004 | DONE | editabledate/start/duration вsharedcreatesheet |
 | NATIVE-EDIT-002 | DONE | native rename/delete UI сconfirm иCancel |
-| NATIVE-DEVICE-001 | TODO (назначен; ожидает iPhone/Team) | личныйiPhone install/основныеflows/finalsmallUIpolish |
+| NATIVE-DEVICE-001 | INSTALLED / USER-CONFIRMED LAUNCH | установлен на личный iPhone; пользователь подтвердил запуск, полный physical smoke не заявляется |
+| NATIVE-UI-FEEDBACK-001 | IMPLEMENTED / OWNER CHECK | интерфейс и баги из ZIP; Simulator smoke и builds, ограничения в отчёте |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
 | NATIVE-PRJ-002 | TODO (план) | настоящий экран списка/создания проектов и нижняя вкладка |
 | NATIVE-PRJ-003 | TODO (план) | назначить проект задаче и список задач проекта |
