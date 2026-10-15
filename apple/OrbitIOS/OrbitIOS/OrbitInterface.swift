@@ -57,11 +57,11 @@ enum OrbitHaptics {
     }
     static func selection() {
         guard enabled else { return }
-        UISelectionFeedbackGenerator().selectionChanged()
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred(intensity: 0.85)
     }
     static func longPress() {
         guard enabled else { return }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        UIImpactFeedbackGenerator(style: .rigid).impactOccurred(intensity: 1)
     }
 }
 
@@ -95,14 +95,15 @@ private struct OrbitSecondaryStyle: ViewModifier {
 }
 private struct OrbitEditorSurface: ViewModifier {
     @Environment(\.orbitAppearance) private var appearance
+    @Environment(\.colorScheme) private var inheritedColorScheme
     func body(content: Content) -> some View {
         content
             .scrollContentBackground(.hidden)
             .background(appearance.canvas)
-            // An opaque semantic surface prevents the coral FAB underneath
-            // from bleeding into a half-height editor and changing its colors.
-            .presentationBackground(appearance.canvas)
-            .preferredColorScheme(appearance.colorScheme)
+            // Keep the system sheet's own backing surface and transition.
+            // A presentationBackground preference can repaint the full host
+            // before the sheet starts moving on current iOS releases.
+            .environment(\.colorScheme, appearance.colorScheme ?? inheritedColorScheme)
     }
 }
 private struct OrbitLongPressFeedback: ViewModifier {
@@ -166,6 +167,7 @@ struct OrbitSettingsButton: View {
 
 struct OrbitSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var inheritedColorScheme
     @AppStorage("orbit.ui.appearance") private var appearanceRaw = OrbitAppearance.system.rawValue
     @AppStorage("orbit.ui.haptics") private var haptics = true
     private var selectedAppearance: OrbitAppearance {
@@ -211,6 +213,6 @@ struct OrbitSettingsSheet: View {
             }
         }
         .environment(\.orbitAppearance, selectedAppearance)
-        .preferredColorScheme(selectedAppearance.colorScheme)
+        .environment(\.colorScheme, selectedAppearance.colorScheme ?? inheritedColorScheme)
     }
 }

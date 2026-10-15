@@ -19,6 +19,7 @@ struct DayTimelineView: View {
     @State private var selectedTaskID: UUID?
     @State private var editing: TimelineGestureEdit?
     @State private var gestureError: String?
+    @State private var lastGestureFinish = Date.distantPast
     @GestureState private var gestureActive = false
 
     /// Uniform linear hour height.
@@ -144,7 +145,8 @@ struct DayTimelineView: View {
 
         return TaskActionPopoverButton(task: task, range: range,
                                          previewWidth: min(300, max(160, containerWidth - 32)),
-                                         opensOnHold: false) { action in
+                                         opensOnHold: false,
+                                         canOpen: { editing == nil && Date.now.timeIntervalSince(lastGestureFinish) > 0.25 }) { action in
             switch action {
             case .toggle: if task.isCompleted { onReopen(task) } else { onComplete(task) }
             case .date: onEditDate(task)
@@ -195,7 +197,7 @@ struct DayTimelineView: View {
             alignment: .top
         )
         .clipped()
-        .highPriorityGesture(moveGesture(task: task, segment: segment))
+        .simultaneousGesture(moveGesture(task: task, segment: segment))
         .overlay {
             if selectedTaskID == task.id {
                 RoundedRectangle(cornerRadius: 3).stroke(.white, lineWidth: 2)
@@ -322,6 +324,9 @@ struct DayTimelineView: View {
 
     private func finish() {
         guard let edit = editing else { return }
+        // A completed hold/drag must not also open the button on release.
+        // Ordinary taps never begin an edit and remain available.
+        lastGestureFinish = .now
         editing = nil
         guard let candidate = edit.candidate,
               candidate.time != edit.time || candidate.duration != edit.duration else { return }
@@ -354,7 +359,8 @@ struct DayTimelineView: View {
             .updating($gestureActive) { _, state, _ in state = true }
             .onChanged { value in
                 switch value {
-                case .first(true): begin(.move, task: task, segment: segment)
+                // The first phase starts at touch-down, before the hold
+                // threshold. Only the second phase may enter edit mode.
                 case .second(true, let drag):
                     begin(.move, task: task, segment: segment)
                     if let drag { update(drag.translation.height) }

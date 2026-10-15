@@ -34,8 +34,8 @@ struct OrbitCreateButton: View {
 
     private var symbol: some View {
         Image(systemName: "plus")
-            .font(.system(size: 24, weight: .medium))
-            .frame(width: 40, height: 40)
+            .font(.system(size: 27, weight: .medium))
+            .frame(width: 48, height: 48)
     }
 }
 
@@ -70,7 +70,6 @@ private struct OrbitCreateHostModifier: ViewModifier {
                             OrbitHaptics.selection()
                             presentation = TaskCreateSheetPresentation(datePreset: datePreset())
                         }
-                        .opacity(presentation == nil ? 1 : 0)
                         .allowsHitTesting(presentation == nil)
                         .accessibilityHidden(presentation != nil)
                         .padding(.trailing, 16)
