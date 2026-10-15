@@ -1,18 +1,9 @@
 import SwiftUI
 
-/// NATIVE-UI-MODE/R1: the one common «Список / Календарь» mode row
-/// composition, hosted as the first row directly under the safe area by all
-/// four leaf presentations (Today/Upcoming × list/calendar — no navigation
-/// title or bar above it on any of them, so the control keeps its physical
-/// position when a section switches views). The switcher control itself
-/// stays the section's existing segmented `TodayModeSwitcher`/
-/// `UpcomingModeSwitcher` (one definition per section, no duplicated
-/// `Picker`); `NativeModeHeader` hosts it leading with the same insets,
-/// height and `.bar` band everywhere. The trailing content (calendar «⋯»
-/// menu, fixed-day caption) never shifts the switcher: it is fixed-size and
-/// the spacer absorbs the slack, so a row without trailing content keeps the
-/// control in the same leading position as the calendar rows.
+/// Shared top row: contextual content leading, view and settings controls
+/// trailing. The row stays in the same safe-area position in either view.
 struct NativeModeHeader<Switcher: View, Trailing: View>: View {
+    @Environment(\.orbitAppearance) private var appearance
     private let switcher: Switcher
     private let trailing: Trailing
 
@@ -23,13 +14,14 @@ struct NativeModeHeader<Switcher: View, Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            switcher
-            Spacer(minLength: 8)
             trailing
+            Spacer(minLength: 8)
+            switcher
+            OrbitSettingsButton()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(.bar)
+        .background(appearance.canvas)
     }
 }
 

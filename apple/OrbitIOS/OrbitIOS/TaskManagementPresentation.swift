@@ -107,19 +107,16 @@ struct TaskRenameSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
+            Form {
+                Section {
                     TextField("Название задачи", text: $title, prompt: Text("Название задачи"))
                         .focused($titleFieldFocused)
                         .submitLabel(.done)
                         .onSubmit(save)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(
-                            Color(.secondarySystemBackground),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        )
+
                         .accessibilityIdentifier("rename-title-field")
+                }
+                Section {
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
@@ -131,22 +128,22 @@ struct TaskRenameSheet: View {
                         Text("Сохранить")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orbitAccent)
+                    .orbitPrimaryStyle()
                     .accessibilityIdentifier("rename-save-button")
 
                     Button("Отмена") { dismiss() }
-                        .buttonStyle(.bordered)
+                        .orbitSecondaryStyle()
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("rename-cancel-button")
                 }
-                .padding(16)
             }
+            .orbitEditorSurface()
             .navigationTitle("Переименовать")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { titleFieldFocused = true }
         }
         .presentationDetents([.medium, .large])
+        .orbitEditorSurface()
     }
 
     private func save() {
@@ -159,5 +156,27 @@ struct TaskRenameSheet: View {
             saved = true
             dismiss()
         }
+    }
+}
+
+/// Shared menu vocabulary; each surface supplies callbacks to its stable host.
+struct OrbitTaskMenuActions: View {
+    let task: OrbitTask
+    let onToggle: () -> Void
+    let onEditDate: () -> Void
+    let onEditInterval: () -> Void
+    let onRename: () -> Void
+    let onDelete: () -> Void
+    var body: some View {
+        Button(action: onToggle) {
+            Label(task.isCompleted ? "Снова открыть" : "Завершить",
+                  systemImage: task.isCompleted ? "arrow.uturn.backward" : "checkmark.circle")
+        }
+        Button(action: onEditDate) { Label("Дата…", systemImage: "calendar") }
+        Button(action: onEditInterval) { Label("Время и длительность…", systemImage: "clock") }
+            .disabled(task.plannedDate == nil)
+        Divider()
+        Button(action: onRename) { Label("Переименовать…", systemImage: "pencil") }
+        Button(role: .destructive, action: onDelete) { Label("Удалить…", systemImage: "trash") }
     }
 }

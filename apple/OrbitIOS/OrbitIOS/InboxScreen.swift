@@ -28,6 +28,7 @@ enum InboxSheetPresentation: Identifiable {
 /// (always undated here); a write error stays visible as a banner above the
 /// content, next to the list or the empty state.
 struct InboxScreen: View {
+    @Environment(\.orbitAppearance) private var appearance
     @State private var model: IOSInboxModel
     @State private var presentation: InboxSheetPresentation?
 
@@ -38,6 +39,13 @@ struct InboxScreen: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                HStack {
+                    Text("Входящие").font(.title2.bold())
+                    Spacer()
+                    OrbitSettingsButton()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
                 if let writeError = model.writeError {
                     writeErrorBanner(writeError)
                 }
@@ -51,9 +59,8 @@ struct InboxScreen: View {
                     }
                 }
             }
-            .navigationTitle("Входящие")
-            .navigationBarTitleDisplayMode(.large)
-            .background(Color(.systemBackground))
+            .toolbar(.hidden, for: .navigationBar)
+            .background(appearance.canvas)
             .sheet(item: $presentation) { item in
                 switch item {
                 case .date(let task):
@@ -78,6 +85,7 @@ struct InboxScreen: View {
                         } onEditInterval: {
                             presentation = .interval(task)
                         }
+                        .listRowBackground(appearance.canvas)
                     }
                 }
             }
@@ -89,11 +97,13 @@ struct InboxScreen: View {
                         } onEditInterval: {
                             presentation = .interval(task)
                         }
+                        .listRowBackground(appearance.canvas)
                     }
                 }
             }
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     private var emptyView: some View {
@@ -141,6 +151,7 @@ struct InboxScreen: View {
 /// wrap instead of being truncated; hit areas are ≥ 44pt; rows are lower
 /// through tighter vertical padding only.
 struct InboxRowView: View {
+    @Environment(\.orbitAppearance) private var appearance
     let task: OrbitTask
     let model: IOSInboxModel
     /// Row presentation flag (NATIVE-LIST-001): show the planned-date
@@ -200,6 +211,7 @@ struct InboxRowView: View {
             taskBodyMenu
         }
         .padding(.vertical, 2)
+        .listRowBackground(appearance.canvas)
         .alignmentGuide(.listRowSeparatorLeading) { dimensions in
             dimensions[.leading] + 44 + 14
         }
@@ -215,20 +227,22 @@ struct InboxRowView: View {
     /// mutates anything, and the circle never triggers it.
     /// NATIVE-EDIT-002: the same shared menu gains «Переименовать…» and the
     /// destructive «Удалить…» (date/time items unchanged, the completion
-    /// circle stays independent); from the calendar the list remains the edit
-    /// route, and a rename/delete here is at once visible in the calendar of
-    /// the same shared UUID.
+    /// circle stays independent). Calendar cards use the same actions and
+    /// shared UUIDs, so mutations are reflected across both presentations.
+    private var taskMenuActions: some View {
+        OrbitTaskMenuActions(
+            task: task,
+            onToggle: { model.setCompleted(!task.isCompleted, for: task) },
+            onEditDate: onEditDate,
+            onEditInterval: onEditInterval,
+            onRename: { renamePresentation = TaskRenamePresentation(task: task) },
+            onDelete: { deletePresentation = TaskDeletePresentation(task: task) }
+        )
+    }
+
     private var taskBodyMenu: some View {
         Menu {
-            Button("Дата…") { onEditDate() }
-            timeMenuButton
-            Divider()
-            Button("Переименовать…") {
-                renamePresentation = TaskRenamePresentation(task: task)
-            }
-            Button("Удалить…", role: .destructive) {
-                deletePresentation = TaskDeletePresentation(task: task)
-            }
+            taskMenuActions
         } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
@@ -252,21 +266,13 @@ struct InboxRowView: View {
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .contentShape(Rectangle())
         }
+        .contextMenu { taskMenuActions }
+        .orbitLongPressFeedback()
+        .orbitMenuFeedback()
         .accessibilityLabel(task.title)
     }
 
-    /// Time/duration is offered only once the task has a planned date (the
-    /// interval editor requires one); an undated task starts with «Дата…» —
-    /// today is never assigned silently.
-    @ViewBuilder
-    private var timeMenuButton: some View {
-        if task.plannedDate != nil {
-            Button("Время и длительность…") { onEditInterval() }
-        } else {
-            Button("Время и длительность — сначала назначьте дату") { }
-                .disabled(true)
-        }
-    }
+
 }
 
 /// Round Todoist-like completion control: calm gray outline, coral fill with a

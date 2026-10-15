@@ -28,47 +28,56 @@ struct TaskDateSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                Text(task.title)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 16)
-                DatePicker("Дата", selection: $draftDate, displayedComponents: [.date])
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
+            Form {
+                Section("Задача") {
+                    Text(task.title)
+                        .font(.body.weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Section("Дата") {
+                    DatePicker("Дата", selection: $draftDate, in: dateRange, displayedComponents: [.date])
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                        .environment(\.locale, Locale(identifier: "ru_RU"))
+                        .environment(\.calendar, Calendar.orbitCivil)
+                }
                 if let errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                        .accessibilityIdentifier("date-error")
-                }
-                Button(action: save) {
-                    Text("Сохранить")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.orbitAccent)
-                Button("Отмена") { dismiss() }
-                    .buttonStyle(.bordered)
-                    .frame(maxWidth: .infinity)
-                if task.plannedDate != nil {
-                    Button(role: .destructive, action: clearDate) {
-                        Label("Убрать дату", systemImage: "calendar.badge.minus")
-                            .frame(maxWidth: .infinity)
+                    Section {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .accessibilityIdentifier("date-error")
                     }
-                    .buttonStyle(.bordered)
                 }
-                Spacer(minLength: 0)
+                Section {
+                    Button(action: save) {
+                        Text("Сохранить").frame(maxWidth: .infinity)
+                    }
+                    .orbitPrimaryStyle()
+                    Button("Отмена") { dismiss() }
+                        .orbitSecondaryStyle()
+                        .frame(maxWidth: .infinity)
+                    if task.plannedDate != nil {
+                        Button(role: .destructive, action: clearDate) {
+                            Label("Убрать дату", systemImage: "calendar.badge.minus")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .orbitSecondaryStyle()
+                    }
+                }
             }
-            .padding(16)
+            .orbitEditorSurface()
             .navigationTitle("Дата задачи")
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium, .large])
+        .orbitEditorSurface()
+    }
+
+    private var dateRange: ClosedRange<Date> {
+        let lower = TaskPlannedDate.date(fromCivilDateString: "1900-01-01")!
+        let upper = TaskPlannedDate.date(fromCivilDateString: "2199-12-31")!
+        return lower...upper
     }
 
     private func save() {

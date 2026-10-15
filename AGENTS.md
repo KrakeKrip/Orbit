@@ -1,6 +1,6 @@
 ## Актуальный статус 2026-10-15
 
-EDIT002DONEHEAD79e180f/mainmerge4c97c6da5e9e8726dc7d5edf5194ff69704f618f. IndependentiOSbuild/sourceidentityPASS, executorsyntheticGUIreviewed/ownlatestGUIнеповторялся. Назначен толькоtasks/NATIVE-DEVICE-001.md/taskNATIVE-DEVICE-001/worktree /Users/atlhnv/Codex/orbit-worktrees/NATIVE-DEVICE-001: read-onlyphysicalpreflight/owner-assistedinstall/manualsmoke, docs/reportonly. Currentpreflightphysical0(simulated1), projectDEVELOPMENT_TEAMне задан. Безsamovolnyhsigning/AppleID/profiles/settings/appwipe. OwnerподключаетiPhone/выбираетTeamвXcode; доэтогоAWAITING_DEVICE/OWNER_SETUP, неDONE. Deadlines/reminders/notificationsпослеfirstphysicalcheck. Новыепродуктовыетаски/полишненазначены. Reportsfile/chatshort.
+Пользователь подтвердил запуск Orbit на личном iPhone после NATIVE-DEVICE-001. Это подтверждение запуска, не полный physical smoke. По прямому поручению пользователя Codex самостоятельно выполняет NATIVE-UI-FEEDBACK-001: интерфейс и баги из пользовательского ZIP. GLM сейчас не назначен. Core/schema/личные данные/подпись не менять; крупные функции из архива сохранены в docs/NATIVE-FEEDBACK-BACKLOG.md. Подробности проверок и ограничения — reports/NATIVE-UI-FEEDBACK-001-executor.md. Полный физический smoke, haptics и hold остаются отдельной проверкой владельца. Reports в файл, чат коротко.
 
 # Orbit — правила координации
 

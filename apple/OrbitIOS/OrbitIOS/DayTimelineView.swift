@@ -16,6 +16,8 @@ import OrbitCore
 /// Full title/range stay in the accessibility labels. No resize/drag, no
 /// stored layout, no new core API.
 struct DayTimelineView: View {
+    @Environment(\.orbitAppearance) private var appearance
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let segments: [TaskDayIntervalSegment]
     /// Resolves a projected task UUID to the live shared-model task object.
     let task: (UUID) -> OrbitTask?
@@ -23,6 +25,8 @@ struct DayTimelineView: View {
     let onComplete: (OrbitTask) -> Void
     let onReopen: (OrbitTask) -> Void
     let onEditDate: (OrbitTask) -> Void
+    let onRename: (OrbitTask) -> Void
+    let onDelete: (OrbitTask) -> Void
 
     /// Uniform linear hour height.
     private let hourHeight: CGFloat = 64
@@ -38,9 +42,10 @@ struct DayTimelineView: View {
                     ZStack(alignment: .topLeading) {
                         ruler
                         blocks(containerWidth: geometry.size.width)
+                            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: segments)
                     }
                     .frame(width: geometry.size.width, height: 24 * hourHeight + 24)
-                    .background(Color(.systemBackground))
+                    .background(appearance.canvas)
                 }
                 .onAppear {
                     proxy.scrollTo("hour-8", anchor: .top)
@@ -58,6 +63,8 @@ struct DayTimelineView: View {
                     Text(String(format: "%02d:00", hour))
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                         .frame(width: 44, alignment: .leading)
                     Rectangle()
                         .fill(Color(.systemGray5))
@@ -72,6 +79,8 @@ struct DayTimelineView: View {
                 Text("24:00")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .frame(width: 44, alignment: .leading)
                 Rectangle()
                     .fill(Color(.systemGray5))
@@ -115,7 +124,9 @@ struct DayTimelineView: View {
         let endTimeText = segment.endMinute == 1440 ? "24:00" : clockString(segment.endMinute)
         let range = "\(clockString(segment.startMinute))–\(endTimeText)\(continuationMarkers(segment))"
 
-        return Button(action: { onEditInterval(task) }) {
+        return Menu {
+            menuActions(for: task)
+        } label: {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(task.isCompleted ? Color(.systemGray4) : Color.orbitAccent.opacity(0.85))
@@ -158,30 +169,50 @@ struct DayTimelineView: View {
             alignment: .top
         )
         .clipped()
-        .offset(x: blockX(laneIndex: laneIndex, laneCount: laneCount, containerWidth: containerWidth), y: startOffset)
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 6))
         .contextMenu {
-            Button(task.isCompleted ? "Снова открыть" : "Завершить") {
-                if task.isCompleted {
-                    onReopen(task)
-                } else {
-                    onComplete(task)
-                }
+            menuActions(for: task)
+        } preview: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(task.title).font(.headline)
+                Text(range).font(.subheadline.monospacedDigit())
             }
-            Button("Дата задачи…") { onEditDate(task) }
+            .padding(14)
+            .frame(width: min(300, max(160, containerWidth - 32)), alignment: .leading)
+            .background(appearance.canvas, in: RoundedRectangle(cornerRadius: 14))
         }
+        .orbitLongPressFeedback()
+        .orbitMenuFeedback()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(task.title), \(range)")
-        .accessibilityHint("Открывает редактор времени задачи; меню «Задачи дня» в шапке — полный список")
+        .accessibilityHint("Открывает меню задачи; меню в шапке — полный список")
         .accessibilityAddTraits(task.isCompleted ? [.isSelected] : [])
+        // Position outside the interactive source: the menu's local source
+        // rect no longer includes a translated, origin-based snapshot.
+        .position(
+            x: blockX(laneIndex: laneIndex, laneCount: laneCount, containerWidth: containerWidth)
+                + laneWidth(laneCount: laneCount, containerWidth: containerWidth) / 2,
+            y: startOffset + paintedHeight / 2
+        )
+    }
+
+    private func menuActions(for task: OrbitTask) -> some View {
+        OrbitTaskMenuActions(
+            task: task,
+            onToggle: { if task.isCompleted { onReopen(task) } else { onComplete(task) } },
+            onEditDate: { onEditDate(task) }, onEditInterval: { onEditInterval(task) },
+            onRename: { onRename(task) }, onDelete: { onDelete(task) }
+        )
     }
 
     private func laneWidth(laneCount: Int, containerWidth: CGFloat) -> CGFloat {
         let available = containerWidth - Self.laneInset - Self.laneTrailing
-        return max(2, available / CGFloat(max(laneCount, 1)) - Self.laneGutter)
+        let count = CGFloat(max(laneCount, 1))
+        return max(1, (available - (count - 1) * Self.laneGutter) / count)
     }
 
     private func blockX(laneIndex: Int, laneCount: Int, containerWidth: CGFloat) -> CGFloat {
-        Self.laneInset + CGFloat(laneIndex) * laneWidth(laneCount: laneCount, containerWidth: containerWidth)
+        Self.laneInset + CGFloat(laneIndex) * (laneWidth(laneCount: laneCount, containerWidth: containerWidth) + Self.laneGutter)
     }
 
     private func clockString(_ minute: Int) -> String {

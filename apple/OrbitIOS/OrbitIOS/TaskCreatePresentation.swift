@@ -15,19 +15,27 @@ struct OrbitCreateButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: "plus")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundStyle(Color.white)
-                .frame(width: 56, height: 56)
-                .background(Circle().fill(Color.orbitAccent))
-                // Modest depth only so the circle reads as floating over the
-                // content; no custom tab bar, material or glass imitation.
-                .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+        Group {
+            if #available(iOS 26.0, *) {
+                Button(action: action) { symbol }
+                    .buttonStyle(.glassProminent)
+                    .buttonBorderShape(.circle)
+                    .tint(.orbitAccent)
+            } else {
+                Button(action: action) { symbol }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.circle)
+                    .tint(.orbitAccent)
+            }
         }
-        .buttonStyle(.plain)
         .accessibilityLabel("Добавить задачу")
         .accessibilityIdentifier("create-task-fab")
+    }
+
+    private var symbol: some View {
+        Image(systemName: "plus")
+            .font(.system(size: 24, weight: .medium))
+            .frame(width: 40, height: 40)
     }
 }
 
@@ -59,8 +67,12 @@ private struct OrbitCreateHostModifier: ViewModifier {
                     .frame(height: 0)
                     .overlay(alignment: .bottomTrailing) {
                         OrbitCreateButton {
+                            OrbitHaptics.selection()
                             presentation = TaskCreateSheetPresentation(datePreset: datePreset())
                         }
+                        .opacity(presentation == nil ? 1 : 0)
+                        .allowsHitTesting(presentation == nil)
+                        .accessibilityHidden(presentation != nil)
                         .padding(.trailing, 16)
                         .padding(.bottom, 16)
                     }
@@ -157,11 +169,11 @@ struct TaskCreateSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    titleField
-                    dateSection
-                    timeSection
+            Form {
+                Section { titleField }
+                Section { dateSection }
+                Section { timeSection }
+                Section {
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
@@ -173,23 +185,23 @@ struct TaskCreateSheet: View {
                         Text("Добавить")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orbitAccent)
+                    .orbitPrimaryStyle()
                     .disabled(!addEnabled)
                     .accessibilityIdentifier("create-add-button")
 
                     Button("Отмена") { dismiss() }
-                        .buttonStyle(.bordered)
+                        .orbitSecondaryStyle()
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("create-cancel-button")
                 }
-                .padding(16)
             }
+            .orbitEditorSurface()
             .navigationTitle("Новая задача")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { titleFieldFocused = true }
         }
         .presentationDetents([.medium, .large])
+        .orbitEditorSurface()
     }
 
     // MARK: - Sections
@@ -199,12 +211,6 @@ struct TaskCreateSheet: View {
             .focused($titleFieldFocused)
             .submitLabel(.done)
             .onSubmit(submit)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(
-                Color(.secondarySystemBackground),
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-            )
             .accessibilityIdentifier("create-title-field")
     }
 
@@ -227,6 +233,7 @@ struct TaskCreateSheet: View {
                 .datePickerStyle(.wheel)
                 .labelsHidden()
                 .environment(\.locale, Locale(identifier: "ru_RU"))
+                .environment(\.calendar, Calendar.orbitCivil)
                 .accessibilityIdentifier("create-date-picker")
                 .onChange(of: pickerDate) { _, newDate in
                     draftDate = TaskPlannedDate.civilDateString(from: newDate)
@@ -243,8 +250,7 @@ struct TaskCreateSheet: View {
                     Label("Выбрать эту дату", systemImage: "calendar.badge.checkmark")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.orbitAccent)
+                .orbitPrimaryStyle()
                 .accessibilityIdentifier("create-confirm-date")
                 if draftDate != nil {
                     Button(role: .destructive) {
@@ -256,7 +262,7 @@ struct TaskCreateSheet: View {
                         Label("Убрать дату", systemImage: "calendar.badge.minus")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .orbitSecondaryStyle()
                     .accessibilityIdentifier("create-clear-date")
                 }
             }
@@ -355,7 +361,7 @@ struct TaskCreateSheet: View {
                     Label("Убрать время", systemImage: "clock.badge.minus")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .orbitSecondaryStyle()
                 .accessibilityIdentifier("create-clear-time")
             }
         }

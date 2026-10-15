@@ -182,11 +182,11 @@ struct TaskIntervalSheet: View {
                         Text("Сохранить")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orbitAccent)
+                    .orbitPrimaryStyle()
                     .disabled(!saveEnabled)
                     .accessibilityIdentifier("interval-save")
                     Button("Отмена") { dismiss() }
+                        .orbitSecondaryStyle()
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("interval-cancel")
                     if task.plannedTime != nil {
@@ -198,11 +198,13 @@ struct TaskIntervalSheet: View {
                     }
                 }
             }
+            .orbitEditorSurface()
             .navigationTitle("Время задачи")
             .navigationBarTitleDisplayMode(.inline)
             .interactiveDismissDisabled(false)
         }
         .presentationDetents([.large])
+        .orbitEditorSurface()
     }
 
     // MARK: - Draft values
@@ -275,7 +277,7 @@ struct TaskIntervalSheet: View {
             )
         else { return nil }
         let crossing = end.date != plannedDate ? " (+1 день)" : ""
-        return "Закончится в \(end.time)\(crossing)"
+        return "\(end.time)\(crossing)"
     }
 
     /// Human-readable assigned date for the context line (Russian, view-local).
