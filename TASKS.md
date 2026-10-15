@@ -32,8 +32,9 @@
 | NATIVE-CALENDAR-PREVIEW | IMPLEMENTED / OWNER CHECK | карточка над действиями по tap, исходный блок остаётся в сетке; отчёт и Simulator evidence |
 | NATIVE-UI-FEEDBACK-001 | IMPLEMENTED / OWNER CHECK | интерфейс и баги из ZIP; Simulator smoke и builds, ограничения в отчёте |
 | NATIVE-PRJ-001 | IMPLEMENTED / SELF-CHECK | core list/create/rename, 98/98 tests, previous-source disk upgrade и iOS build PASS; UI отдельно |
-| NATIVE-PRJ-002 | TODO (подготовлен) | настоящий экран списка/create/rename проектов и нижняя вкладка; tasks/NATIVE-PRJ-002.md |
-| NATIVE-PRJ-003 | TODO (план) | назначить проект задаче и список задач проекта |
+| NATIVE-PRJ-002 | IMPLEMENTED / SELF-CHECK | вкладка, create/rename, dark/AXL/relaunch и store-сохранность PASS; swipe UNVERIFIED |
+| NATIVE-PRJ-003 | TODO (подготовлен) | core принадлежности задачи проекту; tasks/NATIVE-PRJ-003.md |
+| NATIVE-PRJ-004 | TODO (план) | UI назначения проекта и список задач проекта |
 | NATIVE-007D | TODO (план) | перенос из «Без времени» в сетку, отдельный scope перед выдачей |
 | NATIVE-007E | TODO (план) | изменение длительности жестом |
 | NATIVE-007F | TODO (план) | плавная компоновка пересекающихся интервалов |

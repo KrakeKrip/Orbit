@@ -103,6 +103,8 @@ enum IOSInboxFormatting {
 final class IOSInboxModel {
     private let store: OrbitTaskStore
 
+    private(set) var projects: [OrbitProject] = []
+    private(set) var projectListError: String?
     private(set) var tasks: [OrbitTask] = []
     private(set) var listError: String?
     private(set) var writeError: String?
@@ -121,11 +123,47 @@ final class IOSInboxModel {
     }
 
     func reload() {
+        reloadProjects()
         do {
             tasks = try store.tasks()
             listError = nil
         } catch {
             listError = IOSInboxFormatting.storageMessage(error)
+        }
+    }
+
+    func reloadProjects() {
+        do {
+            projects = try store.projects()
+            projectListError = nil
+        } catch {
+            projectListError = "Не удалось загрузить проекты. \(error.localizedDescription)"
+        }
+    }
+
+    /// A successful save stays a success even if the subsequent list read fails.
+    /// The same store/context is shared with tasks; no second container is opened.
+    func saveProject(name: String, for id: UUID?) -> String? {
+        do {
+            if let id {
+                try store.renameProject(name: name, for: id)
+            } else {
+                try store.addProject(name: name)
+            }
+            reloadProjects()
+            return nil
+        } catch {
+            reloadProjects()
+            switch error {
+            case ProjectNameError.empty:
+                return "Введите название проекта."
+            case ProjectNameError.tooLong(let limit):
+                return "Название не должно превышать \(limit) символов."
+            case OrbitProjectStoreError.projectNotFound:
+                return "Проект не найден. Закройте форму и обновите список."
+            default:
+                return "Не удалось сохранить проект. \(error.localizedDescription)"
+            }
         }
     }
 
