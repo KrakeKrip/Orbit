@@ -1,93 +1,45 @@
-# Orbit — native macOS Inbox (NATIVE-001)
+# OrbitCore и macOS-прототип
 
-Первый локальный вертикальный срез Orbit на Swift/SwiftUI: один экран «Входящие»
-с добавлением, завершением/повторным открытием задач и локальным SwiftData
-хранилищем на диске. Без сервера, аккаунтов, синхронизации и CloudKit
-(`cloudKitDatabase: .none`). iOS target в этом TASK отсутствует; shared-код в
-OrbitCore написан без AppKit/HTTP и пригоден для будущего iOS 17+ target, но
-сборка/GUI на iOS НЕ ПРОВЕРЕНЫ.
+Swift package с общей логикой native Orbit и ранним macOS Inbox. Основной пользовательский клиент сейчас — [iPhone-приложение](../OrbitIOS/README.md); актуальный обзор — в [корневом README](../../README.md).
 
 ## Структура
 
-- `Sources/OrbitCore` — SwiftData-модель `OrbitTask` (стабильный UUID, title,
-  createdAt, completedAt, nullable plannedDate/plannedTime/durationMinutes),
-  валидация заголовка (trim, 1…500 Unicode scalars), disk store с явным
-  save/rollback, централизованные пути хранения и разбор `--store-path`.
-  Без AppKit/HTTP.
-- `Sources/OrbitMac` — SwiftUI app entry и единственный экран Inbox
-  (добавление по Enter/кнопке, секции «Открытые»/«Завершённые», native
-  checkbox-контроль завершения, честные ошибки без подмены хранилища).
-- `Tests/OrbitCoreTests` — Swift Testing: валидация, операции store, disk
-  reopen regression, негативное открытие, разбор аргументов запуска.
+- `Sources/OrbitCore` — SwiftData-модель `OrbitTask`, операции хранилища, валидация названия/даты/интервала, выборки на день, календарная проекция и чистые расчёты жестов.
+- `Sources/OrbitMac` — SwiftUI Inbox-прототип. macOS-этап приостановлен, паритет с iOS не заявляется.
+- `Tests/OrbitCoreTests` — Swift Testing: проверки правил, отказов до мутаций, сохранения и повторного открытия, проекций и календарной арифметики.
 
-## Временной интервал задачи (NATIVE-004, core only)
+Swift tools version 6.0; минимумы пакета — macOS 14 / iOS 17. OrbitCore не зависит от AppKit, UIKit, HTTP или CloudKit-синхронизации.
 
-`plannedTime` — строгий ASCII `HH:mm` (00:00–23:59), `durationMinutes` — целое
-1…1440; оба поля nullable и существуют только парой (обе nil или обе заданы)
-и только у задачи с `plannedDate`. Store-операция `setPlannedInterval` валидирует
-весь кандидат до мутации (пара/формат/границы/наличие даты/derived end) и
-сохраняет явно с rollback; `setPlannedDate(nil)` очищает интервал тем же save,
-перенос даты сохраняет валидную пару, а вариант с выходом derived end за
-Gregorian 1900–2199 отвергается. Derived end (может переходить через полночь)
-не хранится — считает pure-хелпер `TaskTimeInterval.end` целочисленной civil
-арифметикой без Calendar/TimeZone/DST. UI-редактор — отдельный будущий TASK.
+## Сборка, тесты и запуск
 
-## Проекция интервала на календарный день (NATIVE-007A, read-only)
-
-`TaskDayProjector.project(day:in:)` — pure-проекция на один выбранный civil
-день `YYYY-MM-DD` для будущей сетки 00:00–24:00 (NATIVE-007B). Результат
-`TaskDayProjection`: `untimedTaskIDs` (задачи дня без пары, в исходном
-порядке) и `timedSegments` — half-open сегменты `[start, end)` в минутах
-0…1440 с флагами перехода через полночь. Same-day интервал даёт сегмент
-`start…end` на своём дне; overnight — `start…1440` + `continuesIntoNextDay`
-на дне старта и положительный `0…end` + `continuesFromPreviousDay` на
-следующем; end ровно в полночь не создаёт zero-length сегмент. Невалидные
-partial/вне-диапазона интервалы исключаются (не чинятся); завершённые задачи
-не выбрасываются; пересекающиеся остаются отдельными сегментами (без
-lanes/columns); сортировка start/end/UUID-строка. Derived end не хранится;
-невалидный день или день вне 1900–2199 → пустой результат. Никаких мутаций,
-новых UUID или Calendar/TimeZone конверсий.
-
-## Требования
-
-- macOS 14+ (собрано и проверено на текущей системе с Xcode 27.0 / macOS 27.0 SDK).
-- Для сборки используется установленный Xcode через `DEVELOPER_DIR`;
-  системный `xcode-select` не переключается.
-
-## Сборка, тесты, запуск
+Из корня репозитория:
 
 ```sh
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 cd apple/Orbit
+swift build
+swift test
 
-# сборка
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift build
-
-# тесты (Swift Testing; временные хранилища создаются в собственном temp)
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
-
-# запуск GUI с хранилищем по умолчанию
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run OrbitMac
-
-# запуск GUI на отдельном временном хранилище (для review/test)
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run OrbitMac -- \
-  --store-path /tmp/orbit-review/store.sqlite
+# Отдельное хранилище для разработки macOS-прототипа
+swift run OrbitMac --store-path /tmp/orbit-mac-review/Orbit.store
 ```
 
-## Хранилище
+Без явного пути macOS использует `~/Library/Application Support/OrbitNative/Orbit.store`. Допустимы `--store-path <путь>` и `--store-path=<путь>`. iOS открывает собственную базу в sandbox и этот resolver не использует.
 
-- Путь по умолчанию (централизован в `OrbitStoreLocation.defaultStoreURL()`):
-  `~/Library/Application Support/OrbitNative/Orbit.store`.
-- Переопределение на запуск: `--store-path <путь>` или `--store-path=<путь>`
-  (`~` раскрывается; при отсутствии/пустом значении используется путь по
-  умолчанию). App-слой создаёт родительский каталог выбранного пути; сама
-  OrbitTaskStore каталоги не создаёт (ошибка открытия — явное состояние).
-- Приложение не читает и не удаляет существующие пользовательские хранилища;
-  для проверок используйте отдельный temp-путь. Ошибка открытия хранилища
-  показывается как состояние ошибки — без удаления файла и без подмены на
-  пустую in-memory базу.
+## Контракты данных
 
-## Границы (не входит в NATIVE-001)
+- Стабильный UUID задачи; название после trim — 1…500 Unicode scalars.
+- `plannedDate` — необязательная Gregorian civil-дата `YYYY-MM-DD`, 1900–2199.
+- `plannedTime` — ASCII `HH:mm`, 00:00–23:59. Время и `durationMinutes` существуют только полной парой и требуют даты.
+- Новая запись интервала: 5…1440 минут. Core не требует кратности пяти: 6/7 минут допустимы. Существующие интервалы 1…4 читаются без нормализации.
+- Derived end рассчитывается целочисленной civil-арифметикой и может переходить через полночь; отдельно не сохраняется. Кандидат с концом вне поддерживаемого диапазона дат отвергается.
+- Удаление даты очищает время и длительность. Переименование сохраняет UUID и остальные поля. Удаление задачи — hard delete одной строки.
+- Запись проходит валидацию и явный save с rollback при ошибке; создание с датой и интервалом атомарно.
 
-Rename/delete, проекты, планирование (Today/Upcoming), notes/priority,
-subtasks/recurrence, экспорт, упаковка/подпись macOS, iOS app target,
-синхронизация и сервер — следующие TASK.
+`TaskDayProjector` создаёт half-open сегменты `[start, end)` для суток: overnight разбивается по границе дня, zero-length продолжение на полночь не создаётся. Ошибочные интервалы не исправляются при чтении; завершённые задачи остаются в проекции.
+
+`TaskTimelineAdjustment` рассчитывает перенос с привязкой начала к 5 минутам и resize с привязкой длительности к 10 минутам / минимумом 5. UI-жест и сохранение принадлежат iOS-клиенту, а не чистому helper.
+
+## Границы
+
+macOS и iPhone используют независимые локальные stores. Серверной синхронизации, экспорта и восстановления нет. Не используйте личные базы для тестирования и не удаляйте store при ошибке открытия. Последний полный зафиксированный core-прогон — 93/93 на этапе [NATIVE-TASK-GESTURES](../../reports/NATIVE-TASK-GESTURES-executor.md); это исторический результат, не новый запуск из этой инструкции.
