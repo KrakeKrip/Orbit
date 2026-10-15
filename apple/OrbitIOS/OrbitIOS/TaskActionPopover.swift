@@ -12,6 +12,7 @@ struct TaskActionPopoverButton<Content: View>: View {
     let range: String
     let previewWidth: CGFloat
     var opensOnHold = true
+    var canOpen: () -> Bool = { true }
     let onAction: (OrbitTaskAction) -> Void
     @ViewBuilder let label: () -> Content
     @Environment(\.orbitAppearance) private var appearance
@@ -19,11 +20,14 @@ struct TaskActionPopoverButton<Content: View>: View {
     @State private var pendingAction: OrbitTaskAction?
 
     var body: some View {
-        Button { isPresented = true } label: { label() }
-            .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+        Button {
+            guard canOpen() else { return }
+            isPresented = true
+        } label: { label() }
+            .modifier(TaskPopoverHoldModifier(enabled: opensOnHold) {
                 OrbitHaptics.longPress()
                 isPresented = true
-            }, including: opensOnHold ? .all : .none)
+            })
             .popover(isPresented: $isPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                 VStack(spacing: 0) {
                     TaskActionPreview(task: task, range: range)
@@ -87,5 +91,20 @@ private struct OrbitTaskActionStyle: ButtonStyle {
             .foregroundStyle(configuration.role == .destructive ? Color.red : Color.primary)
             .contentShape(Rectangle())
             .background(configuration.isPressed ? Color.primary.opacity(0.08) : .clear)
+    }
+}
+
+
+/// Leave calendar buttons free of the list's hold recognizer and gesture
+/// mask. The calendar owns its own sequenced hold/drag recognition.
+private struct TaskPopoverHoldModifier: ViewModifier {
+    let enabled: Bool
+    let action: () -> Void
+    func body(content: Content) -> some View {
+        if enabled {
+            content.simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in action() })
+        } else {
+            content
+        }
     }
 }

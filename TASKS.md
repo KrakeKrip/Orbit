@@ -26,6 +26,7 @@
 | NATIVE-ADD-004 | DONE | editabledate/start/duration вsharedcreatesheet |
 | NATIVE-EDIT-002 | DONE | native rename/delete UI сconfirm иCancel |
 | NATIVE-DEVICE-001 | INSTALLED / USER-CONFIRMED LAUNCH | установлен на личный iPhone; пользователь подтвердил запуск, полный physical smoke не заявляется |
+| NATIVE-FAB-R1 | IMPLEMENTED / OWNER CHECK | увеличенная стабильная «+», первый tap календаря, сильнее haptics, Settings без предварительной заливки |
 | NATIVE-GESTURES-R1 | IMPLEMENTED / OWNER CHECK | маленькие точки с прежним offsets, tap пустой сетки снимает selection, согласованная dark Form |
 | NATIVE-TASK-GESTURES | IMPLEMENTED / OWNER CHECK | общий preview списка, календарные move/start/end handles; 93 core tests, Simulator gestures |
 | NATIVE-CALENDAR-PREVIEW | IMPLEMENTED / OWNER CHECK | карточка над действиями по tap, исходный блок остаётся в сетке; отчёт и Simulator evidence |
