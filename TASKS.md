@@ -26,6 +26,7 @@
 | NATIVE-ADD-004 | DONE | editabledate/start/duration вsharedcreatesheet |
 | NATIVE-EDIT-002 | DONE | native rename/delete UI сconfirm иCancel |
 | NATIVE-DEVICE-001 | INSTALLED / USER-CONFIRMED LAUNCH | установлен на личный iPhone; пользователь подтвердил запуск, полный physical smoke не заявляется |
+| NATIVE-TASK-GESTURES | IMPLEMENTED / OWNER CHECK | общий preview списка, календарные move/start/end handles; 93 core tests, Simulator gestures |
 | NATIVE-CALENDAR-PREVIEW | IMPLEMENTED / OWNER CHECK | карточка над действиями по tap, исходный блок остаётся в сетке; отчёт и Simulator evidence |
 | NATIVE-UI-FEEDBACK-001 | IMPLEMENTED / OWNER CHECK | интерфейс и баги из ZIP; Simulator smoke и builds, ограничения в отчёте |
 | NATIVE-PRJ-001 | TODO (план) | локальная модель/операции проектов без потери existing tasks |
