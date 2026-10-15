@@ -1,3 +1,7 @@
+## Последний этап 2026-10-16 — NATIVE-PRJ-002
+
+По «делаем» Codex выполнил вкладку Проекты и shared-store create/rename UI. Self-check: iOS builds + synthetic Simulator Cyrillic/validation/Cancel/tab/dark/AXL/relaunch и read-only store diff PASS. Core/schema не менялись, предыдущие98 tests не повторялись. Swipe не доставляется CUA — UNVERIFIED. reports/NATIVE-PRJ-002-executor.md. Следующий маленький core scope tasks/NATIVE-PRJ-003.md; GLM не назначен. Личный iPhone/push не выполнялись.
+
 ## Актуальный статус 2026-10-16
 
 Пользователь разрешил продолжить очередь, замечания UI передаст отдельно. Codex самостоятельно выполнил NATIVE-PRJ-001 (core проектов, без UI/assignment), self-check: 98/98 core, previous-source disk upgrade, iOS build PASS. Отчёт reports/NATIVE-PRJ-001-executor.md. Следующий bounded scope подготовлен в tasks/NATIVE-PRJ-002.md; GLM сейчас не назначен. Историческое «schema/core не менять» ниже относится к UI-FEEDBACK scope и не запрещает явно назначенный PRJ001 additive upgrade. Личные stores/iPhone не использовались; автоматический push и установка этой schema-версии не выполнялись.

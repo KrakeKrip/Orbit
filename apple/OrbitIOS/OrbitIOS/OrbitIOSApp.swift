@@ -12,6 +12,7 @@ struct OrbitIOSApp: App {
         case today
         case inbox
         case upcoming
+        case projects
     }
 
     @Environment(\.scenePhase) private var scenePhase
@@ -56,6 +57,9 @@ struct OrbitIOSApp: App {
                             Label("Предстоящее", systemImage: "calendar")
                         }
                         .tag(Tab.upcoming)
+                    ProjectsScreen(model: model)
+                        .tabItem { Label("Проекты", systemImage: "folder") }
+                        .tag(Tab.projects)
                 }
                 .tint(.orbitAccent)
                 .environment(\.orbitAppearance, appearance)
