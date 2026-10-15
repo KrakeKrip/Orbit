@@ -124,8 +124,15 @@ struct DayTimelineView: View {
         let endTimeText = segment.endMinute == 1440 ? "24:00" : clockString(segment.endMinute)
         let range = "\(clockString(segment.startMinute))–\(endTimeText)\(continuationMarkers(segment))"
 
-        return Menu {
-            menuActions(for: task)
+        return CalendarTaskPopoverButton(task: task, range: range,
+                                         previewWidth: min(300, max(160, containerWidth - 32))) { action in
+            switch action {
+            case .toggle: if task.isCompleted { onReopen(task) } else { onComplete(task) }
+            case .date: onEditDate(task)
+            case .interval: onEditInterval(task)
+            case .rename: onRename(task)
+            case .delete: onDelete(task)
+            }
         } label: {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 2)
@@ -173,13 +180,8 @@ struct DayTimelineView: View {
         .contextMenu {
             menuActions(for: task)
         } preview: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(task.title).font(.headline)
-                Text(range).font(.subheadline.monospacedDigit())
-            }
-            .padding(14)
-            .frame(width: min(300, max(160, containerWidth - 32)), alignment: .leading)
-            .background(appearance.canvas, in: RoundedRectangle(cornerRadius: 14))
+            CalendarTaskPreview(task: task, range: range)
+                .frame(width: min(300, max(160, containerWidth - 32)))
         }
         .orbitLongPressFeedback()
         .orbitMenuFeedback()
@@ -264,5 +266,90 @@ struct DayTimelineView: View {
         return assigned.map { item in
             LaidOutSegment(segment: item.segment, lane: item.lane, laneCount: lanesPerCluster[item.cluster] ?? 1)
         }
+    }
+}
+
+
+private enum CalendarTaskAction {
+    case toggle, date, interval, rename, delete
+}
+
+/// Tap presents a card above the actions, rather than a native Menu which
+/// hides its label while open. The calendar rectangle keeps its exact height.
+private struct CalendarTaskPopoverButton<Content: View>: View {
+    let task: OrbitTask
+    let range: String
+    let previewWidth: CGFloat
+    let onAction: (CalendarTaskAction) -> Void
+    @ViewBuilder let label: () -> Content
+    @Environment(\.orbitAppearance) private var appearance
+    @State private var isPresented = false
+    @State private var pendingAction: CalendarTaskAction?
+
+    var body: some View {
+        Button { isPresented = true } label: { label() }
+            .popover(isPresented: $isPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                VStack(spacing: 0) {
+                    CalendarTaskPreview(task: task, range: range)
+                        .padding(10)
+                    VStack(spacing: 0) {
+                        OrbitTaskMenuActions(
+                            task: task,
+                            onToggle: { choose(.toggle) },
+                            onEditDate: { choose(.date) },
+                            onEditInterval: { choose(.interval) },
+                            onRename: { choose(.rename) },
+                            onDelete: { choose(.delete) }
+                        )
+                    }
+                    .buttonStyle(CalendarTaskActionStyle())
+                    .padding(.bottom, 6)
+                }
+                .frame(width: previewWidth)
+                .background(appearance.canvas)
+                .presentationBackground(appearance.canvas)
+                .presentationCompactAdaptation(.popover)
+                .onDisappear {
+                    // Present editors/confirmation only after the popover is
+                    // gone. Tapping outside leaves pendingAction nil.
+                    guard let action = pendingAction else { return }
+                    pendingAction = nil
+                    onAction(action)
+                }
+            }
+    }
+
+    private func choose(_ action: CalendarTaskAction) {
+        pendingAction = action
+        isPresented = false
+    }
+}
+
+private struct CalendarTaskPreview: View {
+    let task: OrbitTask
+    let range: String
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(task.title).font(.headline).lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(range).font(.subheadline.monospacedDigit())
+        }
+        .foregroundStyle(.white)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(task.isCompleted ? Color.gray : Color.orbitAccent,
+                    in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityIdentifier("calendar-task-menu-preview")
+    }
+}
+
+private struct CalendarTaskActionStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.horizontal, 16)
+            .foregroundStyle(configuration.role == .destructive ? Color.red : Color.primary)
+            .contentShape(Rectangle())
+            .background(configuration.isPressed ? Color.primary.opacity(0.08) : .clear)
     }
 }
